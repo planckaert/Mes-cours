@@ -110,6 +110,10 @@
     .type-badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.3px;border-radius:6px;padding:2px 8px;}
     .arrow{color:rgba(255,255,255,.2);font-size:18px;flex-shrink:0;}
 
+    .tip-banner{margin:10px 16px 0;background:rgba(99,179,237,0.05);border:1px solid rgba(99,179,237,0.12);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;}
+    .tip-text{font-size:11px;color:rgba(99,179,237,0.65);line-height:1.7;}
+    .tip-text strong{color:rgba(99,179,237,0.9);display:block;margin-bottom:3px;font-size:12px;}
+    .tip-close{background:none;border:none;color:rgba(99,179,237,0.3);cursor:pointer;font-size:16px;padding:0;flex-shrink:0;margin-left:auto;}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     .fu{animation:fadeUp .3s ease forwards;}
   </style>
@@ -143,6 +147,12 @@
   <div id="wake-banner">
     <span>☀️</span>
     <div class="wake-banner-text">Mise en veille désactivée — l'écran restera allumé</div>
+  </div>
+
+  <div class="tip-banner" id="tipBanner">
+    <span>💡</span>
+    <div class="tip-text"><strong>Écran qui s'éteint ?</strong>Paramètres → Écran → Mise en veille → choisir <em>10 minutes</em></div>
+    <button class="tip-close" onclick="document.getElementById('tipBanner').style.display='none'">✕</button>
   </div>
 
   <div id="loading">
