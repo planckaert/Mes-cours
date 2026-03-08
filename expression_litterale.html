@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produire une expression littérale</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #6b21a8; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 10px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #f3e8ff; color: #581c87; border: 2px solid #c084fc; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #6b21a8; color: white; border-color: #6b21a8; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* ÉNONCÉ */
+  .enonce-box { background: white; border-radius: 12px; padding: 14px 18px; margin: 8px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #6b21a8; font-size: 0.97em; color: #222; line-height: 1.6; }
+  .enonce-box .titre-enonce { font-weight: bold; color: #6b21a8; margin-bottom: 6px; font-size: 1em; }
+  .enonce-box .texte { color: #374151; }
+
+  /* SVG FIGURE */
+  svg#fig { width: 100%; max-width: 480px; height: 140px; background: white; border-radius: 14px; box-shadow: 0 2px 8px #0002; display: block; margin: 6px auto; }
+  svg#fig.hidden { display: none; }
+
+  /* CONSTRUCTION EXPRESSION */
+  .construct-box { background: white; border-radius: 14px; padding: 14px 20px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #6b21a8; font-size: 1em; line-height: 2.1; }
+  .construct-box .etiq { display: inline-block; padding: 2px 10px; border-radius: 16px; font-weight: bold; font-size: 0.95em; margin: 2px; }
+  .etiq-var    { background: #f3e8ff; color: #6b21a8; border: 1.5px solid #c084fc; }
+  .etiq-op     { background: #fef9c3; color: #78350f; border: 1.5px solid #fde68a; }
+  .etiq-num    { background: #dbeafe; color: #1e3a8a; border: 1.5px solid #93c5fd; }
+  .etiq-result { background: #f0fdf4; color: #14532d; border: 1.5px solid #6ee7b7; font-size: 1.05em; padding: 4px 14px; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 3px 0; }
+  .fleche { color: #9ca3af; font-size: 1.1em; }
+
+  .conclusion-ligne { background: #f3e8ff; border-left: 4px solid #a855f7; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #581c87; margin-top: 8px; font-size: 1.05em; font-family: 'Courier New', monospace; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 7px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.92em; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #6b21a8; color: white; }
+</style>
+</head>
+<body>
+<h1>🔡 Produire une expression littérale</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Situation de prix</button>
+  <button class="tab tab2" onclick="setMode(1)">Périmètre d'une figure</button>
+  <button class="tab tab3" onclick="setMode(2)">Situation avec plusieurs inconnus</button>
+</div>
+<div class="scene">
+  <div class="enonce-box" id="enonce-box"></div>
+  <svg id="fig" viewBox="0 0 480 140"></svg>
+  <div class="construct-box" id="construct-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — SITUATION DE PRIX
+// Un stylo coûte x euros. Un cahier coûte 3 fois plus cher.
+// On achète 2 stylos et 1 cahier. Quel est le prix total ?
+// ============================================================
+const etapes0 = [
+  {
+    text: "Un stylo coûte x euros. On ne connaît pas le prix exact : on l'appelle x. C'est notre variable.",
+    enonce: `Un stylo coûte <strong>x euros</strong>.<br>Un cahier coûte <strong>3 fois plus cher</strong> qu'un stylo.<br>On achète <strong>2 stylos</strong> et <strong>1 cahier</strong>. Quel est le prix total ?`,
+    fig: 'prix',
+    figStep: 0,
+    construct: `<div class="ligne">La variable : <span class="etiq etiq-var">x</span> = prix d'un stylo (en €)</div>`
+  },
+  {
+    text: "Le cahier coûte 3 fois plus cher qu'un stylo : son prix est 3 × x, qu'on écrit 3x.",
+    enonce: `Un stylo coûte <strong>x euros</strong>.<br>Un cahier coûte <strong>3 fois plus cher</strong> qu'un stylo.<br>On achète <strong>2 stylos</strong> et <strong>1 cahier</strong>. Quel est le prix total ?`,
+    fig: 'prix', figStep: 1,
+    construct: `<div class="ligne"><span class="etiq etiq-var">x</span> = prix d'un stylo</div>
+                <div class="ligne">Prix d'un cahier <span class="fleche">→</span> <span class="etiq etiq-num">3</span> <span class="etiq etiq-op">×</span> <span class="etiq etiq-var">x</span> <span class="fleche">=</span> <span class="etiq etiq-var">3x</span></div>
+                <div class="attention">⚠️ On écrit 3x et non x3. Le nombre se place avant la lettre.</div>`
+  },
+  {
+    text: "Le prix de 2 stylos, c'est 2 × x = 2x.",
+    enonce: `Un stylo coûte <strong>x euros</strong>.<br>Un cahier coûte <strong>3 fois plus cher</strong> qu'un stylo.<br>On achète <strong>2 stylos</strong> et <strong>1 cahier</strong>. Quel est le prix total ?`,
+    fig: 'prix', figStep: 2,
+    construct: `<div class="ligne"><span class="etiq etiq-var">x</span> = prix d'un stylo</div>
+                <div class="ligne">Prix d'un cahier = <span class="etiq etiq-var">3x</span></div>
+                <div class="ligne">Prix de 2 stylos <span class="fleche">→</span> <span class="etiq etiq-num">2</span> <span class="etiq etiq-op">×</span> <span class="etiq etiq-var">x</span> <span class="fleche">=</span> <span class="etiq etiq-var">2x</span></div>`
+  },
+  {
+    text: "Le prix total = 2 stylos + 1 cahier = 2x + 3x.",
+    enonce: `Un stylo coûte <strong>x euros</strong>.<br>Un cahier coûte <strong>3 fois plus cher</strong> qu'un stylo.<br>On achète <strong>2 stylos</strong> et <strong>1 cahier</strong>. Quel est le prix total ?`,
+    fig: 'prix', figStep: 3,
+    construct: `<div class="ligne">Prix de 2 stylos = <span class="etiq etiq-var">2x</span></div>
+                <div class="ligne">Prix de 1 cahier = <span class="etiq etiq-var">3x</span></div>
+                <div class="ligne">Prix total <span class="fleche">→</span> <span class="etiq etiq-var">2x</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">3x</span></div>`
+  },
+  {
+    text: "On peut simplifier 2x + 3x = 5x. L'expression littérale du prix total est 5x.",
+    enonce: `Un stylo coûte <strong>x euros</strong>.<br>Un cahier coûte <strong>3 fois plus cher</strong> qu'un stylo.<br>On achète <strong>2 stylos</strong> et <strong>1 cahier</strong>. Quel est le prix total ?`,
+    fig: 'prix', figStep: 3,
+    construct: `<div class="ligne">Prix total = <span class="etiq etiq-var">2x</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">3x</span></div>
+                <div class="ligne">= <span class="etiq etiq-result">(2+3)x = 5x</span></div>
+                <div class="conclusion-ligne">Prix total = 5x</div>
+                <div class="attention">On peut vérifier : si x = 2 €, prix total = 5 × 2 = 10 €.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — PÉRIMÈTRE D'UN RECTANGLE
+// longueur = a, largeur = b, P = 2a + 2b = 2(a+b)
+// ============================================================
+const etapes1 = [
+  {
+    text: "Un rectangle a une longueur a et une largeur b. On veut exprimer son périmètre en fonction de a et b.",
+    enonce: `Un rectangle a une longueur <strong>a</strong> et une largeur <strong>b</strong>.<br>Écrire une expression littérale du <strong>périmètre</strong>.`,
+    fig: 'rect', figStep: 0,
+    construct: `<div class="ligne">Variables : <span class="etiq etiq-var">a</span> = longueur &nbsp;|&nbsp; <span class="etiq etiq-var">b</span> = largeur</div>
+                <div class="ligne">Le périmètre = somme de tous les côtés</div>`
+  },
+  {
+    text: "Le rectangle a 2 longueurs et 2 largeurs. On additionne les 4 côtés : a + b + a + b.",
+    enonce: `Un rectangle a une longueur <strong>a</strong> et une largeur <strong>b</strong>.<br>Écrire une expression littérale du <strong>périmètre</strong>.`,
+    fig: 'rect', figStep: 1,
+    construct: `<div class="ligne">Côtés : <span class="etiq etiq-var">a</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">b</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">a</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">b</span></div>`
+  },
+  {
+    text: "On regroupe les termes identiques : a + a = 2a et b + b = 2b. Donc P = 2a + 2b.",
+    enonce: `Un rectangle a une longueur <strong>a</strong> et une largeur <strong>b</strong>.<br>Écrire une expression littérale du <strong>périmètre</strong>.`,
+    fig: 'rect', figStep: 1,
+    construct: `<div class="ligne"><span class="etiq etiq-var">a</span> + <span class="etiq etiq-var">b</span> + <span class="etiq etiq-var">a</span> + <span class="etiq etiq-var">b</span></div>
+                <div class="ligne">= <span class="etiq etiq-var">2a</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">2b</span></div>`
+  },
+  {
+    text: "On peut aussi factoriser : 2a + 2b = 2 × (a + b). Les deux expressions sont équivalentes.",
+    enonce: `Un rectangle a une longueur <strong>a</strong> et une largeur <strong>b</strong>.<br>Écrire une expression littérale du <strong>périmètre</strong>.`,
+    fig: 'rect', figStep: 1,
+    construct: `<div class="ligne"><span class="etiq etiq-var">a</span> + <span class="etiq etiq-var">b</span> + <span class="etiq etiq-var">a</span> + <span class="etiq etiq-var">b</span> = <span class="etiq etiq-var">2a</span> + <span class="etiq etiq-var">2b</span></div>
+                <div class="ligne">= <span class="etiq etiq-num">2</span> <span class="etiq etiq-op">×</span> <span class="etiq etiq-op">(</span><span class="etiq etiq-var">a</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">b</span><span class="etiq etiq-op">)</span></div>
+                <div class="conclusion-ligne">P = 2a + 2b &nbsp; ou &nbsp; P = 2(a + b)</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — DEUX VARIABLES + CONSTANTE
+// Marie a n billes. Paul en a le double moins 4.
+// Combien ont-ils ensemble ?
+// ============================================================
+const etapes2 = [
+  {
+    text: "Marie a n billes. Paul en a le double moins 4. Combien ont-ils ensemble ?",
+    enonce: `Marie a <strong>n billes</strong>.<br>Paul en a <strong>le double moins 4</strong>.<br>Exprimer le nombre total de billes.`,
+    fig: 'billes', figStep: 0,
+    construct: `<div class="ligne">Variable : <span class="etiq etiq-var">n</span> = nombre de billes de Marie</div>`
+  },
+  {
+    text: "Paul a le double de Marie : 2 × n = 2n. Puis il en a 4 de moins : 2n − 4.",
+    enonce: `Marie a <strong>n billes</strong>.<br>Paul en a <strong>le double moins 4</strong>.<br>Exprimer le nombre total de billes.`,
+    fig: 'billes', figStep: 1,
+    construct: `<div class="ligne"><span class="etiq etiq-var">n</span> = billes de Marie</div>
+                <div class="ligne">Le double de n <span class="fleche">→</span> <span class="etiq etiq-num">2</span><span class="etiq etiq-op">×</span><span class="etiq etiq-var">n</span> = <span class="etiq etiq-var">2n</span></div>
+                <div class="ligne">Moins 4 <span class="fleche">→</span> <span class="etiq etiq-var">2n</span> <span class="etiq etiq-op">−</span> <span class="etiq etiq-num">4</span></div>`
+  },
+  {
+    text: "Le total = billes de Marie + billes de Paul = n + (2n − 4).",
+    enonce: `Marie a <strong>n billes</strong>.<br>Paul en a <strong>le double moins 4</strong>.<br>Exprimer le nombre total de billes.`,
+    fig: 'billes', figStep: 2,
+    construct: `<div class="ligne">Marie : <span class="etiq etiq-var">n</span></div>
+                <div class="ligne">Paul : <span class="etiq etiq-var">2n</span> <span class="etiq etiq-op">−</span> <span class="etiq etiq-num">4</span></div>
+                <div class="ligne">Total <span class="fleche">→</span> <span class="etiq etiq-var">n</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-op">(</span><span class="etiq etiq-var">2n</span> <span class="etiq etiq-op">−</span> <span class="etiq etiq-num">4</span><span class="etiq etiq-op">)</span></div>`
+  },
+  {
+    text: "On développe et on regroupe : n + 2n − 4 = 3n − 4.",
+    enonce: `Marie a <strong>n billes</strong>.<br>Paul en a <strong>le double moins 4</strong>.<br>Exprimer le nombre total de billes.`,
+    fig: 'billes', figStep: 2,
+    construct: `<div class="ligne"><span class="etiq etiq-var">n</span> + <span class="etiq etiq-op">(</span><span class="etiq etiq-var">2n</span> − <span class="etiq etiq-num">4</span><span class="etiq etiq-op">)</span></div>
+                <div class="ligne">= <span class="etiq etiq-var">n</span> <span class="etiq etiq-op">+</span> <span class="etiq etiq-var">2n</span> <span class="etiq etiq-op">−</span> <span class="etiq etiq-num">4</span></div>
+                <div class="ligne">= <span class="etiq etiq-result">3n − 4</span></div>
+                <div class="conclusion-ligne">Total = 3n − 4</div>
+                <div class="attention">On peut vérifier : si n = 10, Paul a 2×10−4 = 16. Total = 10+16 = 26 = 3×10−4 ✓</div>`
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#6b21a8','#1d4ed8','#b45309'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('construct-box').style.borderLeftColor=cols[m];
+  document.getElementById('enonce-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1,etapes2][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// FIGURES SVG
+// ============================================================
+function drawFig(fig, step) {
+  const col = ['#6b21a8','#1d4ed8','#b45309'][mode];
+  let h='';
+
+  if(fig==='prix') {
+    // Stylo et cahier
+    // Stylo
+    h+=`<rect x="50" y="50" width="100" height="40" rx="8" fill="#f3e8ff" stroke="#a855f7" stroke-width="2"/>`;
+    h+=`<text x="100" y="74" font-size="13" text-anchor="middle" font-weight="bold" fill="#6b21a8">✏️ stylo</text>`;
+    h+=`<text x="100" y="108" font-size="13" text-anchor="middle" fill="#6b21a8" font-weight="bold">= x €</text>`;
+
+    // Cahier
+    h+=`<rect x="200" y="40" width="100" height="50" rx="8" fill="#fce7f3" stroke="#f472b6" stroke-width="2"/>`;
+    h+=`<text x="250" y="70" font-size="13" text-anchor="middle" font-weight="bold" fill="#9d174d">📓 cahier</text>`;
+    if(step>=1) h+=`<text x="250" y="108" font-size="13" text-anchor="middle" fill="#9d174d" font-weight="bold">= 3x €</text>`;
+
+    // 2 stylos
+    if(step>=2){
+      h+=`<rect x="350" y="50" width="100" height="40" rx="8" fill="#f3e8ff" stroke="#a855f7" stroke-width="2"/>`;
+      h+=`<text x="400" y="74" font-size="12" text-anchor="middle" font-weight="bold" fill="#6b21a8">2 stylos</text>`;
+      h+=`<text x="400" y="108" font-size="13" text-anchor="middle" fill="#6b21a8" font-weight="bold">= 2x €</text>`;
+    }
+
+    // Total
+    if(step>=3){
+      h+=`<rect x="160" y="115" width="160" height="22" rx="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>`;
+      h+=`<text x="240" y="131" font-size="12" text-anchor="middle" font-weight="bold" fill="#14532d">Total = 2x + 3x = 5x</text>`;
+    }
+  }
+
+  else if(fig==='rect') {
+    const rx=80, ry=30, rw=320, rh=80;
+    h+=`<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="#dbeafe" stroke="#3b82f6" stroke-width="2.5" rx="4"/>`;
+    // Labels côtés
+    h+=`<text x="${rx+rw/2}" y="${ry-8}" font-size="14" text-anchor="middle" font-weight="bold" fill="#1d4ed8">a</text>`;
+    h+=`<text x="${rx+rw/2}" y="${ry+rh+18}" font-size="14" text-anchor="middle" font-weight="bold" fill="#1d4ed8">a</text>`;
+    h+=`<text x="${rx-12}" y="${ry+rh/2+5}" font-size="14" text-anchor="middle" font-weight="bold" fill="#1d4ed8">b</text>`;
+    h+=`<text x="${rx+rw+12}" y="${ry+rh/2+5}" font-size="14" text-anchor="middle" font-weight="bold" fill="#1d4ed8">b</text>`;
+    if(step>=1){
+      // Flèche périmètre
+      h+=`<text x="240" y="130" font-size="13" text-anchor="middle" fill="#1d4ed8" font-weight="bold">P = a + b + a + b = 2a + 2b</text>`;
+    }
+  }
+
+  else if(fig==='billes') {
+    // Marie
+    h+=`<circle cx="90" cy="70" r="40" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>`;
+    h+=`<text x="90" y="66" font-size="12" text-anchor="middle" fill="#78350f" font-weight="bold">Marie</text>`;
+    h+=`<text x="90" y="84" font-size="15" text-anchor="middle" fill="#b45309" font-weight="bold">n 🔵</text>`;
+
+    // Paul
+    const paulLabel = step>=1 ? '2n − 4 🔵' : '? 🔵';
+    const paulCol = step>=1 ? '#7c3aed' : '#9ca3af';
+    h+=`<circle cx="250" cy="70" r="40" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="2"/>`;
+    h+=`<text x="250" y="66" font-size="12" text-anchor="middle" fill="#4c1d95" font-weight="bold">Paul</text>`;
+    h+=`<text x="250" y="84" font-size="13" text-anchor="middle" fill="${paulCol}" font-weight="bold">${paulLabel}</text>`;
+
+    // Total
+    if(step>=2){
+      h+=`<rect x="340" y="45" width="120" height="50" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2"/>`;
+      h+=`<text x="400" y="68" font-size="12" text-anchor="middle" fill="#14532d" font-weight="bold">Total</text>`;
+      h+=`<text x="400" y="86" font-size="13" text-anchor="middle" fill="#14532d" font-weight="bold">3n − 4</text>`;
+    }
+  }
+
+  document.getElementById('fig').innerHTML=h;
+  document.getElementById('fig').classList.remove('hidden');
+}
+
+function render() {
+  const etapesArr=[etapes0,etapes1,etapes2][mode];
+  const e=etapesArr[etape];
+  const col=['#6b21a8','#1d4ed8','#b45309'][mode];
+
+  document.getElementById('enonce-box').innerHTML=`<div class="titre-enonce">📋 Énoncé</div><div class="texte">${e.enonce}</div>`;
+  drawFig(e.fig, e.figStep);
+  document.getElementById('construct-box').innerHTML=e.construct;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

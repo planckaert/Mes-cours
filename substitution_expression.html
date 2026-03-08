@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Substituer une valeur</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fff7ed; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #9a3412; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 8px 13px; border-radius: 18px; border: none; font-size: 0.8em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #fed7aa; color: #7c2d12; border: 2px solid #fb923c; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #9a3412; color: white; border-color: #9a3412; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* EXPRESSION EN GROS */
+  .expr-box { background: white; border-radius: 16px; box-shadow: 0 2px 12px #0002; padding: 18px 12px 14px; margin: 8px auto; max-width: 480px; width: 95%; text-align: center; }
+  .expr-line { display: flex; justify-content: center; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 1.7em; font-family: 'Courier New', monospace; font-weight: bold; }
+  .tok-var    { display: inline-block; padding: 2px 7px; border-radius: 8px; background: #fed7aa; color: #9a3412; border: 2px solid #fb923c; transition: all 0.4s; }
+  .tok-var.substituted { background: #fef9c3; color: #713f12; border-color: #fde68a; }
+  .tok-num    { color: #1d4ed8; }
+  .tok-op     { color: #374151; font-size: 0.9em; }
+  .tok-res    { color: #15803d; background: #dcfce7; padding: 2px 8px; border-radius: 8px; border: 2px solid #6ee7b7; }
+  .sub-label  { font-size: 0.78em; color: #9a3412; margin-top: 8px; font-weight: bold; }
+
+  /* CALCUL */
+  .calcul-box { background: white; border-radius: 14px; padding: 14px 20px; margin: 8px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #9a3412; font-size: 1em; line-height: 2.1; }
+  .calcul-box .enonce { font-weight: bold; color: #9a3412; background: #fff7ed; border-radius: 8px; padding: 6px 14px; margin-bottom: 8px; font-size: 0.95em; }
+  .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .eq { min-width: 18px; color: #374151; }
+  .hl-orange { color: #c2410c; font-weight: bold; }
+  .hl-blue   { color: #1d4ed8; font-weight: bold; }
+  .hl-green  { color: #15803d; font-weight: bold; }
+  .hl-sub    { background: #fef9c3; color: #713f12; font-weight: bold; padding: 1px 6px; border-radius: 5px; border: 1px solid #fde68a; font-family: 'Courier New', monospace; }
+  .conclusion-ligne { background: #fff7ed; border-left: 4px solid #fb923c; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #7c2d12; margin-top: 6px; font-size: 1.05em; font-family: 'Courier New', monospace; }
+  .attention { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 7px 12px; border-radius: 7px; margin-top: 6px; color: #78350f; font-size: 0.92em; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #9a3412; color: white; }
+</style>
+</head>
+<body>
+<h1>🔢 Substituer une valeur dans une expression</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Expression simple &nbsp;4x + 1</button>
+  <button class="tab tab2" onclick="setMode(1)">Avec puissance &nbsp;x² − 2x</button>
+  <button class="tab tab3" onclick="setMode(2)">Deux variables &nbsp;3a + 2b</button>
+</div>
+<div class="scene">
+  <div class="expr-box" id="expr-box"></div>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — 4x + 1  pour x = 3
+// ============================================================
+const etapes0 = [
+  {
+    text: "On veut calculer la valeur de l'expression 4x + 1 pour x = 3. La lettre x est remplacée par la valeur 3.",
+    exprHTML: `<span class="tok-num">4</span><span class="tok-var">x</span><span class="tok-op"> + </span><span class="tok-num">1</span>`,
+    subLabel: 'x = 3',
+    calcul: `<div class="enonce">Calculer 4x + 1 pour x = 3</div>
+             <div class="ligne">On va remplacer <span class="hl-sub">x</span> par <span class="hl-orange">3</span> dans l'expression.</div>
+             <div class="attention">⚠️ On remplace TOUTES les occurrences de x par la même valeur.</div>`
+  },
+  {
+    text: "On remplace x par 3 : 4x devient 4 × 3. On écrit les parenthèses pour être rigoureux.",
+    exprHTML: `<span class="tok-num">4</span><span class="tok-var substituted">(3)</span><span class="tok-op"> + </span><span class="tok-num">1</span>`,
+    subLabel: 'x remplacé par 3',
+    calcul: `<div class="enonce">Calculer 4x + 1 pour x = 3</div>
+             <div class="ligne">4<span class="hl-sub">x</span> + 1</div>
+             <div class="ligne">= 4 × <span class="hl-orange">3</span> + 1</div>`
+  },
+  {
+    text: "On calcule 4 × 3 = 12 en premier (la multiplication avant l'addition).",
+    exprHTML: `<span class="tok-num">4</span><span class="tok-var substituted">(3)</span><span class="tok-op"> + </span><span class="tok-num">1</span>`,
+    subLabel: '4 × 3 = 12',
+    calcul: `<div class="enonce">Calculer 4x + 1 pour x = 3</div>
+             <div class="ligne">4<span class="hl-sub">x</span> + 1</div>
+             <div class="ligne">= 4 × <span class="hl-orange">3</span> + 1</div>
+             <div class="ligne">= <span class="hl-blue">12</span> + 1</div>`
+  },
+  {
+    text: "12 + 1 = 13. La valeur de l'expression 4x + 1 pour x = 3 est 13.",
+    exprHTML: `<span class="tok-res">13</span>`,
+    subLabel: 'résultat pour x = 3',
+    calcul: `<div class="enonce">Calculer 4x + 1 pour x = 3</div>
+             <div class="ligne">4<span class="hl-sub">x</span> + 1</div>
+             <div class="ligne">= 4 × <span class="hl-orange">3</span> + 1</div>
+             <div class="ligne">= <span class="hl-blue">12</span> + 1</div>
+             <div class="ligne">= <span class="hl-green">13</span></div>
+             <div class="conclusion-ligne">Pour x = 3, &nbsp; 4x + 1 = 13</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — x² − 2x  pour x = 4
+// ============================================================
+const etapes1 = [
+  {
+    text: "On veut calculer x² − 2x pour x = 4. On va remplacer chaque x par 4.",
+    exprHTML: `<span class="tok-var">x</span><sup style="font-size:0.55em;color:#b45309">2</sup><span class="tok-op"> − </span><span class="tok-num">2</span><span class="tok-var">x</span>`,
+    subLabel: 'x = 4',
+    calcul: `<div class="enonce">Calculer x² − 2x pour x = 4</div>
+             <div class="ligne">Attention : il y a deux <span class="hl-sub">x</span> dans l'expression. On les remplace <strong>tous les deux</strong> par <span class="hl-blue">4</span>.</div>`
+  },
+  {
+    text: "On remplace les deux x par 4 : x² devient 4² et 2x devient 2 × 4.",
+    exprHTML: `<span class="tok-var substituted">(4)</span><sup style="font-size:0.55em;color:#b45309">2</sup><span class="tok-op"> − </span><span class="tok-num">2</span><span class="tok-var substituted">(4)</span>`,
+    subLabel: 'x remplacé partout par 4',
+    calcul: `<div class="enonce">Calculer x² − 2x pour x = 4</div>
+             <div class="ligne"><span class="hl-sub">x</span>² − 2<span class="hl-sub">x</span></div>
+             <div class="ligne">= <span class="hl-blue">4</span>² − 2 × <span class="hl-blue">4</span></div>`
+  },
+  {
+    text: "On calcule les puissances et les produits : 4² = 16 et 2 × 4 = 8.",
+    exprHTML: `<span class="tok-var substituted">(4)</span><sup style="font-size:0.55em;color:#b45309">2</sup><span class="tok-op"> − </span><span class="tok-num">2</span><span class="tok-var substituted">(4)</span>`,
+    subLabel: '4² = 16 &nbsp; 2×4 = 8',
+    calcul: `<div class="enonce">Calculer x² − 2x pour x = 4</div>
+             <div class="ligne"><span class="hl-sub">x</span>² − 2<span class="hl-sub">x</span></div>
+             <div class="ligne">= <span class="hl-blue">4</span>² − 2 × <span class="hl-blue">4</span></div>
+             <div class="ligne">= <span class="hl-orange">16</span> − <span class="hl-orange">8</span></div>`
+  },
+  {
+    text: "16 − 8 = 8. La valeur de x² − 2x pour x = 4 est 8.",
+    exprHTML: `<span class="tok-res">8</span>`,
+    subLabel: 'résultat pour x = 4',
+    calcul: `<div class="enonce">Calculer x² − 2x pour x = 4</div>
+             <div class="ligne"><span class="hl-sub">x</span>² − 2<span class="hl-sub">x</span></div>
+             <div class="ligne">= <span class="hl-blue">4</span>² − 2 × <span class="hl-blue">4</span></div>
+             <div class="ligne">= <span class="hl-orange">16</span> − <span class="hl-orange">8</span></div>
+             <div class="ligne">= <span class="hl-green">8</span></div>
+             <div class="conclusion-ligne">Pour x = 4, &nbsp; x² − 2x = 8</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — 3a + 2b  pour a = 5 et b = 2
+// ============================================================
+const etapes2 = [
+  {
+    text: "On veut calculer 3a + 2b pour a = 5 et b = 2. Il y a deux variables différentes.",
+    exprHTML: `<span class="tok-num">3</span><span class="tok-var">a</span><span class="tok-op"> + </span><span class="tok-num">2</span><span class="tok-var" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd">b</span>`,
+    subLabel: 'a = 5 &nbsp; b = 2',
+    calcul: `<div class="enonce">Calculer 3a + 2b pour a = 5 et b = 2</div>
+             <div class="ligne">On remplace <span class="hl-sub">a</span> par <span class="hl-orange">5</span> et <span style="background:#dbeafe;color:#1d4ed8;font-weight:bold;padding:1px 6px;border-radius:5px;font-family:Courier New,monospace;border:1px solid #93c5fd">b</span> par <span class="hl-blue">2</span>.</div>`
+  },
+  {
+    text: "On remplace a par 5 : 3a devient 3 × 5.",
+    exprHTML: `<span class="tok-num">3</span><span class="tok-var substituted">(5)</span><span class="tok-op"> + </span><span class="tok-num">2</span><span class="tok-var" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd">b</span>`,
+    subLabel: 'a remplacé par 5',
+    calcul: `<div class="enonce">Calculer 3a + 2b pour a = 5 et b = 2</div>
+             <div class="ligne">3<span class="hl-sub">a</span> + 2b</div>
+             <div class="ligne">= 3 × <span class="hl-orange">5</span> + 2b</div>`
+  },
+  {
+    text: "On remplace b par 2 : 2b devient 2 × 2.",
+    exprHTML: `<span class="tok-num">3</span><span class="tok-var substituted">(5)</span><span class="tok-op"> + </span><span class="tok-num">2</span><span class="tok-var substituted" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd">(2)</span>`,
+    subLabel: 'a = 5 &nbsp; b = 2',
+    calcul: `<div class="enonce">Calculer 3a + 2b pour a = 5 et b = 2</div>
+             <div class="ligne">3<span class="hl-sub">a</span> + 2<span style="background:#dbeafe;color:#1d4ed8;font-weight:bold;padding:1px 6px;border-radius:5px;font-family:Courier New,monospace;border:1px solid #93c5fd">b</span></div>
+             <div class="ligne">= 3 × <span class="hl-orange">5</span> + 2 × <span class="hl-blue">2</span></div>`
+  },
+  {
+    text: "On calcule les produits : 3 × 5 = 15 et 2 × 2 = 4.",
+    exprHTML: `<span class="tok-num">3</span><span class="tok-var substituted">(5)</span><span class="tok-op"> + </span><span class="tok-num">2</span><span class="tok-var substituted" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd">(2)</span>`,
+    subLabel: '3×5 = 15 &nbsp; 2×2 = 4',
+    calcul: `<div class="enonce">Calculer 3a + 2b pour a = 5 et b = 2</div>
+             <div class="ligne">= 3 × <span class="hl-orange">5</span> + 2 × <span class="hl-blue">2</span></div>
+             <div class="ligne">= <span class="hl-orange">15</span> + <span class="hl-blue">4</span></div>`
+  },
+  {
+    text: "15 + 4 = 19. La valeur de 3a + 2b pour a = 5 et b = 2 est 19.",
+    exprHTML: `<span class="tok-res">19</span>`,
+    subLabel: 'résultat pour a=5, b=2',
+    calcul: `<div class="enonce">Calculer 3a + 2b pour a = 5 et b = 2</div>
+             <div class="ligne">= 3 × <span class="hl-orange">5</span> + 2 × <span class="hl-blue">2</span></div>
+             <div class="ligne">= <span class="hl-orange">15</span> + <span class="hl-blue">4</span></div>
+             <div class="ligne">= <span class="hl-green">19</span></div>
+             <div class="conclusion-ligne">Pour a = 5 et b = 2, &nbsp; 3a + 2b = 19</div>`
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#9a3412','#1d4ed8','#15803d'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('calcul-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1,etapes2][mode].length;if(etape<maxE-1){etape++;render();}}
+
+function render(){
+  const etapesArr=[etapes0,etapes1,etapes2][mode];
+  const e=etapesArr[etape];
+  document.getElementById('expr-box').innerHTML=
+    `<div class="expr-line">${e.exprHTML}</div>
+     <div class="sub-label">${e.subLabel}</div>`;
+  document.getElementById('calcul-box').innerHTML=e.calcul;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
