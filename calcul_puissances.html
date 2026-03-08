@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calcul de puissances</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f3ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #3730a3; color: white; font-size: 1.25em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 11px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 14px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #3730a3; color: white; border-color: #3730a3; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+
+  /* AFFICHAGE PUISSANCE */
+  .puissance-display { background: white; border-radius: 16px; box-shadow: 0 2px 12px #0002; padding: 16px 10px 10px; margin: 8px auto; max-width: 480px; width: 95%; text-align: center; }
+  .big-expr { font-family: 'Courier New', monospace; font-size: 2em; font-weight: bold; color: #374151; display: flex; align-items: flex-start; justify-content: center; gap: 2px; flex-wrap: wrap; }
+  .big-expr .base { color: #3730a3; }
+  .big-expr .exp  { font-size: 0.55em; vertical-align: super; color: #b45309; margin-left:1px; }
+  .big-expr .base-neg { color: #9d174d; }
+
+  .decompo { font-family: 'Courier New', monospace; font-size: 1.15em; margin-top: 8px; color: #374151; min-height: 28px; }
+  .decompo .fact { display: inline-block; padding: 2px 5px; border-radius: 5px; margin: 1px; }
+  .fact-active { background: #ede9fe; color: #3730a3; font-weight: bold; }
+  .fact-done   { background: #f0fdf4; color: #14532d; font-weight: bold; }
+  .fact-neg-active { background: #fce7f3; color: #9d174d; font-weight: bold; }
+
+  /* CALCUL DÉTAILLÉ */
+  .calcul-box { background: white; border-radius: 14px; padding: 14px 20px; margin: 8px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #3730a3; font-size: 1em; line-height: 2.1; }
+  .calcul-box .regle { font-weight: bold; background: #ede9fe; color: #3730a3; border-radius: 8px; padding: 6px 14px; margin-bottom: 8px; text-align: center; font-size: 0.95em; }
+  .calcul-box .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .calcul-box .eq { min-width: 22px; color: #374151; }
+  .hl-purple { color: #3730a3; font-weight: bold; }
+  .hl-pink   { color: #9d174d; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+  .hl-green  { color: #047857; font-weight: bold; }
+  .hl-red    { color: #dc2626; font-weight: bold; }
+  .conclusion-ligne { background: #ede9fe; border-left: 4px solid #6366f1; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #1e1b4b; margin-top: 6px; font-family: 'Courier New', monospace; font-size: 1.05em; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 7px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.93em; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #3730a3; color: white; }
+
+  sup { font-size: 0.65em; vertical-align: super; }
+</style>
+</head>
+<body>
+<h1>⚡ Calcul de puissances</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Base positive</button>
+  <button class="tab tab2" onclick="setMode(1)">Base négative</button>
+</div>
+<div class="scene">
+  <div class="puissance-display" id="puissance-display"></div>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — BASE POSITIVE : 3⁴ = 81
+// ============================================================
+const etapes0 = [
+  {
+    text: "On veut calculer 3⁴. La base est 3, l'exposant est 4.",
+    display: { base: '3', exp: '4', decompo: '', result: '' },
+    calcul: `<div class="regle">aⁿ = a × a × a × … (n fois)</div>
+             <div class="ligne"><span class="hl-purple">Base</span> = <span class="hl-purple">3</span> &nbsp;|&nbsp; <span class="hl-orange">Exposant</span> = <span class="hl-orange">4</span></div>
+             <div class="ligne">3<sup>4</sup> signifie que l'on multiplie <span class="hl-purple">3</span> par lui-même <span class="hl-orange">4</span> fois.</div>`
+  },
+  {
+    text: "On écrit le développement : 3⁴ = 3 × 3 × 3 × 3 (le 3 apparaît 4 fois).",
+    display: { base: '3', exp: '4', decompo: '3 × 3 × 3 × 3', result: '', hlFacts: [0,1,2,3] },
+    calcul: `<div class="regle">aⁿ = a × a × a × … (n fois)</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-purple">3 × 3 × 3 × 3</span></div>
+             <div class="ligne">(le facteur <span class="hl-purple">3</span> est répété <span class="hl-orange">4</span> fois)</div>`
+  },
+  {
+    text: "On effectue le calcul de gauche à droite : 3 × 3 = 9.",
+    display: { base: '3', exp: '4', decompo: '9 × 3 × 3', result: '', hlFacts: [0,1], done: [0] },
+    calcul: `<div class="regle">aⁿ = a × a × a × … (n fois)</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-purple">3 × 3</span> × 3 × 3</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-green">9</span> × 3 × 3</div>`
+  },
+  {
+    text: "On continue : 9 × 3 = 27.",
+    display: { base: '3', exp: '4', decompo: '27 × 3', result: '', hlFacts: [0,1], done: [0] },
+    calcul: `<div class="regle">aⁿ = a × a × a × … (n fois)</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> 3 × 3 × 3 × 3</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-green">9</span> × 3 × 3</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-green">27</span> × 3</div>`
+  },
+  {
+    text: "Dernier calcul : 27 × 3 = 81.",
+    display: { base: '3', exp: '4', decompo: '', result: '81' },
+    calcul: `<div class="regle">aⁿ = a × a × a × … (n fois)</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> 3 × 3 × 3 × 3</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-green">9</span> × 3 × 3</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-green">27</span> × 3</div>
+             <div class="ligne">3<sup>4</sup> <span class="eq">=</span> <span class="hl-green">81</span></div>
+             <div class="conclusion-ligne">3⁴ = 81</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — BASE NÉGATIVE : deux cas
+// (−2)³ = −8  (exposant impair → résultat négatif)
+// (−2)⁴ = 16  (exposant pair → résultat positif)
+// + attention aux parenthèses : −2⁴ ≠ (−2)⁴
+// ============================================================
+const etapes1 = [
+  {
+    text: "Avec une base négative, les parenthèses sont OBLIGATOIRES. (−2)³ ≠ −2³. On commence par calculer (−2)³.",
+    display: { base: '−2', exp: '3', decompo: '', result: '', neg: true },
+    calcul: `<div class="regle">(−a)ⁿ : on multiplie (−a) par lui-même n fois</div>
+             <div class="ligne"><span class="hl-pink">(−2)</span><sup>3</sup> signifie <span class="hl-pink">(−2)</span> × <span class="hl-pink">(−2)</span> × <span class="hl-pink">(−2)</span></div>
+             <div class="attention">⚠️ Les parenthèses sont indispensables autour d'une base négative.</div>`
+  },
+  {
+    text: "On développe : (−2)³ = (−2) × (−2) × (−2). On multiplie deux à deux.",
+    display: { base: '−2', exp: '3', decompo: '(−2) × (−2) × (−2)', result: '', neg: true },
+    calcul: `<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+             <div class="ligne">(−2)<sup>3</sup> <span class="eq">=</span> <span class="hl-pink">(−2) × (−2)</span> × (−2)</div>
+             <div class="ligne"><span class="hl-pink">(−2) × (−2)</span> <span class="eq">=</span> <span class="hl-green">+4</span> &nbsp;<span class="hl-orange">(− × − = +)</span></div>`
+  },
+  {
+    text: "4 × (−2) = −8. Un négatif × un positif = négatif.",
+    display: { base: '−2', exp: '3', decompo: '', result: '−8', neg: true },
+    calcul: `<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+             <div class="ligne">(−2)<sup>3</sup> <span class="eq">=</span> (−2) × (−2) × (−2)</div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-green">+4</span> × <span class="hl-pink">(−2)</span></div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-red">−8</span> &nbsp;<span class="hl-orange">(+ × − = −)</span></div>
+             <div class="conclusion-ligne">(−2)³ = −8</div>
+             <div class="attention">Exposant <strong>impair</strong> → résultat <strong>négatif</strong></div>`
+  },
+  {
+    text: "Maintenant calculons (−2)⁴. L'exposant est pair : que va-t-il se passer ?",
+    display: { base: '−2', exp: '4', decompo: '', result: '', neg: true },
+    calcul: `<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+             <div class="ligne">(−2)<sup>4</sup> <span class="eq">=</span> <span class="hl-pink">(−2) × (−2) × (−2) × (−2)</span></div>`
+  },
+  {
+    text: "(−2) × (−2) = +4 et (−2) × (−2) = +4. Puis 4 × 4 = 16.",
+    display: { base: '−2', exp: '4', decompo: '', result: '+16', neg: true },
+    calcul: `<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+             <div class="ligne">(−2)<sup>4</sup> <span class="eq">=</span> (−2) × (−2) × (−2) × (−2)</div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-green">+4</span> × <span class="hl-green">+4</span> &nbsp;<span class="hl-orange">(− × − = + deux fois)</span></div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-green">+16</span></div>
+             <div class="conclusion-ligne">(−2)⁴ = +16</div>
+             <div class="attention">Exposant <strong>pair</strong> → résultat <strong>positif</strong></div>`
+  },
+  {
+    text: "⚠️ Attention ! −2⁴ ≠ (−2)⁴. Sans parenthèses, on calcule d'abord 2⁴ = 16, puis on applique le signe −.",
+    display: { base: '2', exp: '4', decompo: '', result: '', neg: false, warning: true },
+    calcul: `<div class="regle">Sans parenthèses : −2⁴ = −(2⁴)</div>
+             <div class="ligne">−2<sup>4</sup> <span class="eq">=</span> −(2 × 2 × 2 × 2)</div>
+             <div class="ligne"><span class="eq">=</span> −(<span class="hl-green">16</span>)</div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-red">−16</span></div>
+             <div class="conclusion-ligne">−2⁴ = −16 &nbsp;≠&nbsp; (−2)⁴ = +16</div>
+             <div class="attention">⚠️ <strong>−2⁴</strong> : le signe − n'est PAS dans la puissance.<br><strong>(−2)⁴</strong> : le signe − EST dans la puissance.</div>`
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#3730a3','#9d174d'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('calcul-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// AFFICHAGE PUISSANCE
+// ============================================================
+function renderDisplay(d) {
+  const col = d.neg ? '#9d174d' : '#3730a3';
+  let html = `<div class="big-expr">`;
+
+  if(d.warning) {
+    // Affichage −2⁴ sans parenthèses
+    html += `<span style="color:#dc2626;font-size:0.9em">−</span>`;
+    html += `<span class="base" style="color:#3730a3">${d.base}</span>`;
+    html += `<span class="exp" style="color:#b45309">${d.exp}</span>`;
+  } else if(d.neg) {
+    html += `<span class="base-neg">(${d.base})</span>`;
+    html += `<span class="exp">${d.exp}</span>`;
+  } else {
+    html += `<span class="base">${d.base}</span>`;
+    html += `<span class="exp">${d.exp}</span>`;
+  }
+  html += `</div>`;
+
+  // Décomposition
+  if(d.decompo) {
+    html += `<div class="decompo">${d.decompo}</div>`;
+  }
+
+  // Résultat
+  if(d.result) {
+    const rcol = d.result.startsWith('−') ? '#dc2626' : '#047857';
+    html += `<div style="font-size:1.6em;font-weight:bold;color:${rcol};margin-top:8px;font-family:'Courier New',monospace">= ${d.result}</div>`;
+  }
+
+  document.getElementById('puissance-display').innerHTML = html;
+}
+
+function render() {
+  const etapesArr=[etapes0,etapes1][mode];
+  const e=etapesArr[etape];
+  renderDisplay(e.display);
+  document.getElementById('calcul-box').innerHTML=e.calcul;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
