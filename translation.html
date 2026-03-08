@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f8f4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #5b21b6; color: white; font-size: 1.3em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 13px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #4c1d95; border: 2px solid #a78bfa; }
+  .tab2 { background: #ecfdf5; color: #064e3b; border: 2px solid #6ee7b7; }
+  .tab3 { background: #fff7ed; color: #7c2d12; border: 2px solid #fdba74; }
+  .tab1.active { background: #5b21b6; color: white; border-color: #5b21b6; }
+  .tab2.active { background: #047857; color: white; border-color: #047857; }
+  .tab3.active { background: #c2410c; color: white; border-color: #c2410c; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#canvas { width: 100%; max-width: 500px; height: 280px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .info-box { background: white; border-radius: 14px; padding: 12px 18px; margin: 8px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #5b21b6; min-height: 46px; line-height: 1.6; }
+  .info-box .hl-purple { color: #5b21b6; font-weight: bold; }
+  .info-box .hl-green  { color: #047857; font-weight: bold; }
+  .info-box .hl-orange { color: #c2410c; font-weight: bold; }
+  .info-box .conclusion { background: #ede9fe; border-left: 4px solid #7c3aed; padding: 7px 12px; border-radius: 8px; margin-top: 8px; font-weight: bold; color: #4c1d95; }
+  .info-box .attention  { background: #fff7ed; border-left: 4px solid #f97316; padding: 7px 12px; border-radius: 8px; margin-top: 8px; color: #7c2d12; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; min-height: 46px; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #5b21b6; color: white; }
+</style>
+</head>
+<body>
+<h1>➡️ Translation</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Image d'un point</button>
+  <button class="tab tab2" onclick="setMode(1)">Image d'une figure</button>
+  <button class="tab tab3" onclick="setMode(2)">Reconnaître et nommer</button>
+</div>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 500 280"></svg>
+  <div class="info-box" id="info-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// Translation : D→E (décalage dx=130, dy=-50)
+const dx = 130, dy = -55;
+
+// ============================================================
+// MODE 0 — IMAGE D'UN POINT
+// Translation qui transforme D en E → image de A ?
+// D=(70,190), E=(200,135), A=(90,110)
+// A' = A + (E-D)
+// ============================================================
+const D0 = {x:70,  y:190, l:'D'};
+const E0 = {x:200, y:135, l:'E'};
+const A0 = {x:110, y:115, l:'A'};
+const A0p= {x:A0.x+dx, y:A0.y+dy, l:"A'"};
+
+const etapes0 = [
+  {
+    text: "On considère la translation qui transforme D en E. On veut trouver l'image du point A par cette même translation.",
+    showD:true, showE:true, showA:true, showAp:false, showDE:false, showDEarrow:false, showAAp:false,
+    info: `La translation qui transforme D en E déplace chaque point <span class='hl-purple'>du même déplacement</span> que D vers E.`
+  },
+  {
+    text: "Première condition : la demi-droite [AA') doit être parallèle à la droite (DE), dans le même sens.",
+    showD:true, showE:true, showA:true, showAp:false, showDE:true, showDEarrow:false, showAAp:false,
+    info: `<span class='hl-purple'>[AA') est parallèle à (DE)</span> — même direction et même sens que de D vers E.`
+  },
+  {
+    text: "Deuxième condition : AA' = DE. On reporte depuis A la même longueur que DE, dans le même sens.",
+    showD:true, showE:true, showA:true, showAp:false, showDE:true, showDEarrow:true, showAAp:true,
+    info: `<span class='hl-purple'>[AA') ∥ (DE)</span> et <span class='hl-purple'>AA' = DE</span> (même longueur, même sens).`
+  },
+  {
+    text: "On place A'. Les quatre points A, A', E, D forment le parallélogramme AA'ED.",
+    showD:true, showE:true, showA:true, showAp:true, showDE:true, showDEarrow:true, showAAp:true,
+    info: `<div class='conclusion'>A' est l'image de A par la translation qui transforme D en E.<br><span class='hl-purple'>[AA') ∥ (DE)</span> &nbsp;|&nbsp; <span class='hl-purple'>AA' = DE</span><br>A, A', E, D forment le parallélogramme AA'ED.</div>`
+  },
+  {
+    text: "✅ AA'ED est un parallélogramme : AA' et DE sont parallèles et de même longueur.",
+    showD:true, showE:true, showA:true, showAp:true, showDE:true, showDEarrow:true, showAAp:true, showParal:true,
+    info: `<div class='conclusion'>Propriété : AA'ED est un parallélogramme.<br>[AA') ∥ (DE) &nbsp;|&nbsp; AA' = DE<br>C'est toujours vrai pour toute translation.</div>`
+  }
+];
+
+// ============================================================
+// MODE 1 — IMAGE D'UNE FIGURE (triangle)
+// Translation qui transforme D en E
+// Triangle T1 : P1=(60,200), P2=(140,210), P3=(90,130)
+// ============================================================
+const D1 = {x:55, y:230, l:'D'};
+const E1 = {x:185, y:175, l:'E'};
+const tri1 = [{x:60,y:195,l:'A'},{x:145,y:205,l:'B'},{x:88,y:128,l:'C'}];
+const tri2 = tri1.map(p=>({x:p.x+dx,y:p.y+dy,l:p.l+"'"}));
+
+const etapes1 = [
+  {
+    text: "On considère la translation qui transforme D en E. On veut construire l'image du triangle ABC.",
+    show: 0,
+    info: `Pour trouver l'image d'une figure, on cherche <span class='hl-green'>l'image de chaque sommet</span>, puis on relie les images.`
+  },
+  {
+    text: "On cherche l'image de A : on applique à A le même déplacement que de D vers E. On obtient A'.",
+    show: 1,
+    info: `A' est l'image de A. <span class='hl-green'>DA A'E forme un parallélogramme</span>.`
+  },
+  {
+    text: "On cherche l'image de B de la même façon. On obtient B'.",
+    show: 2,
+    info: `B' est l'image de B. On refait le même déplacement que D→E depuis B.`
+  },
+  {
+    text: "On cherche l'image de C. On obtient C'.",
+    show: 3,
+    info: `C' est l'image de C.`
+  },
+  {
+    text: "On relie A', B', C' pour former le triangle image A'B'C'.",
+    show: 4,
+    info: `<div class='conclusion'>Le triangle A'B'C' est l'image du triangle ABC par la translation qui transforme D en E.<br>Les deux triangles sont superposables (même forme, même taille).</div>`
+  }
+];
+
+// ============================================================
+// MODE 2 — RECONNAÎTRE ET NOMMER
+// Deux figures : un triangle et son image. Trouver la translation.
+// ============================================================
+const triR1 = [{x:55,y:200,l:'A'},{x:155,y:215,l:'B'},{x:95,y:120,l:'C'}];
+const dxR = 170, dyR = -30;
+const triR2 = triR1.map((p,i)=>({x:p.x+dxR,y:p.y+dyR,l:["A'","B'","C'"][i]}));
+
+const etapes2 = [
+  {
+    text: "On voit deux triangles. On veut savoir si l'un est l'image de l'autre par une translation, et si oui, la nommer.",
+    show: 0,
+    info: `Pour reconnaître une translation : vérifier que <span class='hl-orange'>toutes les flèches</span> reliant les sommets correspondants sont <span class='hl-orange'>parallèles, de même sens et de même longueur</span>.`
+  },
+  {
+    text: "On relie A à A' et on observe le déplacement.",
+    show: 1,
+    info: `De A à A' : on se déplace vers la droite et légèrement vers le haut.`
+  },
+  {
+    text: "On relie B à B' : même direction, même sens, même longueur que AA'. Et C à C' : idem !",
+    show: 2,
+    info: `AA', BB', CC' sont <span class='hl-orange'>parallèles, de même sens et de même longueur</span> ✓`
+  },
+  {
+    text: "C'est bien une translation ! Comment la nommer ? On choisit une paire de points correspondants.",
+    show: 3,
+    info: `<div class='conclusion'>On peut nommer cette translation de plusieurs façons :<br>
+      • "la translation qui transforme A en A'"<br>
+      • "la translation qui transforme B en B'"<br>
+      • "la translation qui transforme C en C'"<br>
+      Toutes ces formulations désignent la <strong>même</strong> translation.</div>
+      <div class='attention'>⚠️ On ne parle PAS de vecteur ici. On dit bien <strong>"la translation qui transforme ... en ..."</strong></div>`
+  }
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#5b21b6','#047857','#c2410c'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('info-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1,etapes2][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function point(x,y,col,r=5){return `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;}
+function label(x,y,txt,col,ox=0,oy=0){return `<text x="${x+ox}" y="${y+oy}" font-size="14" font-weight="bold" fill="${col}" text-anchor="middle">${txt}</text>`;}
+
+function arrow(x1,y1,x2,y2,col,dash='',id=''){
+  const dx2=x2-x1,dy2=y2-y1,len=Math.sqrt(dx2*dx2+dy2*dy2);
+  if(len<1)return'';
+  const ux=dx2/len,uy=dy2/len;
+  // Flèche : raccourcir légèrement pour ne pas dépasser le point
+  const ex=x2-ux*7,ey=y2-uy*7;
+  const hx=-uy*7,hy=ux*7;
+  const mid = `M${ex.toFixed(1)},${ey.toFixed(1)} L${(ex-ux*12+hx).toFixed(1)},${(ey-uy*12+hy).toFixed(1)} L${(ex-ux*12-hx).toFixed(1)},${(ey-uy*12-hy).toFixed(1)} Z`;
+  return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${ex.toFixed(1)}" y2="${ey.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-dasharray="${dash}"/>
+          <path d="${mid}" fill="${col}"/>`;
+}
+
+function polyStroke(pts,col,fill='none',sw=2.5){
+  return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${fill}" stroke="${col}" stroke-width="${sw}"/>`;
+}
+
+function grid(){
+  let h='';
+  for(let x=0;x<=500;x+=20) h+=`<line x1="${x}" y1="0" x2="${x}" y2="280" stroke="#f1f5f9" stroke-width="0.7"/>`;
+  for(let y=0;y<=280;y+=20) h+=`<line x1="0" y1="${y}" x2="500" y2="${y}" stroke="#f1f5f9" stroke-width="0.7"/>`;
+  return h;
+}
+
+// ============================================================
+// RENDER MODE 0
+// ============================================================
+function renderMode0(){
+  const e=etapes0[etape];
+  let h=grid();
+
+  // D et E toujours
+  if(e.showDE){
+    // Segment DE
+    h+=`<line x1="${D0.x}" y1="${D0.y}" x2="${E0.x}" y2="${E0.y}" stroke="#5b21b6" stroke-width="1.5" stroke-dasharray="6,3"/>`;
+  }
+  if(e.showDEarrow){
+    h+=arrow(D0.x,D0.y,E0.x,E0.y,'#5b21b6');
+  }
+
+  // Flèche A→A'
+  if(e.showAAp){
+    h+=arrow(A0.x,A0.y,A0p.x,A0p.y,'#047857','6,3');
+  }
+
+  // Parallélogramme D,A,E,A'
+  if(e.showParal){
+    h+=`<polygon points="${A0.x},${A0.y} ${A0p.x},${A0p.y} ${E0.x},${E0.y} ${D0.x},${D0.y}" fill="rgba(91,33,182,0.07)" stroke="#5b21b6" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+    // Label parallélogramme
+    h+=`<text x="${(D0.x+A0.x+E0.x+A0p.x)/4}" y="${(D0.y+A0.y+E0.y+A0p.y)/4+4}" font-size="11" text-anchor="middle" fill="#5b21b6" font-style="italic">AA'ED</text>`;
+  }
+
+  if(e.showD) { h+=point(D0.x,D0.y,'#5b21b6'); h+=label(D0.x,D0.y,'D','#5b21b6',-14,4); }
+  if(e.showE) { h+=point(E0.x,E0.y,'#5b21b6'); h+=label(E0.x,E0.y,'E','#5b21b6',14,4); }
+  if(e.showA) { h+=point(A0.x,A0.y,'#be185d'); h+=label(A0.x,A0.y,'A','#be185d',-14,-4); }
+  if(e.showAp){ h+=point(A0p.x,A0p.y,'#047857',6); h+=label(A0p.x,A0p.y,"A'",'#047857',16,-4); }
+
+  document.getElementById('canvas').innerHTML=h;
+  document.getElementById('info-box').innerHTML=e.info;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapes0.length}`;
+}
+
+// ============================================================
+// RENDER MODE 1
+// ============================================================
+function renderMode1(){
+  const e=etapes1[etape];
+  let h=grid();
+  const col='#047857';
+
+  // Triangle original toujours
+  h+=polyStroke(tri1,'#5b21b6','rgba(91,33,182,0.08)');
+  tri1.forEach(p=>{
+    h+=point(p.x,p.y,'#5b21b6');
+    const ox=p.l==='B'?10:p.l==='A'?-14:-10, oy=p.l==='C'?-10:14;
+    h+=label(p.x,p.y,p.l,'#5b21b6',ox,oy);
+  });
+
+  // D et E toujours (pour référence)
+  h+=arrow(D1.x,D1.y,E1.x,E1.y,'#94a3b8');
+  h+=point(D1.x,D1.y,'#94a3b8');
+  h+=label(D1.x,D1.y,'D','#64748b',-12,6);
+  h+=point(E1.x,E1.y,'#94a3b8');
+  h+=label(E1.x,E1.y,'E','#64748b',12,6);
+
+  // Selon l'étape, montrer les images progressivement
+  const showPts = e.show; // 0=rien, 1=A', 2=A'B', 3=A'B'C', 4=triangle complet
+
+  for(let i=0;i<Math.min(showPts,3);i++){
+    const p=tri1[i], p2=tri2[i];
+    // Flèche de déplacement
+    h+=arrow(p.x,p.y,p2.x,p2.y,col,'5,3');
+    // Point image
+    h+=point(p2.x,p2.y,col,6);
+    const ox=p2.l==="B'"?10:p2.l==="A'"?-16:-10, oy=p2.l==="C'"?-10:14;
+    h+=label(p2.x,p2.y,p2.l,col,ox,oy);
+  }
+
+  // Triangle image complet
+  if(showPts>=4){
+    h+=polyStroke(tri2,col,'rgba(4,120,87,0.1)');
+  }
+
+  document.getElementById('canvas').innerHTML=h;
+  document.getElementById('info-box').innerHTML=e.info;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapes1.length}`;
+}
+
+// ============================================================
+// RENDER MODE 2
+// ============================================================
+function renderMode2(){
+  const e=etapes2[etape];
+  let h=grid();
+  const col='#c2410c';
+
+  // Triangles toujours visibles
+  h+=polyStroke(triR1,'#5b21b6','rgba(91,33,182,0.08)');
+  h+=polyStroke(triR2,col,'rgba(194,65,12,0.08)');
+  triR1.forEach(p=>{
+    h+=point(p.x,p.y,'#5b21b6');
+    const ox=p.l==='B'?10:p.l==='A'?-14:-10, oy=p.l==='C'?-10:14;
+    h+=label(p.x,p.y,p.l,'#5b21b6',ox,oy);
+  });
+  triR2.forEach(p=>{
+    h+=point(p.x,p.y,col);
+    const ox=p.l==="B'"?10:p.l==="A'"?-16:-10, oy=p.l==="C'"?-10:14;
+    h+=label(p.x,p.y,p.l,col,ox,oy);
+  });
+
+  // Flèches selon étape
+  const showArrows = e.show;
+  if(showArrows>=1){
+    h+=arrow(triR1[0].x,triR1[0].y,triR2[0].x,triR2[0].y,'#f97316');
+  }
+  if(showArrows>=2){
+    h+=arrow(triR1[1].x,triR1[1].y,triR2[1].x,triR2[1].y,'#f97316');
+    h+=arrow(triR1[2].x,triR1[2].y,triR2[2].x,triR2[2].y,'#f97316');
+  }
+  if(showArrows>=3){
+    // Mettre en évidence AA' avec label "translation"
+    const mx=(triR1[0].x+triR2[0].x)/2, my=(triR1[0].y+triR2[0].y)/2;
+    h+=`<rect x="${(mx-55).toFixed(0)}" y="${(my-22).toFixed(0)}" width="110" height="18" rx="8" fill="#c2410c"/>`;
+    h+=`<text x="${mx.toFixed(0)}" y="${(my-9).toFixed(0)}" font-size="11" font-weight="bold" text-anchor="middle" fill="white">translation A→A'</text>`;
+  }
+
+  document.getElementById('canvas').innerHTML=h;
+  document.getElementById('info-box').innerHTML=e.info;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapes2.length}`;
+}
+
+// ============================================================
+function render(){
+  if(mode===0) renderMode0();
+  else if(mode===1) renderMode1();
+  else renderMode2();
+}
+render();
+</script>
+</body>
+</html>

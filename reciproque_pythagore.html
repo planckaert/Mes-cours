@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réciproque de Pythagore</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fefce8; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #713f12; color: white; font-size: 1.25em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 12px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 16px; border-radius: 20px; border: none; font-size: 0.83em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #fee2e2; color: #7f1d1d; border: 2px solid #fca5a5; }
+  .tab1.active { background: #14532d; color: white; border-color: #14532d; }
+  .tab2.active { background: #991b1b; color: white; border-color: #991b1b; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#canvas { width: 100%; max-width: 500px; height: 230px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calcul-box { background: white; border-radius: 14px; padding: 14px 20px; margin: 8px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #14532d; font-size: 1em; line-height: 2.1; }
+  .calcul-box .enonce { font-weight: bold; color: #713f12; background: #fef9c3; border-radius: 8px; padding: 7px 14px; margin-bottom: 8px; font-size: 0.95em; }
+  .calcul-box .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .calcul-box .eq { min-width: 22px; color: #374151; }
+
+  .hl-green  { color: #047857; font-weight: bold; }
+  .hl-blue   { color: #1d4ed8; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+  .hl-red    { color: #dc2626; font-weight: bold; }
+
+  .conclusion-ok  { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; font-size: 0.97em; line-height: 1.5; }
+  .conclusion-non { background: #fff1f2; border-left: 4px solid #f43f5e; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #881337; margin-top: 6px; font-size: 0.97em; line-height: 1.5; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 7px 12px; border-radius: 8px; color: #7c2d12; margin-top: 6px; font-size: 0.9em; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #14532d; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Réciproque du théorème de Pythagore</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Triangle rectangle ✓</button>
+  <button class="tab tab2" onclick="setMode(1)">Triangle non rectangle ✗</button>
+</div>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 500 230"></svg>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — triangle avec AB=5, BC=4, AC=3 → rectangle en C
+// Le plus grand côté est AB=5
+// ============================================================
+// On dessine un triangle QUELCONQUE au départ, puis on révèle l'angle droit
+const Tm0 = {
+  A: {x:80,  y:55,  l:'A'},
+  B: {x:340, y:200, l:'B'},
+  C: {x:80,  y:200, l:'C'},
+  AB: 5, BC: 4, AC: 3,
+  grand: 'AB', rectEn: 'C'
+};
+
+// ============================================================
+// MODE 1 — triangle avec AB=7, BC=4, AC=3 → non rectangle
+// 7² = 49,  4²+3² = 16+9 = 25  → 49 ≠ 25
+// ============================================================
+const Tm1 = {
+  // Triangle non rectangle
+  A: {x:90,  y:60,  l:'A'},
+  B: {x:370, y:200, l:'B'},
+  C: {x:130, y:200, l:'C'},
+  AB: 7, BC: 4, AC: 3,
+  grand: 'AB'
+};
+
+// ============================================================
+// ÉTAPES
+// ============================================================
+const etapes0 = [
+  {
+    text: "On considère un triangle ABC dont les côtés mesurent : AB = 5 cm, BC = 4 cm, AC = 3 cm. On veut savoir si ce triangle est rectangle.",
+    show: 'tri',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 5 cm, BC = 4 cm, AC = 3 cm.<br>Ce triangle est-il rectangle ?</div>
+             <div>On identifie le plus grand côté : <span class="hl-green">AB = 5 cm</span>. Si le triangle est rectangle, l'angle droit est en face de ce côté.</div>`
+  },
+  {
+    text: "On va tester si AB² est égal à AC² + BC². On calcule d'abord AB² = 5².",
+    show: 'tri',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 5 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne">On calcule <span class="hl-green">AB²</span> : &nbsp; <span class="hl-green">5²</span> <span class="eq">=</span> <span class="hl-green">25</span></div>`
+  },
+  {
+    text: "On calcule ensuite AC² + BC² = 3² + 4².",
+    show: 'tri',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 5 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne">On calcule <span class="hl-green">AB²</span> : &nbsp; <span class="hl-green">5²</span> <span class="eq">=</span> <span class="hl-green">25</span></div>
+             <div class="ligne">On calcule <span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> : &nbsp; <span class="hl-blue">3²</span> + <span class="hl-blue">4²</span> <span class="eq">=</span> <span class="hl-blue">9</span> + <span class="hl-blue">16</span> <span class="eq">=</span> <span class="hl-blue">25</span></div>`
+  },
+  {
+    text: "On compare : AB² = 25 et AC² + BC² = 25. Les deux résultats sont ÉGAUX !",
+    show: 'compare',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 5 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne"><span class="hl-green">AB²</span> <span class="eq">=</span> <span class="hl-green">25</span></div>
+             <div class="ligne"><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> <span class="eq">=</span> <span class="hl-blue">25</span></div>
+             <div class="ligne">Donc &nbsp; <span class="hl-green">AB²</span> <span class="eq">=</span> <span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> &nbsp; ✓</div>`
+  },
+  {
+    text: "✅ D'après la réciproque du théorème de Pythagore, le triangle ABC est rectangle !",
+    show: 'rect',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 5 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne"><span class="hl-green">AB²</span> <span class="eq">=</span> <span class="hl-green">25</span></div>
+             <div class="ligne"><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> <span class="eq">=</span> <span class="hl-blue">25</span></div>
+             <div class="ligne">Donc &nbsp; <span class="hl-green">AB²</span> <span class="eq">=</span> <span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> &nbsp; ✓</div>
+             <div class="conclusion-ok">D'après la réciproque du théorème de Pythagore,<br>le triangle ABC est rectangle en C.</div>`
+  },
+];
+
+const etapes1 = [
+  {
+    text: "On considère un triangle ABC dont les côtés mesurent : AB = 7 cm, BC = 4 cm, AC = 3 cm. On veut savoir si ce triangle est rectangle.",
+    show: 'tri',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 7 cm, BC = 4 cm, AC = 3 cm.<br>Ce triangle est-il rectangle ?</div>
+             <div>On identifie le plus grand côté : <span class="hl-red">AB = 7 cm</span>. On teste si AB² = AC² + BC².</div>`
+  },
+  {
+    text: "On calcule AB² = 7².",
+    show: 'tri',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 7 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne">On calcule <span class="hl-red">AB²</span> : &nbsp; <span class="hl-red">7²</span> <span class="eq">=</span> <span class="hl-red">49</span></div>`
+  },
+  {
+    text: "On calcule AC² + BC² = 3² + 4².",
+    show: 'tri',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 7 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne">On calcule <span class="hl-red">AB²</span> : &nbsp; <span class="hl-red">7²</span> <span class="eq">=</span> <span class="hl-red">49</span></div>
+             <div class="ligne">On calcule <span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> : &nbsp; <span class="hl-blue">3²</span> + <span class="hl-blue">4²</span> <span class="eq">=</span> <span class="hl-blue">9</span> + <span class="hl-blue">16</span> <span class="eq">=</span> <span class="hl-blue">25</span></div>`
+  },
+  {
+    text: "On compare : AB² = 49 et AC² + BC² = 25. Les deux résultats sont DIFFÉRENTS !",
+    show: 'compare',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 7 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne"><span class="hl-red">AB²</span> <span class="eq">=</span> <span class="hl-red">49</span></div>
+             <div class="ligne"><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> <span class="eq">=</span> <span class="hl-blue">25</span></div>
+             <div class="ligne">Donc &nbsp; <span class="hl-red">AB²</span> <span class="eq">≠</span> <span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> &nbsp; ✗</div>`
+  },
+  {
+    text: "Les deux valeurs sont différentes : si le triangle était rectangle, l'égalité serait vérifiée. Donc le triangle ABC n'est pas rectangle.",
+    show: 'nonrect',
+    calcul: `<div class="enonce">Dans le triangle ABC : AB = 7 cm, BC = 4 cm, AC = 3 cm.</div>
+             <div class="ligne"><span class="hl-red">AB²</span> <span class="eq">=</span> <span class="hl-red">49</span></div>
+             <div class="ligne"><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> <span class="eq">=</span> <span class="hl-blue">25</span></div>
+             <div class="ligne">Donc &nbsp; <span class="hl-red">AB²</span> <span class="eq">≠</span> <span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span> &nbsp; ✗</div>
+             <div class="conclusion-non">AB² ≠ AC² + BC².<br>Si le triangle ABC était rectangle, cette égalité serait vérifiée.<br>Donc le triangle ABC n'est pas rectangle.</div>
+             <div class="attention">⚠️ On ne peut pas dire "le triangle est quelconque" ou "le triangle est obtus".<br>On dit uniquement : <strong>"le triangle ABC n'est pas rectangle"</strong>.</div>`
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#14532d','#991b1b'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('calcul-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// DESSIN SVG
+// ============================================================
+function drawScene() {
+  const t = mode===0 ? Tm0 : Tm1;
+  const e = [etapes0,etapes1][mode][etape];
+  const col = mode===0 ? '#14532d' : '#991b1b';
+  const {A,B,C} = t;
+  const show = e.show;
+  let h='';
+
+  // Fond quadrillé
+  for(let x=0;x<=500;x+=20) h+=`<line x1="${x}" y1="0" x2="${x}" y2="230" stroke="#fef9c3" stroke-width="0.8"/>`;
+  for(let y=0;y<=230;y+=20) h+=`<line x1="0" y1="${y}" x2="500" y2="${y}" stroke="#fef9c3" stroke-width="0.8"/>`;
+
+  const colGrand = mode===0 ? '#047857' : '#dc2626';
+  const colPetit = '#1d4ed8';
+
+  // Triangle
+  const showRect = show==='rect';
+  const showNon  = show==='nonrect';
+  const fillCol  = showRect ? 'rgba(20,83,45,0.10)' : showNon ? 'rgba(153,27,27,0.08)' : 'rgba(113,63,18,0.06)';
+  h+=`<polygon points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}" fill="${fillCol}" stroke="${col}" stroke-width="2.5"/>`;
+
+  // Angle droit en C si rectangle
+  if(showRect && mode===0){
+    const rightPt=C, adj1=A, adj2=B;
+    const d1x=adj1.x-rightPt.x,d1y=adj1.y-rightPt.y,l1=Math.sqrt(d1x*d1x+d1y*d1y);
+    const d2x=adj2.x-rightPt.x,d2y=adj2.y-rightPt.y,l2=Math.sqrt(d2x*d2x+d2y*d2y);
+    const sz=14;
+    const p1={x:rightPt.x+(d1x/l1)*sz,y:rightPt.y+(d1y/l1)*sz};
+    const p2={x:rightPt.x+(d2x/l2)*sz,y:rightPt.y+(d2y/l2)*sz};
+    const pm={x:p1.x+p2.x-rightPt.x,y:p1.y+p2.y-rightPt.y};
+    h+=`<polyline points="${p1.x},${p1.y} ${pm.x},${pm.y} ${p2.x},${p2.y}" fill="none" stroke="#f97316" stroke-width="2.5"/>`;
+  }
+
+  // Labels côtés
+  function midLabel(p1,p2,val,c,side=1){
+    const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.sqrt(dx*dx+dy*dy);
+    const nx=-dy/len*20*side,ny=dx/len*20*side;
+    return `<text x="${(mx+nx).toFixed(1)}" y="${(my+ny+4).toFixed(1)}" font-size="13" font-weight="bold" text-anchor="middle" fill="${c}">${val}</text>`;
+  }
+
+  const showLabels = ['tri','compare','rect','nonrect'].includes(show);
+  if(showLabels){
+    h+=midLabel(A,B, t.AB+' cm', colGrand, -1);
+    h+=midLabel(A,C, t.AC+' cm', colPetit, -1);
+    h+=midLabel(B,C, t.BC+' cm', colPetit, 1);
+  }
+
+  // Surligné du grand côté lors de la comparaison
+  if(show==='compare'||show==='rect'||show==='nonrect'){
+    h+=`<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${colGrand}" stroke-width="4"/>`;
+  }
+
+  // ≠ ou = sur le grand côté
+  if(show==='compare'){
+    const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+    const sym = mode===0 ? '=' : '≠';
+    const symcol = mode===0 ? '#047857' : '#dc2626';
+    h+=`<rect x="${(mx-22).toFixed(0)}" y="${(my-38).toFixed(0)}" width="44" height="26" rx="8" fill="${symcol}"/>`;
+    h+=`<text x="${mx.toFixed(0)}" y="${(my-19).toFixed(0)}" font-size="17" font-weight="bold" text-anchor="middle" fill="white">${sym}</text>`;
+  }
+
+  // Sommets
+  [A,B,C].forEach(p=>{
+    h+=`<circle cx="${p.x}" cy="${p.y}" r="5" fill="${col}" stroke="white" stroke-width="2"/>`;
+    const ox=p.x<100?-16:p.x>350?12:p.l==='C'?-14:0;
+    const oy=p.y<100?-10:18;
+    h+=`<text x="${p.x+ox}" y="${p.y+oy}" font-size="15" font-weight="bold" fill="${col}" text-anchor="middle">${p.l}</text>`;
+  });
+
+  // Label "angle droit en C" si rectangle
+  if(showRect){
+    h+=`<text x="${C.x-10}" y="${C.y-26}" font-size="12" font-weight="bold" fill="#f97316" text-anchor="middle">angle droit</text>`;
+  }
+
+  return h;
+}
+
+function render(){
+  const etapesArr=[etapes0,etapes1][mode];
+  const e=etapesArr[etape];
+  document.getElementById('canvas').innerHTML=drawScene();
+  document.getElementById('calcul-box').innerHTML=e.calcul;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

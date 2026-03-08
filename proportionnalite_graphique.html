@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proportionnalité et graphique</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #134e4a; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 10px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 12px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ccfbf1; color: #134e4a; border: 2px solid #5eead4; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #fee2e2; color: #7f1d1d; border: 2px solid #fca5a5; }
+  .tab1.active { background: #0f766e; color: white; border-color: #0f766e; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #dc2626; color: white; border-color: #dc2626; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Tableau de données */
+  .data-table { background: white; border-radius: 10px; box-shadow: 0 1px 6px #0002; overflow: hidden; margin: 6px auto; max-width: 480px; width: 95%; }
+  .data-table table { border-collapse: collapse; width: 100%; }
+  .data-table th { padding: 6px 8px; font-size: 0.82em; color: white; }
+  .data-table td { padding: 7px 10px; text-align: center; font-size: 0.92em; font-weight: bold; border: 1px solid #e5e7eb; }
+  .data-table td.hl { background: #fef9c3; color: #713f12; }
+
+  svg#canvas { width: 100%; max-width: 480px; height: 270px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .info-box { background: white; border-radius: 14px; padding: 12px 18px; margin: 7px auto; max-width: 460px; width: 95%; font-size: 0.95em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #0f766e; line-height: 1.6; }
+  .conclusion-ok  { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 7px 12px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .conclusion-non { background: #fff1f2; border-left: 4px solid #f43f5e; padding: 7px 12px; border-radius: 8px; font-weight: bold; color: #881337; margin-top: 6px; }
+  .hl-teal   { color: #0f766e; font-weight: bold; }
+  .hl-blue   { color: #1d4ed8; font-weight: bold; }
+  .hl-red    { color: #dc2626; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 460px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #0f766e; color: white; }
+</style>
+</head>
+<body>
+<h1>📈 Proportionnalité et graphique</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Construire le graphique</button>
+  <button class="tab tab2" onclick="setMode(1)">Reconnaître — Oui ✓</button>
+  <button class="tab tab3" onclick="setMode(2)">Reconnaître — Non ✗</button>
+</div>
+<div class="scene">
+  <div id="data-table-wrap"></div>
+  <svg id="canvas" viewBox="0 0 480 270"></svg>
+  <div class="info-box" id="info-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// DONNÉES
+// MODE 0 — construire : prix d'oranges (k=2,5 €/kg)
+// x : 0,1,2,3,4  y : 0,2.5,5,7.5,10
+// MODE 1 — reconnaître oui : même données, mais on reçoit le graphique
+// MODE 2 — deux cas : droite ne passant pas par 0 / courbe non droite
+// ============================================================
+
+const pL=50, pB=35, pT=18, pR=20;
+const W=480, H=270;
+const chartW=W-pL-pR, chartH=H-pB-pT;
+const maxX=5, maxY=12;
+
+function toSvg(x,y){
+  return {
+    sx: pL + (x/maxX)*chartW,
+    sy: pT + chartH - (y/maxY)*chartH
+  };
+}
+
+// Données mode 0
+const data0 = [
+  {x:0,y:0},{x:1,y:2.5},{x:2,y:5},{x:3,y:7.5},{x:4,y:10}
+];
+// Données mode 1 — proportionnel, même données
+const data1 = data0;
+// Données mode 2a — droite ne passant pas par 0 (abonnement+prix)
+const data2a = [{x:0,y:3},{x:1,y:5.5},{x:2,y:8},{x:3,y:10.5},{x:4,y:13}];
+// Données mode 2b — non droite (aire d'un carré selon côté)
+const data2b = [{x:0,y:0},{x:1,y:1},{x:2,y:4},{x:3,y:9},{x:4,y:16}];
+
+// ============================================================
+// ÉTAPES
+// ============================================================
+const etapes0 = [
+  {
+    text: "Tableau de proportionnalité : prix d'oranges à 2,50 €/kg. On va placer ces données sur un graphique.",
+    pts: 0, showLine: false, showOrigin: false, hlRow: -1,
+    info: `On place les axes : axe horizontal = <span class="hl-teal">quantité (kg)</span>, axe vertical = <span class="hl-teal">prix (€)</span>.`,
+    tableHL: -1
+  },
+  {
+    text: "On place le premier point : pour 0 kg, on paie 0 €. C'est l'origine (0 ; 0).",
+    pts: 1, showLine: false, showOrigin: true, hlRow: 0,
+    info: `Point (0 ; 0) : <span class="hl-orange">l'origine fait toujours partie du graphique</span> en situation de proportionnalité.`,
+    tableHL: 0
+  },
+  {
+    text: "On place le point (1 ; 2,5) : pour 1 kg on paie 2,50 €.",
+    pts: 2, showLine: false, showOrigin: true, hlRow: 1,
+    info: `On se déplace à x=1 sur l'axe horizontal, puis on monte à y=2,5.`,
+    tableHL: 1
+  },
+  {
+    text: "On place les points (2 ; 5), (3 ; 7,5) et (4 ; 10).",
+    pts: 5, showLine: false, showOrigin: true, hlRow: -1,
+    info: `Tous les points sont placés. On observe : ils semblent alignés !`,
+    tableHL: -1
+  },
+  {
+    text: "On relie tous les points par une droite. Cette droite passe par l'origine (0 ; 0).",
+    pts: 5, showLine: true, showOrigin: true, hlRow: -1,
+    info: `<div class="conclusion-ok">Le graphique d'une situation de proportionnalité est une droite qui passe par l'origine.</div>`,
+    tableHL: -1
+  },
+];
+
+const etapes1 = [
+  {
+    text: "On observe ce graphique. Est-ce une situation de proportionnalité ? On commence par vérifier si les points sont alignés.",
+    show: 'pts', submode: 'oui',
+    info: `Pour reconnaître une proportionnalité : vérifier <span class="hl-blue">1) que les points sont alignés</span> et <span class="hl-blue">2) que la droite passe par l'origine</span>.`,
+  },
+  {
+    text: "Les points sont bien alignés : on peut tracer une droite passant par tous les points.",
+    show: 'line', submode: 'oui',
+    info: `✓ Les points sont <span class="hl-blue">alignés</span> → le graphique est une droite.`,
+  },
+  {
+    text: "Est-ce que cette droite passe par l'origine (0 ; 0) ? On vérifie.",
+    show: 'line', submode: 'oui', showCheck: true,
+    info: `✓ La droite passe bien par l'<span class="hl-blue">origine (0 ; 0)</span>.`,
+  },
+  {
+    text: "✅ Les deux conditions sont remplies : c'est bien une situation de proportionnalité !",
+    show: 'final', submode: 'oui',
+    info: `<div class="conclusion-ok">Le graphique est une droite passant par l'origine (0 ; 0).<br>Donc c'est une situation de proportionnalité.</div>`,
+  },
+];
+
+const etapes2 = [
+  // Sous-mode 2a : droite ne passant pas par l'origine
+  {
+    text: "Cas 1 — On observe ce graphique. Les points semblent alignés. Est-ce une proportionnalité ?",
+    show: 'pts', submode: '2a',
+    info: `On vérifie d'abord si les points sont alignés.`,
+  },
+  {
+    text: "Les points sont alignés : on trace la droite. Mais où passe-t-elle ?",
+    show: 'line', submode: '2a',
+    info: `✓ Droite... mais elle ne passe pas par (0 ; 0) !`,
+  },
+  {
+    text: "La droite ne passe pas par l'origine : elle coupe l'axe vertical en y = 3, pas en 0.",
+    show: 'noorig', submode: '2a',
+    info: `<div class="conclusion-non">Le graphique est une droite, mais elle <strong>ne passe pas par l'origine</strong>.<br>Donc ce n'est pas une situation de proportionnalité.</div>`,
+  },
+  // Sous-mode 2b : courbe non droite
+  {
+    text: "Cas 2 — On observe ce graphique. Les points passent bien par l'origine. Est-ce une proportionnalité ?",
+    show: 'pts', submode: '2b',
+    info: `On vérifie si les points sont alignés.`,
+  },
+  {
+    text: "Les points ne sont pas alignés : on ne peut pas tracer une droite passant par tous les points.",
+    show: 'curve', submode: '2b',
+    info: `<div class="conclusion-non">Les points <strong>ne sont pas alignés</strong> (la courbe est courbée).<br>Donc ce n'est pas une situation de proportionnalité.</div>`,
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#0f766e','#1d4ed8','#dc2626'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('info-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1,etapes2][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// TABLE
+// ============================================================
+function renderTable(hlIdx, col) {
+  const rows = [
+    ['Quantité (kg)', 0,1,2,3,4],
+    ['Prix (€)',      0,2.5,5,7.5,10],
+  ];
+  let html = `<div class="data-table"><table><thead><tr>`;
+  rows[0].forEach((v,i) => {
+    if(i===0) html+=`<th style="background:${col};font-size:0.82em">${v}</th>`;
+    else html+=`<th style="background:${col}">${v}</th>`;
+  });
+  html+=`</tr></thead><tbody><tr>`;
+  rows[1].forEach((v,i)=>{
+    if(i===0) html+=`<td style="font-weight:bold;color:${col}">${v}</td>`;
+    else html+=`<td class="${i-1===hlIdx?'hl':''}">${v}</td>`;
+  });
+  html+=`</tr></tbody></table></div>`;
+  document.getElementById('data-table-wrap').innerHTML=html;
+}
+
+// ============================================================
+// DESSIN SVG
+// ============================================================
+function grid() {
+  let h='';
+  for(let x=0;x<=maxX;x++) {
+    const sx=pL+(x/maxX)*chartW;
+    h+=`<line x1="${sx.toFixed(1)}" y1="${pT}" x2="${sx.toFixed(1)}" y2="${pT+chartH}" stroke="#e5e7eb" stroke-width="0.8"/>`;
+    h+=`<text x="${sx.toFixed(1)}" y="${pT+chartH+14}" font-size="11" text-anchor="middle" fill="#6b7280">${x}</text>`;
+  }
+  for(let y=0;y<=maxY;y+=2) {
+    const sy=pT+chartH-(y/maxY)*chartH;
+    h+=`<line x1="${pL}" y1="${sy.toFixed(1)}" x2="${pL+chartW}" y2="${sy.toFixed(1)}" stroke="#e5e7eb" stroke-width="0.8"/>`;
+    h+=`<text x="${pL-6}" y="${(sy+4).toFixed(1)}" font-size="11" text-anchor="end" fill="#6b7280">${y}</text>`;
+  }
+  // Axes
+  h+=`<line x1="${pL}" y1="${pT}" x2="${pL}" y2="${pT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  h+=`<line x1="${pL}" y1="${pT+chartH}" x2="${pL+chartW}" y2="${pT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  // Flèches
+  h+=`<polygon points="${pL},${pT-2} ${pL-4},${pT+10} ${pL+4},${pT+10}" fill="#374151"/>`;
+  h+=`<polygon points="${pL+chartW+2},${pT+chartH} ${pL+chartW-10},${pT+chartH-4} ${pL+chartW-10},${pT+chartH+4}" fill="#374151"/>`;
+  // Labels axes
+  h+=`<text x="${pL+chartW/2}" y="${H-2}" font-size="11" text-anchor="middle" fill="#6b7280">Quantité (kg)</text>`;
+  h+=`<text x="12" y="${pT+chartH/2}" font-size="11" text-anchor="middle" fill="#6b7280" transform="rotate(-90,12,${pT+chartH/2})">Prix (€)</text>`;
+  return h;
+}
+
+function gridAlt(maxYalt, labelX='x', labelY='y', yStep=2) {
+  let h='';
+  for(let x=0;x<=maxX;x++) {
+    const sx=pL+(x/maxX)*chartW;
+    h+=`<line x1="${sx.toFixed(1)}" y1="${pT}" x2="${sx.toFixed(1)}" y2="${pT+chartH}" stroke="#e5e7eb" stroke-width="0.8"/>`;
+    h+=`<text x="${sx.toFixed(1)}" y="${pT+chartH+14}" font-size="11" text-anchor="middle" fill="#6b7280">${x}</text>`;
+  }
+  for(let y=0;y<=maxYalt;y+=yStep) {
+    const sy=pT+chartH-(y/maxYalt)*chartH;
+    h+=`<line x1="${pL}" y1="${sy.toFixed(1)}" x2="${pL+chartW}" y2="${sy.toFixed(1)}" stroke="#e5e7eb" stroke-width="0.8"/>`;
+    h+=`<text x="${pL-6}" y="${(sy+4).toFixed(1)}" font-size="11" text-anchor="end" fill="#6b7280">${y}</text>`;
+  }
+  h+=`<line x1="${pL}" y1="${pT}" x2="${pL}" y2="${pT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  h+=`<line x1="${pL}" y1="${pT+chartH}" x2="${pL+chartW}" y2="${pT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  h+=`<polygon points="${pL},${pT-2} ${pL-4},${pT+10} ${pL+4},${pT+10}" fill="#374151"/>`;
+  h+=`<polygon points="${pL+chartW+2},${pT+chartH} ${pL+chartW-10},${pT+chartH-4} ${pL+chartW-10},${pT+chartH+4}" fill="#374151"/>`;
+  h+=`<text x="${pL+chartW/2}" y="${H-2}" font-size="11" text-anchor="middle" fill="#6b7280">${labelX}</text>`;
+  h+=`<text x="12" y="${pT+chartH/2}" font-size="11" text-anchor="middle" fill="#6b7280" transform="rotate(-90,12,${pT+chartH/2})">${labelY}</text>`;
+  return h;
+}
+
+function dot(x,y,col,r=5,label=''){
+  const p=toSvg(x,y);
+  let h=`<circle cx="${p.sx.toFixed(1)}" cy="${p.sy.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+  if(label) h+=`<text x="${(p.sx+8).toFixed(1)}" y="${(p.sy-6).toFixed(1)}" font-size="11" font-weight="bold" fill="${col}">(${x} ; ${label})</text>`;
+  return h;
+}
+
+function dotAlt(pts,xi,yi,maxYalt,col,r=5){
+  const sx=pL+(xi/maxX)*chartW;
+  const sy=pT+chartH-(yi/maxYalt)*chartH;
+  return `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+
+function lineSeg(pts,col,dash=''){
+  const p0=toSvg(pts[0].x,pts[0].y), pN=toSvg(pts[pts.length-1].x,pts[pts.length-1].y);
+  return `<line x1="${p0.sx.toFixed(1)}" y1="${p0.sy.toFixed(1)}" x2="${pN.sx.toFixed(1)}" y2="${pN.sy.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-dasharray="${dash}"/>`;
+}
+
+// ============================================================
+// RENDER MODE 0
+// ============================================================
+function renderMode0() {
+  const e = etapes0[etape];
+  let h = grid();
+
+  // Points progressifs
+  for(let i=0;i<e.pts && i<data0.length;i++){
+    const d=data0[i];
+    const isHL = i===e.hlRow;
+    const col = isHL ? '#f97316' : '#0f766e';
+    const rr = isHL ? 7 : 5;
+    const lbl = isHL ? d.y.toString() : '';
+    h+=dot(d.x,d.y,col,rr,lbl);
+    // Lignes pointillées de construction pour le point courant
+    if(isHL){
+      const p=toSvg(d.x,d.y);
+      h+=`<line x1="${pL}" y1="${p.sy.toFixed(1)}" x2="${p.sx.toFixed(1)}" y2="${p.sy.toFixed(1)}" stroke="#f97316" stroke-width="1.2" stroke-dasharray="4,3"/>`;
+      h+=`<line x1="${p.sx.toFixed(1)}" y1="${p.sy.toFixed(1)}" x2="${p.sx.toFixed(1)}" y2="${pT+chartH}" stroke="#f97316" stroke-width="1.2" stroke-dasharray="4,3"/>`;
+    }
+  }
+  if(e.showLine) h+=lineSeg(data0,'#0f766e');
+
+  // Marque origine
+  if(e.showOrigin){
+    const orig=toSvg(0,0);
+    h+=`<circle cx="${orig.sx}" cy="${orig.sy}" r="7" fill="none" stroke="#f97316" stroke-width="2"/>`;
+    h+=`<text x="${(orig.sx+10).toFixed(0)}" y="${(orig.sy-8).toFixed(0)}" font-size="11" font-weight="bold" fill="#f97316">Origine (0;0)</text>`;
+  }
+
+  document.getElementById('canvas').innerHTML=h;
+  renderTable(e.tableHL,'#0f766e');
+  document.getElementById('data-table-wrap').style.display='block';
+}
+
+// ============================================================
+// RENDER MODE 1
+// ============================================================
+function renderMode1() {
+  const e = etapes1[etape];
+  let h = grid();
+
+  // Toujours montrer les points
+  data1.forEach(d => h+=dot(d.x,d.y,'#1d4ed8',5));
+
+  if(e.show==='line'||e.show==='final') h+=lineSeg(data1,'#1d4ed8');
+
+  // Croix sur origine
+  if(e.show==='final'||e.showCheck){
+    const orig=toSvg(0,0);
+    h+=`<circle cx="${orig.sx}" cy="${orig.sy}" r="8" fill="none" stroke="#1d4ed8" stroke-width="2.5"/>`;
+    h+=`<text x="${(orig.sx+12).toFixed(0)}" y="${(orig.sy-8).toFixed(0)}" font-size="12" font-weight="bold" fill="#1d4ed8">✓ (0 ; 0)</text>`;
+  }
+
+  document.getElementById('canvas').innerHTML=h;
+  document.getElementById('data-table-wrap').innerHTML='';
+}
+
+// ============================================================
+// RENDER MODE 2
+// ============================================================
+function renderMode2() {
+  const e = etapes2[etape];
+  let h='';
+
+  if(e.submode==='2a') {
+    // Droite ne passant pas par l'origine — maxY=14
+    const mY=14;
+    h+=gridAlt(mY,'x','y (€)',2);
+    const toS2=(x,y)=>({sx:pL+(x/maxX)*chartW, sy:pT+chartH-(y/mY)*chartH});
+    data2a.forEach(d=>{
+      const p=toS2(d.x,d.y);
+      h+=`<circle cx="${p.sx.toFixed(1)}" cy="${p.sy.toFixed(1)}" r="5" fill="#dc2626" stroke="white" stroke-width="2"/>`;
+    });
+    if(e.show==='line'||e.show==='noorig'){
+      const p0=toS2(0,3), pN=toS2(4,13);
+      h+=`<line x1="${p0.sx.toFixed(1)}" y1="${p0.sy.toFixed(1)}" x2="${pN.sx.toFixed(1)}" y2="${pN.sy.toFixed(1)}" stroke="#dc2626" stroke-width="2.5"/>`;
+    }
+    if(e.show==='noorig'){
+      // Marque sur y=3 (où la droite coupe l'axe) et croix sur l'origine
+      const pOrig=toS2(0,0), pInter=toS2(0,3);
+      h+=`<circle cx="${pOrig.sx}" cy="${pOrig.sy}" r="8" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="4,2"/>`;
+      h+=`<text x="${(pOrig.sx+12).toFixed(0)}" y="${(pOrig.sy-8).toFixed(0)}" font-size="12" font-weight="bold" fill="#dc2626">✗ (0 ; 0)</text>`;
+      h+=`<circle cx="${pInter.sx.toFixed(1)}" cy="${pInter.sy.toFixed(1)}" r="6" fill="#f97316" stroke="white" stroke-width="2"/>`;
+      h+=`<text x="${(pInter.sx+10).toFixed(1)}" y="${(pInter.sy-6).toFixed(1)}" font-size="11" font-weight="bold" fill="#f97316">coupe en y=3</text>`;
+    }
+  } else {
+    // Courbe — aire carré, maxY=16
+    const mY=17;
+    h+=gridAlt(mY,'côté','aire',2);
+    const toS3=(x,y)=>({sx:pL+(x/maxX)*chartW, sy:pT+chartH-(y/mY)*chartH});
+    data2b.forEach(d=>{
+      const p=toS3(d.x,d.y);
+      h+=`<circle cx="${p.sx.toFixed(1)}" cy="${p.sy.toFixed(1)}" r="5" fill="#dc2626" stroke="white" stroke-width="2"/>`;
+    });
+    if(e.show==='curve'){
+      // Courbe lissée via polyline
+      const ptStr=data2b.map(d=>{const p=toS3(d.x,d.y);return `${p.sx.toFixed(1)},${p.sy.toFixed(1)}`;}).join(' ');
+      h+=`<polyline points="${ptStr}" fill="none" stroke="#dc2626" stroke-width="2.5"/>`;
+      // Montrer un test d'alignement raté (droite fictive)
+      const p0=toS3(0,0),pN=toS3(4,16);
+      h+=`<line x1="${p0.sx.toFixed(1)}" y1="${p0.sy.toFixed(1)}" x2="${pN.sx.toFixed(1)}" y2="${pN.sy.toFixed(1)}" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3"/>`;
+      h+=`<text x="${(pL+chartW/2).toFixed(0)}" y="${pT+20}" font-size="11" fill="#94a3b8" text-anchor="middle" font-style="italic">droite impossible</text>`;
+    }
+  }
+
+  document.getElementById('canvas').innerHTML=h;
+  document.getElementById('data-table-wrap').innerHTML='';
+}
+
+// ============================================================
+function render() {
+  const etapesArr=[etapes0,etapes1,etapes2][mode];
+  const e=etapesArr[etape];
+  if(mode===0) renderMode0();
+  else if(mode===1) renderMode1();
+  else renderMode2();
+  document.getElementById('info-box').innerHTML=e.info;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Écriture scientifique</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #1e1b4b; color: white; font-size: 1.25em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 12px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 16px; border-radius: 20px; border: none; font-size: 0.83em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #e0e7ff; color: #1e1b4b; border: 2px solid #a5b4fc; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #1e1b4b; color: white; border-color: #1e1b4b; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+
+  /* VISUALISATION NOMBRE */
+  .nb-box { background: white; border-radius: 14px; padding: 18px 10px 12px; margin: 8px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 10px #0002; text-align: center; min-height: 90px; }
+  .nb-display { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0; font-size: 1.6em; font-family: 'Courier New', monospace; font-weight: bold; line-height: 1.4; }
+  .digit { display: inline-block; transition: all 0.3s; }
+  .digit.hl-int  { color: #4f46e5; background: #e0e7ff; border-radius: 5px; padding: 0 3px; }
+  .digit.hl-dec  { color: #be185d; background: #fce7f3; border-radius: 5px; padding: 0 3px; }
+  .digit.dim     { color: #9ca3af; }
+  .digit.zero    { color: #d1d5db; }
+  .virgule       { color: #374151; font-size: 1em; }
+  .arrow-label   { font-size: 0.7em; font-weight: bold; margin-top: 4px; color: #6b7280; }
+
+  /* RÈGLE */
+  .regle-box { background: #fffbeb; border: 2px solid #fbbf24; border-radius: 12px; padding: 10px 18px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.92em; color: #78350f; font-weight: bold; text-align: center; }
+
+  /* CALCUL */
+  .calcul-box { background: white; border-radius: 14px; padding: 14px 20px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1e1b4b; font-size: 1em; line-height: 2.1; }
+  .calcul-box .ligne { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .calcul-box .eq { min-width: 20px; color: #374151; }
+  .hl-purple { color: #4f46e5; font-weight: bold; }
+  .hl-pink   { color: #be185d; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+  .hl-green  { color: #047857; font-weight: bold; }
+  .conclusion-ligne { background: #ede9fe; border-left: 4px solid #7c3aed; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #1e1b4b; margin-top: 6px; font-size: 1em; font-family: 'Courier New', monospace; }
+  .condition { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 6px 12px; border-radius: 7px; font-size: 0.9em; color: #14532d; margin-top: 6px; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1e1b4b; color: white; }
+
+  sup { font-size: 0.7em; vertical-align: super; }
+</style>
+</head>
+<body>
+<h1>🔬 Écriture scientifique</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Grands nombres</button>
+  <button class="tab tab2" onclick="setMode(1)">Petits nombres</button>
+</div>
+<div class="scene">
+  <div class="nb-box" id="nb-box"></div>
+  <div class="regle-box" id="regle-box"></div>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — GRAND NOMBRE : 4 730 000 = 4,73 × 10⁶
+// ============================================================
+const grand = {
+  digits: ['4','7','3','0','0','0','0'],
+  // La virgule se place après le premier chiffre → 4,730000
+  // On déplace de 6 rangs vers la gauche → exposant +6
+};
+
+const etapes0 = [
+  {
+    text: "On veut écrire 4 730 000 en écriture scientifique. L'écriture scientifique a la forme a × 10ⁿ, avec 1 ≤ a < 10.",
+    nbState: 'original',
+    regle: "Forme : a × 10ⁿ  avec  1 ≤ a < 10",
+    calcul: `<div class="ligne">Nombre de départ : <span class="hl-purple">4 730 000</span></div>`,
+  },
+  {
+    text: "On place la virgule après le premier chiffre non nul : après le 4. On obtient 4,730000.",
+    nbState: 'virgule',
+    regle: "On place la virgule juste après le 1er chiffre significatif.",
+    calcul: `<div class="ligne">On place la virgule : <span class="hl-purple">4</span><span class="hl-orange">,</span><span class="hl-pink">730000</span></div>
+             <div class="ligne">La partie entière est <span class="hl-purple">4</span> &nbsp;→&nbsp; 1 ≤ 4 < 10 ✓</div>`,
+  },
+  {
+    text: "Pour passer de 4,730000 à 4 730 000, la virgule a avancé de 6 rangs vers la droite. Donc on multiplie par 10⁶.",
+    nbState: 'decale',
+    regle: "Chaque rang vers la droite = ×10. On a avancé de 6 rangs → ×10⁶",
+    calcul: `<div class="ligne">4,730000 → virgule avance de <span class="hl-orange">6</span> rangs vers la droite</div>
+             <div class="ligne">Donc on multiplie par <span class="hl-orange">10<sup>6</sup></span></div>`,
+  },
+  {
+    text: "On supprime les zéros inutiles à droite : 4,730000 = 4,73. On écrit le résultat final.",
+    nbState: 'final',
+    regle: "On supprime les zéros non significatifs à droite de la partie décimale.",
+    calcul: `<div class="ligne">4,730000 = <span class="hl-purple">4,73</span></div>
+             <div class="ligne">4 730 000 <span class="eq">=</span> <span class="hl-purple">4,73</span> × <span class="hl-orange">10<sup>6</sup></span></div>
+             <div class="conclusion-ligne">4 730 000 = 4,73 × 10⁶</div>
+             <div class="condition">✓ 1 ≤ 4,73 < 10 &nbsp;|&nbsp; exposant positif car grand nombre</div>`,
+  },
+];
+
+// ============================================================
+// MODE 1 — PETIT NOMBRE : 0,0000056 = 5,6 × 10⁻⁶
+// ============================================================
+const petit = {
+  digits: ['0','0','0','0','0','5','6'],
+};
+
+const etapes1 = [
+  {
+    text: "On veut écrire 0,0000056 en écriture scientifique. L'écriture scientifique a la forme a × 10ⁿ, avec 1 ≤ a < 10.",
+    nbState: 'original',
+    regle: "Forme : a × 10ⁿ  avec  1 ≤ a < 10",
+    calcul: `<div class="ligne">Nombre de départ : <span class="hl-pink">0,0000056</span></div>`,
+  },
+  {
+    text: "On place la virgule après le premier chiffre non nul : après le 5. On obtient 5,6.",
+    nbState: 'virgule',
+    regle: "On place la virgule juste après le 1er chiffre significatif.",
+    calcul: `<div class="ligne">On repère le 1er chiffre non nul : <span class="hl-pink">5</span></div>
+             <div class="ligne">On écrit : <span class="hl-pink">5</span><span class="hl-orange">,</span><span class="hl-pink">6</span></div>
+             <div class="ligne">La partie entière est <span class="hl-pink">5</span> &nbsp;→&nbsp; 1 ≤ 5 < 10 ✓</div>`,
+  },
+  {
+    text: "Pour passer de 5,6 à 0,0000056, la virgule a reculé de 6 rangs vers la gauche. Donc on multiplie par 10⁻⁶.",
+    nbState: 'decale',
+    regle: "Chaque rang vers la gauche = ×10⁻¹. On a reculé de 6 rangs → ×10⁻⁶",
+    calcul: `<div class="ligne">5,6 → virgule recule de <span class="hl-orange">6</span> rangs vers la gauche</div>
+             <div class="ligne">Donc on multiplie par <span class="hl-orange">10<sup>−6</sup></span></div>`,
+  },
+  {
+    text: "Le résultat est 5,6 × 10⁻⁶. L'exposant est négatif car le nombre est inférieur à 1.",
+    nbState: 'final',
+    regle: "Exposant négatif = nombre compris entre 0 et 1.",
+    calcul: `<div class="ligne">0,0000056 <span class="eq">=</span> <span class="hl-pink">5,6</span> × <span class="hl-orange">10<sup>−6</sup></span></div>
+             <div class="conclusion-ligne">0,0000056 = 5,6 × 10⁻⁶</div>
+             <div class="condition">✓ 1 ≤ 5,6 < 10 &nbsp;|&nbsp; exposant négatif car nombre < 1</div>`,
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#1e1b4b','#9d174d'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('calcul-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// AFFICHAGE DU NOMBRE
+// ============================================================
+function renderNumber(nbState) {
+  if (mode === 0) renderGrand(nbState);
+  else renderPetit(nbState);
+}
+
+function renderGrand(nbState) {
+  // 4 730 000
+  // original : 4 730 000 (avec espaces)
+  // virgule  : 4,730000 → virgule après le 4
+  // decale   : flèche montrant les 6 déplacements
+  // final    : 4,73 × 10⁶
+  let html = '';
+  if (nbState === 'original') {
+    html = `<div class="nb-display">
+      <span class="digit hl-int">4</span>
+      <span class="digit dim">&nbsp;</span>
+      <span class="digit">7</span><span class="digit">3</span><span class="digit">0</span>
+      <span class="digit dim">&nbsp;</span>
+      <span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span>
+    </div>
+    <div class="arrow-label">4 730 000</div>`;
+  } else if (nbState === 'virgule') {
+    html = `<div class="nb-display">
+      <span class="digit hl-int">4</span><span class="virgule">,</span><span class="digit hl-dec">7</span><span class="digit hl-dec">3</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span>
+    </div>
+    <div class="arrow-label">virgule placée après le premier chiffre</div>`;
+  } else if (nbState === 'decale') {
+    html = `<div class="nb-display">
+      <span class="digit hl-int">4</span><span class="virgule">,</span><span class="digit hl-dec">7</span><span class="digit hl-dec">3</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span>
+    </div>
+    <div style="font-size:1.1em;color:#b45309;font-weight:bold;margin-top:6px">
+      ←&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6 rangs &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→
+    </div>
+    <div class="arrow-label">la virgule avance de 6 rangs vers la droite → ×10⁶</div>`;
+  } else {
+    html = `<div class="nb-display" style="gap:8px">
+      <span class="digit hl-int" style="font-size:1.1em">4,73</span>
+      <span style="color:#374151">×</span>
+      <span class="digit hl-orange" style="font-size:1.1em">10<sup>6</sup></span>
+    </div>
+    <div class="arrow-label" style="color:#047857;font-weight:bold">✅ Écriture scientifique de 4 730 000</div>`;
+  }
+  document.getElementById('nb-box').innerHTML = html;
+}
+
+function renderPetit(nbState) {
+  // 0,0000056
+  let html = '';
+  if (nbState === 'original') {
+    html = `<div class="nb-display">
+      <span class="digit zero">0</span><span class="virgule">,</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit hl-int">5</span><span class="digit hl-int">6</span>
+    </div>
+    <div class="arrow-label">0,0000056</div>`;
+  } else if (nbState === 'virgule') {
+    html = `<div class="nb-display">
+      <span class="digit zero dim">0,0000</span><span class="digit hl-int">5</span><span class="virgule">↑</span><span class="digit hl-dec">6</span>
+    </div>
+    <div style="display:flex;justify-content:center;gap:6px;font-size:0.95em;margin-top:6px;flex-wrap:wrap">
+      <span style="color:#6b7280">0,0000056</span>
+      <span style="color:#b45309">→</span>
+      <span class="hl-pink" style="font-weight:bold">5,6</span>
+    </div>
+    <div class="arrow-label">virgule placée après le premier chiffre non nul</div>`;
+  } else if (nbState === 'decale') {
+    html = `<div class="nb-display">
+      <span class="digit zero">0</span><span class="virgule">,</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit zero">0</span><span class="digit hl-int">5</span><span class="digit hl-dec">6</span>
+    </div>
+    <div style="font-size:1.1em;color:#b45309;font-weight:bold;margin-top:6px">
+      ←&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6 rangs &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→
+    </div>
+    <div class="arrow-label">la virgule recule de 6 rangs vers la gauche → ×10⁻⁶</div>`;
+  } else {
+    html = `<div class="nb-display" style="gap:8px">
+      <span class="digit hl-pink" style="font-size:1.1em">5,6</span>
+      <span style="color:#374151">×</span>
+      <span class="hl-orange" style="font-size:1.1em;font-weight:bold">10<sup>−6</sup></span>
+    </div>
+    <div class="arrow-label" style="color:#047857;font-weight:bold">✅ Écriture scientifique de 0,0000056</div>`;
+  }
+  document.getElementById('nb-box').innerHTML = html;
+}
+
+function render() {
+  const etapesArr = [etapes0, etapes1][mode];
+  const e = etapesArr[etape];
+  renderNumber(e.nbState);
+  document.getElementById('regle-box').textContent = e.regle;
+  document.getElementById('calcul-box').innerHTML = e.calcul;
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

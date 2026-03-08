@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Théorème de Pythagore</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #065f46; color: white; font-size: 1.25em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 12px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 16px; border-radius: 20px; border: none; font-size: 0.83em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab1.active { background: #065f46; color: white; border-color: #065f46; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#canvas { width: 100%; max-width: 500px; height: 240px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  /* CALCUL DÉTAILLÉ */
+  .calcul-box { background: white; border-radius: 14px; padding: 14px 20px; margin: 8px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #065f46; font-size: 1em; line-height: 2; }
+  .calcul-box .enonce { font-weight: bold; color: #065f46; background: #ecfdf5; border-radius: 8px; padding: 7px 14px; margin-bottom: 8px; font-size: 0.97em; }
+  .calcul-box .ligne { display: flex; align-items: baseline; gap: 6px; }
+  .calcul-box .eq   { min-width: 22px; color: #374151; }
+  .calcul-box .expr { font-weight: bold; }
+  .hl-green  { color: #047857; font-weight: bold; }
+  .hl-blue   { color: #1d4ed8; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+  .hl-red    { color: #be185d; font-weight: bold; }
+  .conclusion-ligne { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; font-size: 1em; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #065f46; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Théorème de Pythagore</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Calculer l'hypoténuse</button>
+  <button class="tab tab2" onclick="setMode(1)">Calculer un côté de l'angle droit</button>
+</div>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 500 240"></svg>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — HYPOTÉNUSE
+// Triangle ABC rectangle en C : AC=3, BC=4, AB=?
+// A en haut gauche, B en bas droite, C en bas gauche (angle droit)
+// ============================================================
+const tri0 = {
+  A: {x: 80,  y: 55,  l:'A'},
+  B: {x: 340, y: 205, l:'B'},
+  C: {x: 80,  y: 205, l:'C'},
+  AC: 3, BC: 4, AB: 5,
+  hypot: 'AB', cote1: 'AC', cote2: 'BC'
+};
+
+// ============================================================
+// MODE 1 — CÔTÉ DE L'ANGLE DROIT
+// Triangle PQR rectangle en P : QR=10, PQ=6, PR=?
+// P en bas gauche (angle droit), Q en haut gauche, R en bas droite
+// ============================================================
+const tri1 = {
+  A: {x: 80,  y: 205, l:'P'},
+  B: {x: 80,  y: 65,  l:'Q'},
+  C: {x: 340, y: 205, l:'R'},
+  AC: 8, BC: 6, AB: 10,  // PR=8, PQ=6, QR=10
+  hypot: 'QR', cote1: 'PR', cote2: 'PQ'
+};
+
+// ============================================================
+// ÉTAPES
+// ============================================================
+const etapes0 = [
+  {
+    text: "Voici le triangle ABC rectangle en C. On connaît les deux côtés de l'angle droit : AC = 3 cm et BC = 4 cm. On cherche l'hypoténuse AB.",
+    show: 'triangle',
+    calcul: `<div class="enonce">Dans le triangle ABC rectangle en C, calculer AB.</div>
+             <div>On repère : angle droit en <span class="hl-orange">C</span>, hypoténuse = <span class="hl-green">AB</span> (côté opposé à l'angle droit).</div>`
+  },
+  {
+    text: "Le théorème de Pythagore dit : dans un triangle rectangle, le carré de l'hypoténuse est égal à la somme des carrés des deux autres côtés.",
+    show: 'triangle',
+    calcul: `<div class="enonce">Dans le triangle ABC rectangle en C, calculer AB.</div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span></div>`
+  },
+  {
+    text: "On remplace AC et BC par leurs valeurs : AC = 3 cm et BC = 4 cm.",
+    show: 'cotes',
+    calcul: `<div class="enonce">Dans le triangle ABC rectangle en C, calculer AB.</div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">3²</span> + <span class="hl-blue">4²</span></div>`
+  },
+  {
+    text: "On calcule les carrés : 3² = 9 et 4² = 16.",
+    show: 'cotes',
+    calcul: `<div class="enonce">Dans le triangle ABC rectangle en C, calculer AB.</div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">3²</span> + <span class="hl-blue">4²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-orange">9</span> + <span class="hl-orange">16</span></div>`
+  },
+  {
+    text: "On additionne : 9 + 16 = 25. Donc AB² = 25.",
+    show: 'cotes',
+    calcul: `<div class="enonce">Dans le triangle ABC rectangle en C, calculer AB.</div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">3²</span> + <span class="hl-blue">4²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-orange">9</span> + <span class="hl-orange">16</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-red">25</span></div>`
+  },
+  {
+    text: "Pour trouver AB, on prend la racine carrée des deux membres. √25 = 5.",
+    show: 'done',
+    calcul: `<div class="enonce">Dans le triangle ABC rectangle en C, calculer AB.</div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">AC²</span> + <span class="hl-blue">BC²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-blue">3²</span> + <span class="hl-blue">4²</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-orange">9</span> + <span class="hl-orange">16</span></div>
+             <div class="ligne"><span class="hl-green">AB²</span><span class="eq">=</span><span class="hl-red">25</span></div>
+             <div class="ligne"><span class="hl-green">AB</span><span class="eq">=</span>√<span class="hl-red">25</span></div>
+             <div class="conclusion-ligne">✅ AB = 5 cm</div>`
+  },
+];
+
+const etapes1 = [
+  {
+    text: "Voici le triangle PQR rectangle en P. On connaît l'hypoténuse QR = 10 cm et le côté PQ = 6 cm. On cherche le côté PR.",
+    show: 'triangle',
+    calcul: `<div class="enonce">Dans le triangle PQR rectangle en P, calculer PR.</div>
+             <div>On repère : angle droit en <span class="hl-orange">P</span>, hypoténuse = <span class="hl-green">QR</span>, côtés de l'angle droit : <span class="hl-blue">PQ</span> et <span class="hl-blue">PR</span>.</div>`
+  },
+  {
+    text: "On applique le théorème de Pythagore : QR² = PQ² + PR².",
+    show: 'triangle',
+    calcul: `<div class="enonce">Dans le triangle PQR rectangle en P, calculer PR.</div>
+             <div class="ligne"><span class="hl-green">QR²</span><span class="eq">=</span><span class="hl-blue">PQ²</span> + <span class="hl-blue">PR²</span></div>`
+  },
+  {
+    text: "On remplace QR par 10 et PQ par 6 : 10² = 6² + PR².",
+    show: 'cotes',
+    calcul: `<div class="enonce">Dans le triangle PQR rectangle en P, calculer PR.</div>
+             <div class="ligne"><span class="hl-green">QR²</span><span class="eq">=</span><span class="hl-blue">PQ²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-green">10²</span><span class="eq">=</span><span class="hl-blue">6²</span> + <span class="hl-blue">PR²</span></div>`
+  },
+  {
+    text: "On isole PR² en passant 6² de l'autre côté : PR² = 10² − 6².",
+    show: 'cotes',
+    calcul: `<div class="enonce">Dans le triangle PQR rectangle en P, calculer PR.</div>
+             <div class="ligne"><span class="hl-green">QR²</span><span class="eq">=</span><span class="hl-blue">PQ²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-green">10²</span><span class="eq">=</span><span class="hl-blue">6²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-green">10²</span> − <span class="hl-blue">6²</span></div>`
+  },
+  {
+    text: "On calcule : 10² = 100 et 6² = 36, donc PR² = 100 − 36 = 64.",
+    show: 'cotes',
+    calcul: `<div class="enonce">Dans le triangle PQR rectangle en P, calculer PR.</div>
+             <div class="ligne"><span class="hl-green">QR²</span><span class="eq">=</span><span class="hl-blue">PQ²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-green">10²</span><span class="eq">=</span><span class="hl-blue">6²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-green">10²</span> − <span class="hl-blue">6²</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-orange">100</span> − <span class="hl-orange">36</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-red">64</span></div>`
+  },
+  {
+    text: "On prend la racine carrée : PR = √64 = 8 cm.",
+    show: 'done',
+    calcul: `<div class="enonce">Dans le triangle PQR rectangle en P, calculer PR.</div>
+             <div class="ligne"><span class="hl-green">QR²</span><span class="eq">=</span><span class="hl-blue">PQ²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-green">10²</span><span class="eq">=</span><span class="hl-blue">6²</span> + <span class="hl-blue">PR²</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-green">10²</span> − <span class="hl-blue">6²</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-orange">100</span> − <span class="hl-orange">36</span></div>
+             <div class="ligne"><span class="hl-blue">PR²</span><span class="eq">=</span><span class="hl-red">64</span></div>
+             <div class="ligne"><span class="hl-blue">PR</span><span class="eq">=</span>√<span class="hl-red">64</span></div>
+             <div class="conclusion-ligne">✅ PR = 8 cm</div>`
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#065f46','#1d4ed8'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('calcul-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// DESSIN SVG
+// ============================================================
+function drawTriangle() {
+  const t = mode===0 ? tri0 : tri1;
+  const e = [etapes0,etapes1][mode][etape];
+  const col = mode===0 ? '#065f46' : '#1d4ed8';
+  const A=t.A, B=t.B, C=t.C;
+  let h='';
+
+  // Fond quadrillé léger
+  for(let x=0;x<=500;x+=20) h+=`<line x1="${x}" y1="0" x2="${x}" y2="240" stroke="#f1f5f9" stroke-width="0.7"/>`;
+  for(let y=0;y<=240;y+=20) h+=`<line x1="0" y1="${y}" x2="500" y2="${y}" stroke="#f1f5f9" stroke-width="0.7"/>`;
+
+  const show = e.show;
+  const showCotes = ['cotes','done'].includes(show);
+  const showDone  = show==='done';
+
+  // Couleurs des côtés
+  const colHyp = mode===0 ? '#047857' : '#1d4ed8'; // hypoténuse
+  const colC1  = mode===0 ? '#1d4ed8' : '#047857'; // côté connu
+  const colC2  = mode===0 ? '#1d4ed8' : '#be185d'; // côté cherché (affiché en done)
+
+  // Déterminer quels côtés sont lesquels
+  // Mode 0 : AB=hyp, AC=cote1(3), BC=cote2(4)
+  //   seg AB = A→B, seg AC = A→C, seg BC = B→C
+  // Mode 1 : QR=hyp, PQ=cote1(6), PR=cote2(8)
+  //   seg QR = B→C, seg PQ = A→B, seg PR = A→C
+
+  let segHyp, segC1, segC2;
+  if(mode===0){
+    segHyp = [A,B]; segC1=[A,C]; segC2=[B,C];
+  } else {
+    segHyp = [B,C]; segC1=[A,B]; segC2=[A,C];
+  }
+
+  // Tracer les segments
+  function seg(p1,p2,c,sw,dash=''){
+    return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${c}" stroke-width="${sw}" stroke-dasharray="${dash}"/>`;
+  }
+
+  // Hypoténuse
+  h+=seg(segHyp[0],segHyp[1], showDone?colHyp:col, showDone?3:2.5);
+  // Côté 1 (connu)
+  h+=seg(segC1[0],segC1[1], showCotes?colC1:col, showCotes?3:2.5);
+  // Côté 2 (cherché)
+  if(showDone){
+    h+=seg(segC2[0],segC2[1], colC2, 3.5);
+  } else {
+    h+=seg(segC2[0],segC2[1], col, 2.5, showCotes?'':'');
+  }
+
+  // Angle droit (petit carré)
+  const rc = C; // angle droit toujours en C pour mode 0, A pour mode 1
+  const rightPt = mode===0 ? C : A;
+  const adj1 = mode===0 ? A : B;
+  const adj2 = mode===0 ? B : C;
+  const d1x = adj1.x-rightPt.x, d1y=adj1.y-rightPt.y, l1=Math.sqrt(d1x*d1x+d1y*d1y);
+  const d2x = adj2.x-rightPt.x, d2y=adj2.y-rightPt.y, l2=Math.sqrt(d2x*d2x+d2y*d2y);
+  const sz=14;
+  const p1={x:rightPt.x+(d1x/l1)*sz, y:rightPt.y+(d1y/l1)*sz};
+  const p2={x:rightPt.x+(d2x/l2)*sz, y:rightPt.y+(d2y/l2)*sz};
+  const pm={x:p1.x+p2.x-rightPt.x,   y:p1.y+p2.y-rightPt.y};
+  h+=`<polyline points="${p1.x},${p1.y} ${pm.x},${pm.y} ${p2.x},${p2.y}" fill="none" stroke="#f97316" stroke-width="2"/>`;
+
+  // Labels côtés
+  function midLabel(p1,p2,val,c,side=1){
+    const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+    const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.sqrt(dx*dx+dy*dy);
+    const nx=-dy/len*20*side, ny=dx/len*20*side;
+    return `<text x="${(mx+nx).toFixed(1)}" y="${(my+ny+4).toFixed(1)}" font-size="13" font-weight="bold" text-anchor="middle" fill="${c}">${val}</text>`;
+  }
+
+  if(showCotes){
+    if(mode===0){
+      h+=midLabel(segC1[0],segC1[1],'3 cm',colC1, -1);
+      h+=midLabel(segC2[0],segC2[1],'4 cm',colC1, 1);
+      if(showDone) h+=midLabel(segHyp[0],segHyp[1],'5 cm',colHyp,-1);
+      else         h+=midLabel(segHyp[0],segHyp[1],'?',   '#94a3b8',-1);
+    } else {
+      h+=midLabel(segC1[0],segC1[1],'6 cm',colC1, -1);
+      if(showDone) h+=midLabel(segC2[0],segC2[1],'8 cm',colC2, 1);
+      else         h+=midLabel(segC2[0],segC2[1],'?',   '#94a3b8', 1);
+      h+=midLabel(segHyp[0],segHyp[1],'10 cm',colHyp, 1);
+    }
+  }
+
+  // Sommets
+  [A,B,C].forEach(p=>{
+    h+=`<circle cx="${p.x}" cy="${p.y}" r="5" fill="${col}" stroke="white" stroke-width="2"/>`;
+    const ox = p.x<100?-16:p.x>300?12:0;
+    const oy = p.y<100?-10:18;
+    h+=`<text x="${p.x+ox}" y="${p.y+oy}" font-size="15" font-weight="bold" fill="${col}" text-anchor="middle">${p.l}</text>`;
+  });
+
+  return h;
+}
+
+function render(){
+  const etapesArr=[etapes0,etapes1][mode];
+  const e=etapesArr[etape];
+  document.getElementById('canvas').innerHTML=drawTriangle();
+  document.getElementById('calcul-box').innerHTML=e.calcul;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

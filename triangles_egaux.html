@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triangles égaux</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a5f; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 10px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #86efac; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab4 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab4.active { background: #be185d; color: white; border-color: #be185d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#canvas { width: 100%; max-width: 500px; height: 240px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  /* BOITE RÉDACTION */
+  .redaction { background: #f0f9ff; border: 2px solid #38bdf8; border-radius: 12px; padding: 12px 16px; margin: 8px auto; max-width: 480px; width: 95%; font-size: 0.93em; line-height: 1.7; }
+  .redaction .titre { font-weight: bold; color: #0369a1; font-size: 1em; margin-bottom: 6px; }
+  .redaction .ligne { margin: 2px 0; }
+  .redaction .hl-blue { color: #1d4ed8; font-weight: bold; }
+  .redaction .hl-green { color: #15803d; font-weight: bold; }
+  .redaction .hl-orange { color: #b45309; font-weight: bold; }
+  .redaction .hl-red { color: #be185d; font-weight: bold; }
+  .redaction .hl-grey { color: #6b7280; }
+  .redaction .conclusion { background: #ecfdf5; border-left: 4px solid #22c55e; padding: 6px 10px; border-radius: 6px; margin-top: 8px; font-weight: bold; color: #14532d; }
+  .redaction .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 10px; border-radius: 6px; margin-top: 8px; color: #7c2d12; font-weight: bold; }
+  .redaction.hidden { display: none; }
+
+  .explication { background: white; border-radius: 14px; padding: 11px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #1e3a5f; min-height: 46px; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 7px; }
+  button.nav { padding: 9px 26px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1e3a5f; color: white; }
+</style>
+</head>
+<body>
+<h1>🔺 Démontrer que deux triangles sont égaux</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">3 côtés (SSS)</button>
+  <button class="tab tab2" onclick="setMode(1)">2 côtés + angle (SAS)</button>
+  <button class="tab tab3" onclick="setMode(2)">2 angles + côté (ASA)</button>
+  <button class="tab tab4" onclick="setMode(3)">Triangles NON égaux</button>
+</div>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 500 240"></svg>
+  <div class="redaction" id="redaction"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// TRIANGLES (coordonnées fixes pour chaque cas)
+// Deux triangles côte à côte dans le SVG
+// ============================================================
+
+// Triange 1 (gauche) et Triangle 2 (droite) pour chaque mode
+const triangles = [
+  // SSS : AB=6, BC=5, AC=4 pour les deux
+  {
+    T1: [{x:30,y:200,l:'A'},{x:150,y:200,l:'B'},{x:80,y:90,l:'C'}],
+    T2: [{x:220,y:200,l:'D'},{x:340,y:200,l:'E'},{x:270,y:90,l:'F'}],
+    sides1: ['6 cm','5 cm','4 cm'], sides2: ['6 cm','5 cm','4 cm'],
+  },
+  // SAS : AB=6, angle A=55°, AC=4 pour les deux
+  {
+    T1: [{x:30,y:200,l:'A'},{x:150,y:200,l:'B'},{x:82,y:92,l:'C'}],
+    T2: [{x:220,y:200,l:'D'},{x:340,y:200,l:'E'},{x:272,y:92,l:'F'}],
+    sides1: ['6 cm','','4 cm'], sides2: ['6 cm','','4 cm'],
+    angles1: [55], angles2: [55],
+  },
+  // ASA : AB=6, angle A=55°, angle B=65° pour les deux
+  {
+    T1: [{x:30,y:205,l:'A'},{x:150,y:205,l:'B'},{x:88,y:88,l:'C'}],
+    T2: [{x:220,y:205,l:'D'},{x:340,y:205,l:'E'},{x:278,y:88,l:'F'}],
+    sides1: ['6 cm','',''], sides2: ['6 cm','',''],
+    angles1: [55,65], angles2: [55,65],
+  },
+  // NON ÉGAUX : T1 AB=6,BC=5,AC=4 / T2 AB=6,BC=5,AC=3 (côté différent)
+  {
+    T1: [{x:30,y:200,l:'A'},{x:150,y:200,l:'B'},{x:80,y:90,l:'C'}],
+    T2: [{x:220,y:200,l:'D'},{x:340,y:200,l:'E'},{x:295,y:108,l:'F'}],
+    sides1: ['6 cm','5 cm','4 cm'], sides2: ['6 cm','5 cm','3 cm'],
+  },
+];
+
+// ============================================================
+// ÉTAPES PAR MODE
+// ============================================================
+const etapesData = [
+  // SSS
+  [
+    { text:"Voici deux triangles ABC et DEF. On veut savoir s'ils sont égaux. On va comparer leurs trois côtés.", show:'triangles', hl:[] },
+    { text:"Premier côté : AB = DE = 6 cm. On marque ces côtés égaux (1 tiret).", show:'side0', hl:['AB','DE'] },
+    { text:"Deuxième côté : BC = EF = 5 cm. On marque avec 2 tirets.", show:'side1', hl:['BC','EF'] },
+    { text:"Troisième côté : AC = DF = 4 cm. On marque avec 3 tirets.", show:'side2', hl:['AC','DF'] },
+    { text:"Les trois côtés sont égaux deux à deux. On peut rédiger la conclusion.", show:'redac', hl:[] },
+  ],
+  // SAS
+  [
+    { text:"Voici deux triangles ABC et DEF. On va comparer 2 côtés et l'angle compris entre eux.", show:'triangles', hl:[] },
+    { text:"Premier côté : AB = DE = 6 cm.", show:'side0', hl:['AB','DE'] },
+    { text:"Angle compris entre les deux côtés : angle A = angle D = 55°.", show:'angle0', hl:['A','D'] },
+    { text:"Deuxième côté issu de cet angle : AC = DF = 4 cm.", show:'side2', hl:['AC','DF'] },
+    { text:"Deux côtés et l'angle entre eux sont égaux. On peut rédiger.", show:'redac', hl:[] },
+  ],
+  // ASA
+  [
+    { text:"Voici deux triangles ABC et DEF. On va comparer un côté et les deux angles à ses extrémités.", show:'triangles', hl:[] },
+    { text:"Le côté commun aux deux angles : AB = DE = 6 cm.", show:'side0', hl:['AB','DE'] },
+    { text:"Angle à la première extrémité : angle A = angle D = 55°.", show:'angle0', hl:['A','D'] },
+    { text:"Angle à la deuxième extrémité : angle B = angle E = 65°.", show:'angle1', hl:['B','E'] },
+    { text:"Un côté et les deux angles à ses extrémités sont égaux. On peut rédiger.", show:'redac', hl:[] },
+  ],
+  // NON ÉGAUX
+  [
+    { text:"Ces deux triangles semblent proches. On va comparer leurs côtés pour décider.", show:'triangles', hl:[] },
+    { text:"AB = DE = 6 cm ✓ et BC = EF = 5 cm ✓ — deux côtés sont égaux.", show:'side01', hl:['AB','DE','BC','EF'] },
+    { text:"Mais AC = 4 cm et DF = 3 cm. Le troisième côté est DIFFÉRENT !", show:'side2diff', hl:['AC','DF'] },
+    { text:"On ne peut pas conclure à l'égalité. Attention à la rédaction : il ne faut PAS dire 'les triangles sont inégaux' mais utiliser la bonne formulation.", show:'redac_non', hl:[] },
+  ],
+];
+
+// ============================================================
+// RÉDACTIONS
+// ============================================================
+const redactions = [
+  // SSS
+  `<div class="titre">✍️ Rédaction (cas des 3 côtés)</div>
+   <div class="ligne">Dans les triangles ABC et DEF :</div>
+   <div class="ligne"><span class="hl-blue">AB = DE = 6 cm</span> <span class="hl-grey">(côtés marqués d'1 tiret)</span></div>
+   <div class="ligne"><span class="hl-blue">BC = EF = 5 cm</span> <span class="hl-grey">(côtés marqués de 2 tirets)</span></div>
+   <div class="ligne"><span class="hl-blue">AC = DF = 4 cm</span> <span class="hl-grey">(côtés marqués de 3 tirets)</span></div>
+   <div class="conclusion">Ces triangles ont leurs trois côtés respectivement égaux,<br>donc les triangles ABC et DEF sont égaux.</div>`,
+
+  // SAS
+  `<div class="titre">✍️ Rédaction (cas 2 côtés et l'angle compris)</div>
+   <div class="ligne">Dans les triangles ABC et DEF :</div>
+   <div class="ligne"><span class="hl-green">AB = DE = 6 cm</span></div>
+   <div class="ligne"><span class="hl-green">angle A = angle D = 55°</span> <span class="hl-grey">(angle compris entre les deux côtés)</span></div>
+   <div class="ligne"><span class="hl-green">AC = DF = 4 cm</span></div>
+   <div class="conclusion">Ces triangles ont deux côtés égaux et l'angle compris entre ces côtés égal,<br>donc les triangles ABC et DEF sont égaux.</div>
+   <div class="attention">⚠️ L'angle doit être ENTRE les deux côtés, pas n'importe quel angle !</div>`,
+
+  // ASA
+  `<div class="titre">✍️ Rédaction (cas 2 angles et le côté entre eux)</div>
+   <div class="ligne">Dans les triangles ABC et DEF :</div>
+   <div class="ligne"><span class="hl-orange">AB = DE = 6 cm</span></div>
+   <div class="ligne"><span class="hl-orange">angle A = angle D = 55°</span> <span class="hl-grey">(angle en A, extrémité de AB)</span></div>
+   <div class="ligne"><span class="hl-orange">angle B = angle E = 65°</span> <span class="hl-grey">(angle en B, extrémité de AB)</span></div>
+   <div class="conclusion">Ces triangles ont un côté égal et les deux angles à ses extrémités égaux,<br>donc les triangles ABC et DEF sont égaux.</div>
+   <div class="attention">⚠️ Les angles doivent être aux EXTRÉMITÉS du côté, pas à l'angle opposé !</div>`,
+
+  // NON ÉGAUX
+  `<div class="titre">✍️ Rédaction (triangles non égaux)</div>
+   <div class="ligne">Dans les triangles ABC et DEF :</div>
+   <div class="ligne"><span class="hl-red">AC = 4 cm</span> et <span class="hl-red">DF = 3 cm</span></div>
+   <div class="ligne"><span class="hl-red">AC ≠ DF</span> — les côtés correspondants ne sont pas égaux.</div>
+   <div class="attention">⛔ On ne peut pas affirmer que les triangles ABC et DEF sont égaux.</div>
+   <div class="attention">⚠️ Ne jamais écrire "les triangles sont inégaux" ou "les triangles sont différents".<br>Il faut écrire : <strong>"On ne peut pas conclure que les triangles sont égaux"</strong> ou <strong>"Les triangles ne sont pas égaux car..."</strong></div>`,
+];
+
+// ============================================================
+// DESSIN SVG
+// ============================================================
+function drawScene() {
+  const t = triangles[mode];
+  const e = etapesData[mode][etape];
+  const cols = ['#1d4ed8','#15803d','#b45309','#be185d'];
+  const col = cols[mode];
+  let h = '';
+
+  const T1 = t.T1, T2 = t.T2;
+
+  // Dessine un triangle
+  function triPath(pts, fill, stroke, sw) {
+    return `<polygon points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+  }
+
+  // Segments d'un triangle avec leurs milieux
+  function seg(pts) {
+    return [
+      { x1:pts[0].x,y1:pts[0].y, x2:pts[1].x,y2:pts[1].y, mx:(pts[0].x+pts[1].x)/2, my:(pts[0].y+pts[1].y)/2 },
+      { x1:pts[1].x,y1:pts[1].y, x2:pts[2].x,y2:pts[2].y, mx:(pts[1].x+pts[2].x)/2, my:(pts[1].y+pts[2].y)/2 },
+      { x1:pts[0].x,y1:pts[0].y, x2:pts[2].x,y2:pts[2].y, mx:(pts[0].x+pts[2].x)/2, my:(pts[0].y+pts[2].y)/2 },
+    ];
+  }
+  const s1=seg(T1), s2=seg(T2);
+  // Côtés : 0=AB/DE, 1=BC/EF, 2=AC/DF
+
+  const hlSet = new Set(e.hl||[]);
+
+  // Couleurs des triangles
+  h += triPath(T1,'rgba(200,210,255,0.18)',col,2);
+  h += triPath(T2,'rgba(200,210,255,0.18)',col,2);
+
+  // Étiquettes sommets
+  const offsets = [[{x:-16,y:14},{x:8,y:14},{x:-8,y:-6}],[{x:-16,y:14},{x:8,y:14},{x:-8,y:-6}]];
+  [T1,T2].forEach((pts,ti)=>{
+    pts.forEach((p,i)=>{
+      const ox = i===0?-16:i===1?8:-8, oy = i===2?-8:14;
+      h += `<text x="${p.x+ox}" y="${p.y+oy}" font-size="14" font-weight="bold" fill="${col}">${p.l}</text>`;
+    });
+  });
+
+  // ---- Côtés avec marquage ----
+  function drawSide(s, sideIdx, ti, label, markCount, highlighted, different=false) {
+    const lx = s.mx, ly = s.my;
+    const dx = s.x2-s.x1, dy = s.y2-s.y1;
+    const len = Math.sqrt(dx*dx+dy*dy);
+    const nx = -dy/len, ny = dx/len; // normale
+    const stroke = different ? '#be185d' : highlighted ? '#f97316' : col;
+    const sw = highlighted || different ? 3.5 : 2;
+    h += `<line x1="${s.x1}" y1="${s.y1}" x2="${s.x2}" y2="${s.y2}" stroke="${stroke}" stroke-width="${sw}"/>`;
+    // Label côté
+    if (label) {
+      const offset = 16;
+      h += `<text x="${(lx+nx*offset).toFixed(1)}" y="${(ly+ny*offset+4).toFixed(1)}" font-size="11" font-weight="bold" text-anchor="middle" fill="${different?'#be185d':highlighted?'#f97316':'#374151'}">${label}</text>`;
+    }
+    // Tirets d'égalité
+    if (markCount > 0 && !different) {
+      for (let m=0;m<markCount;m++) {
+        const offset = (m-(markCount-1)/2)*6;
+        const mx2 = lx+nx*10+dx/len*offset, my2 = ly+ny*10+dy/len*offset;
+        h += `<line x1="${(mx2-ny*5).toFixed(1)}" y1="${(my2+nx*5).toFixed(1)}" x2="${(mx2+ny*5).toFixed(1)}" y2="${(my2-nx*5).toFixed(1)}" stroke="${col}" stroke-width="2"/>`;
+      }
+    }
+    // Croix si différent
+    if (different) {
+      h += `<text x="${(lx+nx*18).toFixed(1)}" y="${(ly+ny*18).toFixed(1)}" font-size="18" font-weight="bold" fill="#be185d" text-anchor="middle">≠</text>`;
+    }
+  }
+
+  // Arcs d'angle
+  function drawAngle(pts, vertexIdx, angleDeg, color, label) {
+    const vx=pts[vertexIdx].x, vy=pts[vertexIdx].y;
+    const other1 = pts[(vertexIdx+1)%3], other2 = pts[(vertexIdx+2)%3];
+    const a1=Math.atan2(other1.y-vy,other1.x-vx);
+    const a2=Math.atan2(other2.y-vy,other2.x-vx);
+    const r=22;
+    const x1=vx+r*Math.cos(a1),y1=vy+r*Math.sin(a1);
+    const x2=vx+r*Math.cos(a2),y2=vy+r*Math.sin(a2);
+    const large=Math.abs(a2-a1)>Math.PI?1:0;
+    const sweep = (a2-a1+2*Math.PI)%(2*Math.PI) < Math.PI ? 0 : 1;
+    h += `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 0,${sweep} ${x2.toFixed(1)},${y2.toFixed(1)}" fill="${color}33" stroke="${color}" stroke-width="1.8"/>`;
+    const midA=(a1+a2)/2;
+    const lx2=vx+Math.cos(midA)*(r+16), ly2=vy+Math.sin(midA)*(r+16);
+    if (label) h += `<text x="${lx2.toFixed(1)}" y="${(ly2+4).toFixed(1)}" font-size="11" font-weight="bold" text-anchor="middle" fill="${color}">${label}</text>`;
+  }
+
+  // Selon l'étape, montrer les éléments progressivement
+  const show = e.show;
+  const sides1 = t.sides1||['','',''];
+  const sides2 = t.sides2||['','',''];
+
+  // Cas NON égaux
+  if (mode===3) {
+    const show01 = show==='side01'||show==='side2diff'||show==='redac_non';
+    const show2 = show==='side2diff'||show==='redac_non';
+    // côté 0 (AB/DE)
+    const hl01 = hlSet.has('AB')||hlSet.has('DE');
+    drawSide(s1[0],0,0,show01?sides1[0]:'',show01?1:0,hl01);
+    drawSide(s2[0],0,1,show01?sides2[0]:'',show01?1:0,hl01);
+    // côté 1 (BC/EF)
+    const hl1 = hlSet.has('BC')||hlSet.has('EF');
+    drawSide(s1[1],1,0,show01?sides1[1]:'',show01?2:0,hl01);
+    drawSide(s2[1],1,1,show01?sides2[1]:'',show01?2:0,hl01);
+    // côté 2 (AC/DF) - différent !
+    if (show2) {
+      drawSide(s1[2],2,0,sides1[2],0,true);
+      drawSide(s2[2],2,1,sides2[2],0,true,true);
+    } else {
+      drawSide(s1[2],2,0,'',0,false);
+      drawSide(s2[2],2,1,'',0,false);
+    }
+    // Rédaction
+    document.getElementById('redaction').innerHTML = (show==='redac_non') ? redactions[3] : '';
+    document.getElementById('redaction').className = (show==='redac_non') ? 'redaction' : 'redaction hidden';
+    return h;
+  }
+
+  // Cas SSS, SAS, ASA
+  const showSide0 = ['side0','side1','side01','side2','angle0','angle1','redac'].includes(show) || show.includes('side');
+  const showSide1 = ['side1','side01','redac'].includes(show) && mode===0;
+  const showSide2 = ['side2','redac'].includes(show);
+  const showAngle0 = ['angle0','angle1','redac'].includes(show);
+  const showAngle1 = ['angle1','redac'].includes(show);
+
+  const hl0 = hlSet.has('AB')||hlSet.has('DE');
+  const hl1 = hlSet.has('BC')||hlSet.has('EF');
+  const hl2 = hlSet.has('AC')||hlSet.has('DF');
+  const hlA = hlSet.has('A')||hlSet.has('D');
+  const hlB = hlSet.has('B')||hlSet.has('E');
+
+  // Côté 0 : AB / DE
+  if (showSide0) {
+    drawSide(s1[0],0,0,sides1[0],1,hl0);
+    drawSide(s2[0],0,1,sides2[0],1,hl0);
+  } else {
+    drawSide(s1[0],0,0,'',0,false);
+    drawSide(s2[0],0,1,'',0,false);
+  }
+  // Côté 1 : BC / EF (SSS seulement)
+  if (showSide1) {
+    drawSide(s1[1],1,0,sides1[1],2,hl1);
+    drawSide(s2[1],1,1,sides2[1],2,hl1);
+  } else {
+    drawSide(s1[1],1,0,'',0,false);
+    drawSide(s2[1],1,1,'',0,false);
+  }
+  // Côté 2 : AC / DF
+  if (showSide2) {
+    drawSide(s1[2],2,0,sides1[2],mode===0?3:2,hl2);
+    drawSide(s2[2],2,1,sides2[2],mode===0?3:2,hl2);
+  } else {
+    drawSide(s1[2],2,0,'',0,false);
+    drawSide(s2[2],2,1,'',0,false);
+  }
+
+  // Angles
+  const angleColor0 = hlA ? '#f97316' : '#6d28d9';
+  const angleColor1 = hlB ? '#f97316' : '#be185d';
+  if (showAngle0) {
+    const lbl = (t.angles1||[])[0];
+    drawAngle(T1,0,lbl,angleColor0,lbl?lbl+'°':null);
+    drawAngle(T2,0,lbl,angleColor0,lbl?lbl+'°':null);
+  }
+  if (showAngle1) {
+    const lbl = (t.angles1||[])[1];
+    drawAngle(T1,1,lbl,angleColor1,lbl?lbl+'°':null);
+    drawAngle(T2,1,lbl,angleColor1,lbl?lbl+'°':null);
+  }
+
+  // Rédaction
+  document.getElementById('redaction').innerHTML = (show==='redac') ? redactions[mode] : '';
+  document.getElementById('redaction').className = (show==='redac') ? 'redaction' : 'redaction hidden';
+
+  return h;
+}
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#1d4ed8','#15803d','#b45309','#be185d'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('explication').style.borderLeftColor=cols[m];
+  render();
+}
+function prev() { if(etape>0){etape--;render();} }
+function next() { const maxE=etapesData[mode].length; if(etape<maxE-1){etape++;render();} }
+
+function render() {
+  const e=etapesData[mode][etape];
+  const svgContent=drawScene();
+  document.getElementById('canvas').innerHTML=svgContent;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesData[mode].length}`;
+}
+
+render();
+</script>
+</body>
+</html>
