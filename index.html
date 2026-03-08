@@ -257,6 +257,8 @@ function parseCSV(csv) {
   const lines = csv.trim().split("\n");
   // Supprimer BOM éventuel et nettoyer les en-têtes
   const headers = lines[0].replace(/^\uFEFF/, "").split(",").map(h => h.trim().toLowerCase().replace(/[^a-z]/g, ""));
+  console.log("HEADERS:", headers);
+  console.log("LIGNE 1:", lines[1]);
   return lines.slice(1).map(line => {
     const vals = []; let cur = "", inQ = false;
     for (const ch of line) {
@@ -322,9 +324,12 @@ async function loadContent(code, groupe) {
       rows = parseCSV(await res.text());
     }
     const notions = groupByNotion(rows);
+    console.log("ROWS:", rows.length, rows[0]);
+    console.log("NOTIONS:", Object.keys(notions));
     renderContent(notions, sheet.color);
   } catch(e) {
-    document.getElementById("content").innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;">Impossible de charger les données.<br/>Vérifie ta connexion.</div>`;
+    console.error("ERREUR:", e);
+    document.getElementById("content").innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px;">Erreur : ${e.message}<br/>Vérifie ta connexion.</div>`;
   }
   document.getElementById("loading").classList.remove("visible");
 }
