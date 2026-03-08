@@ -207,10 +207,7 @@
     </div>
   </div>
 
-  <div id="wake-banner">
-    <span>☀️</span>
-    <div class="wake-banner-text">Mise en veille désactivée — l'écran restera allumé</div>
-  </div>
+
 
   <div class="tip-banner" id="tipBanner">
     <span>💡</span>
@@ -413,9 +410,7 @@ function handleLogout() {
   document.getElementById("groupSelect").style.display = "none";
   document.getElementById("login").style.display = "flex";
   document.getElementById("codeInput").value = "";
-  document.getElementById("wake-banner").classList.remove("visible");
-  document.getElementById("wakeBtn").textContent = "💤 Veille";
-  document.getElementById("wakeBtn").className = "wake-btn wake-off";
+
 }
 
 // Entrée au clavier
