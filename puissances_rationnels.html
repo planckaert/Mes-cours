@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissances — entiers et rationnels</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 13px; background: #4c1d95; color: white; font-size: 1.15em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 7px 11px; border-radius: 16px; border: none; font-size: 0.76em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab4 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #3730a3; color: white; border-color: #3730a3; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab4.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Grande expression */
+  .expr-display { background: white; border-radius: 16px; box-shadow: 0 2px 12px #0002; padding: 18px 12px 12px; margin: 8px auto; max-width: 480px; width: 95%; text-align: center; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  .big { font-family: 'Courier New', monospace; font-size: 1.9em; font-weight: bold; display: flex; align-items: flex-start; justify-content: center; gap: 3px; flex-wrap: wrap; line-height: 1.1; }
+  /* Fraction SVG-like inline */
+  .frac { display: inline-flex; flex-direction: column; align-items: center; font-size: 0.75em; vertical-align: middle; margin: 0 3px; }
+  .frac .num { border-bottom: 2px solid currentColor; padding: 0 4px 1px; }
+  .frac .den { padding: 1px 4px 0; }
+  sup.exp { font-size: 0.5em; vertical-align: super; color: #b45309; font-weight: bold; }
+
+  /* couleurs tokens */
+  .tk-base { color: #3730a3; }
+  .tk-neg  { color: #9d174d; }
+  .tk-exp  { color: #b45309; }
+  .tk-res  { color: #15803d; background: #dcfce7; padding: 2px 10px; border-radius: 8px; border: 2px solid #6ee7b7; }
+  .tk-sub  { background: #fef9c3; color: #713f12; padding: 2px 7px; border-radius: 6px; border: 1px solid #fde68a; font-family: 'Courier New', monospace; }
+
+  /* Boîte calcul */
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #3730a3; font-size: 0.97em; line-height: 2.1; }
+  .regle { font-weight: bold; background: #ede9fe; color: #3730a3; border-radius: 8px; padding: 6px 14px; margin-bottom: 8px; text-align: center; font-size: 0.93em; font-family: 'Courier New', monospace; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .eq { min-width: 18px; color: #374151; }
+  .hl-p  { color: #3730a3; font-weight: bold; }
+  .hl-r  { color: #9d174d; font-weight: bold; }
+  .hl-g  { color: #15803d; font-weight: bold; }
+  .hl-o  { color: #b45309; font-weight: bold; }
+  .conclusion { background: #ede9fe; border-left: 4px solid #6366f1; padding: 8px 14px; border-radius: 8px; font-weight: bold; color: #1e1b4b; margin-top: 6px; font-family: 'Courier New', monospace; font-size: 1.05em; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #3730a3; color: white; }
+</style>
+</head>
+<body>
+<h1>⚡ Puissances — entiers et fractions</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Entier, exp. positif &nbsp;(−2)³</button>
+  <button class="tab tab2" onclick="setMode(1)">Fraction, exp. positif &nbsp;(²⁄₃)²</button>
+  <button class="tab tab3" onclick="setMode(2)">Entier, exp. négatif &nbsp;3⁻²</button>
+  <button class="tab tab4" onclick="setMode(3)">Fraction, exp. négatif &nbsp;(²⁄₃)⁻²</button>
+</div>
+<div class="scene">
+  <div class="expr-display" id="expr-display"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// Raccourcis HTML
+const frac=(a,b,col='')=>`<span class="frac" style="${col?'color:'+col:''}""><span class="num">${a}</span><span class="den">${b}</span></span>`;
+const sup=(n,col='#b45309')=>`<sup class="exp" style="color:${col}">${n}</sup>`;
+const base=(s,cl='tk-base')=>`<span class="${cl}">${s}</span>`;
+
+// ============================================================
+// MODE 0 — (−2)³ = −8
+// ============================================================
+const e0=[
+  {
+    expr:`<span class="big">${base('(−2)','tk-neg')}${sup('3')}</span>`,
+    explic:"On veut calculer (−2)³. La base est −2, l'exposant est 3 (positif).",
+    calc:`<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+          <div class="ligne"><span class="hl-r">Base</span> = <span class="hl-r">−2</span> &nbsp;|&nbsp; <span class="hl-o">Exposant</span> = <span class="hl-o">3</span></div>
+          <div class="ligne">(−2)³ = (−2) × (−2) × (−2)</div>`
+  },
+  {
+    expr:`<span class="big">${base('(−2)','tk-neg')}${sup('3')}</span>
+          <div style="font-size:1.1em;color:#374151;font-family:Courier New,monospace">(−2) × (−2) × (−2)</div>`,
+    explic:"On multiplie les deux premiers facteurs : (−2) × (−2) = +4 (négatif × négatif = positif).",
+    calc:`<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+          <div class="ligne">(−2)³ = <span class="hl-r">(−2) × (−2)</span> × (−2)</div>
+          <div class="ligne"><span class="eq">=</span> <span class="hl-g">+4</span> × (−2) &nbsp;<span class="hl-o">(− × − = +)</span></div>`
+  },
+  {
+    expr:`<span class="big tk-neg">−8</span>`,
+    explic:"On calcule +4 × (−2) = −8. Exposant impair → résultat négatif.",
+    calc:`<div class="regle">(−a)ⁿ = (−a) × (−a) × … (n fois)</div>
+          <div class="ligne">(−2)³ = (−2) × (−2) × (−2)</div>
+          <div class="ligne"><span class="eq">=</span> <span class="hl-g">+4</span> × (−2)</div>
+          <div class="ligne"><span class="eq">=</span> <span class="hl-r">−8</span></div>
+          <div class="conclusion">(−2)³ = −8</div>
+          <div class="attention">Exposant <strong>impair</strong> → résultat <strong>négatif</strong>.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — (2/3)² = 4/9
+// ============================================================
+const e1=[
+  {
+    expr:`<span class="big">${base('(','tk-base')}${frac('2','3','#3730a3')}${base(')','tk-base')}${sup('2')}</span>`,
+    explic:"On veut calculer (2/3)². Base = fraction 2/3, exposant = 2.",
+    calc:`<div class="regle">(a/b)ⁿ = aⁿ / bⁿ</div>
+          <div class="ligne"><span class="hl-p">Base</span> = <span class="hl-p">2/3</span> &nbsp;|&nbsp; <span class="hl-o">Exposant</span> = <span class="hl-o">2</span></div>
+          <div class="ligne">On applique la puissance au numérateur <strong>et</strong> au dénominateur séparément.</div>`
+  },
+  {
+    expr:`<span class="big">${frac('2<sup style="font-size:0.7em;vertical-align:super;color:#b45309">2</sup>','3<sup style="font-size:0.7em;vertical-align:super;color:#b45309">2</sup>','#3730a3')}</span>`,
+    explic:"On met l'exposant 2 sur le numérateur et sur le dénominateur : 2² / 3².",
+    calc:`<div class="regle">(a/b)ⁿ = aⁿ / bⁿ</div>
+          <div class="ligne">(2/3)² = <span class="hl-p">2²</span> / <span class="hl-p">3²</span></div>
+          <div class="ligne"><span class="hl-p">2²</span> = 2 × 2 = <span class="hl-g">4</span></div>
+          <div class="ligne"><span class="hl-p">3²</span> = 3 × 3 = <span class="hl-g">9</span></div>`
+  },
+  {
+    expr:`<span class="big">${frac('4','9','#15803d')}</span>`,
+    explic:"2² = 4 et 3² = 9. Donc (2/3)² = 4/9.",
+    calc:`<div class="regle">(a/b)ⁿ = aⁿ / bⁿ</div>
+          <div class="ligne">(2/3)² = 2² / 3² = <span class="hl-g">4/9</span></div>
+          <div class="conclusion">(2/3)² = 4/9</div>
+          <div class="attention">⚠️ On n'additionne pas les fractions : (2/3)² ≠ 4/6 !</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — 3⁻² = 1/9
+// ============================================================
+const e2=[
+  {
+    expr:`<span class="big">${base('3','tk-base')}${sup('-2','#9d174d')}</span>`,
+    explic:"On veut calculer 3⁻². L'exposant est négatif : que signifie-t-il ?",
+    calc:`<div class="regle">a⁻ⁿ = 1 / aⁿ &nbsp; (a ≠ 0)</div>
+          <div class="ligne">Un exposant <span class="hl-r">négatif</span> = l'inverse de la puissance positive.</div>
+          <div class="ligne">3⁻² = <span class="hl-p">1</span> / <span class="hl-p">3²</span></div>`
+  },
+  {
+    expr:`<span class="big">${frac('1','3<sup style="font-size:0.7em;vertical-align:super;color:#b45309">2</sup>','#3730a3')}</span>`,
+    explic:"On transforme : 3⁻² = 1/3². On calcule maintenant 3² = 9.",
+    calc:`<div class="regle">a⁻ⁿ = 1 / aⁿ</div>
+          <div class="ligne">3⁻² = 1 / 3²</div>
+          <div class="ligne">3² = 3 × 3 = <span class="hl-g">9</span></div>
+          <div class="ligne">Donc 3⁻² = 1 / <span class="hl-g">9</span></div>`
+  },
+  {
+    expr:`<span class="big">${frac('1','9','#15803d')}</span>`,
+    explic:"3⁻² = 1/9. Plus l'exposant négatif est grand, plus le résultat est petit.",
+    calc:`<div class="regle">a⁻ⁿ = 1 / aⁿ</div>
+          <div class="ligne">3⁻² = 1 / 3² = <span class="hl-g">1/9</span></div>
+          <div class="conclusion">3⁻² = 1/9</div>
+          <div class="attention">⚠️ 3⁻² ≠ −9. L'exposant négatif n'est PAS un signe moins devant le résultat !</div>`
+  },
+  {
+    expr:`<span class="big">${base('2','tk-base')}${sup('-4','#9d174d')}</span>`,
+    explic:"Autre exemple : calculons 2⁻⁴.",
+    calc:`<div class="regle">a⁻ⁿ = 1 / aⁿ</div>
+          <div class="ligne">2⁻⁴ = 1 / 2⁴</div>
+          <div class="ligne">2⁴ = 2 × 2 × 2 × 2 = <span class="hl-g">16</span></div>
+          <div class="ligne">Donc 2⁻⁴ = <span class="hl-g">1/16</span></div>
+          <div class="conclusion">2⁻⁴ = 1/16</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — (2/3)⁻² = 9/4
+// ============================================================
+const e3=[
+  {
+    expr:`<span class="big">${base('(','tk-base')}${frac('2','3','#3730a3')}${base(')','tk-base')}${sup('-2','#9d174d')}</span>`,
+    explic:"On veut calculer (2/3)⁻². Exposant négatif sur une fraction.",
+    calc:`<div class="regle">(a/b)⁻ⁿ = (b/a)ⁿ &nbsp; (on inverse la fraction)</div>
+          <div class="ligne">Un exposant négatif sur une fraction = <strong>on inverse la fraction</strong>, puis on applique l'exposant positif.</div>`
+  },
+  {
+    expr:`<span class="big">${base('(','tk-base')}${frac('3','2','#9d174d')}${base(')','tk-base')}${sup('2','#b45309')}</span>`,
+    explic:"On inverse 2/3 pour obtenir 3/2. L'exposant devient positif : (3/2)².",
+    calc:`<div class="regle">(a/b)⁻ⁿ = (b/a)ⁿ</div>
+          <div class="ligne">(2/3)⁻² = <span class="hl-r">(3/2)</span>² &nbsp; (fraction inversée)</div>
+          <div class="ligne">Maintenant on calcule (3/2)² = <span class="hl-p">3²</span> / <span class="hl-p">2²</span></div>`
+  },
+  {
+    expr:`<span class="big">${frac('3<sup style="font-size:0.7em;vertical-align:super;color:#b45309">2</sup>','2<sup style="font-size:0.7em;vertical-align:super;color:#b45309">2</sup>','#9d174d')}</span>`,
+    explic:"On applique l'exposant 2 au numérateur et au dénominateur : 3² / 2².",
+    calc:`<div class="regle">(a/b)⁻ⁿ = (b/a)ⁿ = bⁿ/aⁿ</div>
+          <div class="ligne">(2/3)⁻² = (3/2)² = 3² / 2²</div>
+          <div class="ligne">3² = <span class="hl-g">9</span> &nbsp;|&nbsp; 2² = <span class="hl-g">4</span></div>`
+  },
+  {
+    expr:`<span class="big">${frac('9','4','#15803d')}</span>`,
+    explic:"3² = 9 et 2² = 4. Donc (2/3)⁻² = 9/4.",
+    calc:`<div class="regle">(a/b)⁻ⁿ = (b/a)ⁿ</div>
+          <div class="ligne">(2/3)⁻² = (3/2)² = 3²/2² = <span class="hl-g">9/4</span></div>
+          <div class="conclusion">(2/3)⁻² = 9/4</div>
+          <div class="attention">Récapitulatif :<br>
+            • Exposant négatif sur un entier : a⁻ⁿ = 1/aⁿ<br>
+            • Exposant négatif sur une fraction : (a/b)⁻ⁿ = (b/a)ⁿ</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+const COLS=['#3730a3','#9d174d','#15803d','#b45309'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const e=ETAPES[mode][etape];
+  document.getElementById('expr-display').innerHTML=e.expr;
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${ETAPES[mode].length}`;
+}
+
+render();
+</script>
+</body>
+</html>

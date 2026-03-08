@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agrandissement et réduction</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #0c4a6e; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 12px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 250px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .en3 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1em; }
+  .c1 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c2 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c3 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>🔍 Agrandissement et réduction</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Reconnaître</button>
+  <button class="tab tab2" onclick="setMode(1)">Calculer un agrandissement</button>
+  <button class="tab tab3" onclick="setMode(2)">Calculer une réduction</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 250"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(x1,y1,x2,y2,col,w=2,dash=''){
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function rect(x,y,w,h,fill,stroke,sw=2,op=0.15){
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" rx="2"/>`;
+}
+function txt(x,y,s,col,size=12,anchor='middle',bold=true){
+  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="${bold?'bold':'normal'}" text-anchor="${anchor}" fill="${col}">${s}</text>`;
+}
+function arrow(x1,y1,x2,y2,col){
+  const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/len, uy=dy/len;
+  const ex=x2-ux*7, ey=y2-uy*7;
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="2" marker-end="url(#arr${col.replace('#','')})"/>`;
+}
+function defs(){
+  return `<defs>
+    <marker id="arrblue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#1d4ed8"/>
+    </marker>
+    <marker id="arrgreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#15803d"/>
+    </marker>
+    <marker id="arrorange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#b45309"/>
+    </marker>
+  </defs>`;
+}
+function cote(x1,y1,x2,y2,val,col,off=14){
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*off, ny=dx/len*off;
+  return txt(mx+nx, my+ny, val, col, 11);
+}
+
+// ============================================================
+// MODE 0 — RECONNAÎTRE agrandissement / réduction
+// Trois paires de figures : agrandissement, réduction, ni l'un ni l'autre
+// ============================================================
+
+function drawReconna(step){
+  let h = defs();
+
+  // Figure 1 : rectangle 60×40 → 90×60 (agrandissement ×1,5)
+  const r1x=30, r1y=30, r1w=60, r1h=40;
+  const r2x=30, r2y=100, r2w=90, r2h=60;
+
+  // Figure 2 : triangle 80 → 40 (réduction ×0,5)
+  const t1 = [{x:260,y:30},{x:330,y:30},{x:295,y:80}];
+  const t2 = [{x:270,y:110},{x:310,y:110},{x:290,y:140}];
+
+  // Label k
+  if(step>=1){
+    // Rapport fig1
+    h+=txt(145, 95, '÷ 60 × 90', '#1d4ed8', 10, 'middle', false);
+    h+=txt(145, 75, 'k = 90/60 = 1,5', '#1d4ed8', 11);
+    h+=txt(145, 160, 'k = 40/80 = 0,5', '#15803d', 11);
+  }
+
+  // Rectangles
+  h+=rect(r1x, r1y, r1w, r1h, '#1d4ed8','#1d4ed8');
+  h+=txt(r1x+r1w/2, r1y-8, 'Figure 1', '#1d4ed8', 11);
+  h+=cote(r1x,r1y,r1x+r1w,r1y,'60','#1d4ed8',-10);
+  h+=cote(r1x+r1w,r1y,r1x+r1w,r1y+r1h,'40','#1d4ed8',12);
+
+  h+=rect(r2x, r2y, r2w, r2h, '#9d174d','#9d174d');
+  h+=txt(r2x+r2w/2, r2y+r2h+14, 'Figure 2', '#9d174d', 11);
+  h+=cote(r2x,r2y,r2x+r2w,r2y,'90','#9d174d',-10);
+  h+=cote(r2x+r2w,r2y,r2x+r2w,r2y+r2h,'60','#9d174d',12);
+
+  // Triangles
+  function tri(pts,col,label,lx,ly){
+    let d=pts.map((p,i)=>`${i===0?'M':'L'}${p.x},${p.y}`).join(' ')+'Z';
+    return `<path d="${d}" fill="${col}" fill-opacity="0.15" stroke="${col}" stroke-width="2"/>`+
+           txt(lx,ly,label,col,11);
+  }
+  h+=tri(t1,'#b45309','Triangle A',295,20);
+  h+=cote(t1[0].x,t1[0].y,t1[1].x,t1[1].y,'80','#b45309',-10);
+  h+=tri(t2,'#15803d','Triangle B',290,155);
+  h+=cote(t2[0].x,t2[0].y,t2[1].x,t2[1].y,'40','#15803d',12);
+
+  if(step>=2){
+    h+=txt(230, 210, 'k > 1 → agrandissement', '#1d4ed8', 11);
+    h+=txt(230, 225, '0 < k < 1 → réduction', '#15803d', 11);
+  }
+
+  return h;
+}
+
+const e0=[
+  {
+    explic:"Pour savoir si une figure est un agrandissement ou une réduction d'une autre, on calcule le rapport entre les mesures correspondantes.",
+    draw(){ return drawReconna(0); },
+    calc:`<div class="enonce en1">Reconnaître un agrandissement ou une réduction.</div>
+          <div class="ligne">On calcule le <span class="hl-b">rapport</span> = mesure de la grande figure ÷ mesure de la petite figure.</div>
+          <div class="ligne">Si le rapport est <span class="hl-g">supérieur à 1</span> → c'est un <span class="hl-g">agrandissement</span>.</div>
+          <div class="ligne">Si le rapport est <span class="hl-b">compris entre 0 et 1</span> → c'est une <span class="hl-b">réduction</span>.</div>`
+  },
+  {
+    explic:"Pour les rectangles : rapport = 90 ÷ 60 = 1,5. Et 60 ÷ 40 = 1,5. Le rapport est le même pour toutes les dimensions : c'est bien un agrandissement.",
+    draw(){ return drawReconna(1); },
+    calc:`<div class="enonce en1">Vérifier que le rapport est le même pour toutes les dimensions.</div>
+          <div class="ligne">Longueur : 90 ÷ 60 = <span class="hl-r">1,5</span></div>
+          <div class="ligne">Largeur : 60 ÷ 40 = <span class="hl-r">1,5</span></div>
+          <div class="ligne">Le rapport est le même → Figure 2 est un <span class="hl-r">agrandissement</span> de Figure 1 de rapport 1,5.</div>
+          <div class="ligne">Triangle B : 40 ÷ 80 = <span class="hl-g">0,5</span> → c'est une <span class="hl-g">réduction</span> de rapport 0,5.</div>`
+  },
+  {
+    explic:"Si k > 1 c'est un agrandissement. Si 0 < k < 1 c'est une réduction. Attention : si les rapports ne sont pas tous égaux, ce n'est ni l'un ni l'autre.",
+    draw(){ return drawReconna(2); },
+    calc:`<div class="enonce en1">Résumé</div>
+          <div class="ligne">Rapport k = mesure image ÷ mesure originale</div>
+          <div class="ligne"><span class="hl-r">k > 1</span> → agrandissement (la figure est plus grande)</div>
+          <div class="ligne"><span class="hl-g">0 &lt; k &lt; 1</span> → réduction (la figure est plus petite)</div>
+          <div class="attention">⚠️ Pour que ce soit un agrandissement ou une réduction, <strong>toutes les dimensions</strong> doivent avoir le même rapport k.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — CALCULER UN AGRANDISSEMENT
+// Triangle original : base=6 cm, hauteur=4 cm, hyp=~7.2 cm
+// Rapport k=2.5 → base'=15, hauteur'=10
+// ============================================================
+
+function drawAgrandi(step, showImg=false){
+  let h=defs();
+
+  // Triangle original (petit, gauche)
+  const ox=40, oy=200;
+  const ow=96, oh=64; // 6cm→96px, 4cm→64px (16px/cm)
+  h+=rect(ox,oy-oh,ow,oh,'#1d4ed8','#1d4ed8',2.5);
+  h+=txt(ox+ow/2, oy-oh-10, 'Original', '#1d4ed8', 11);
+  h+=cote(ox,oy,ox+ow,oy,'6 cm','#1d4ed8',12);
+  h+=cote(ox+ow,oy-oh,ox+ow,oy,'4 cm','#1d4ed8',14);
+
+  if(showImg){
+    // Triangle agrandi (grand, droite) k=2.5 → base=15cm, hauteur=10cm
+    const iw=ow*2.5, ih=oh*2.5; // trop grand, on met k=2 pour tenir
+    // On utilise k=2 pour la figure mais k=2.5 dans les calculs
+    const k_pix=1.8; // k visuel pour tenir dans la vue
+    const iw2=ow*k_pix, ih2=oh*k_pix;
+    const ix=170, iy=200;
+    h+=rect(ix,iy-ih2,iw2,ih2,'#9d174d','#9d174d',2.5);
+    h+=txt(ix+iw2/2, iy-ih2-10, 'Image', '#9d174d', 11);
+    if(step>=3){
+      h+=cote(ix,iy,ix+iw2,iy,'15 cm','#9d174d',12);
+      h+=cote(ix+iw2,iy-ih2,ix+iw2,iy,'10 cm','#9d174d',14);
+    } else {
+      h+=cote(ix,iy,ix+iw2,iy,'? cm','#9d174d',12);
+      h+=cote(ix+iw2,iy-ih2,ix+iw2,iy,'? cm','#9d174d',14);
+    }
+    // Flèche
+    h+=`<line x1="${ox+ow+12}" y1="${oy-oh/2}" x2="${ix-8}" y2="${iy-ih2/2}" stroke="#b45309" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrorange)"/>`;
+    h+=txt((ox+ow+12+ix-8)/2, oy-oh/2-14, 'k = 2,5', '#b45309', 12);
+  }
+
+  return h;
+}
+
+const e1=[
+  {
+    explic:"On a un rectangle de base 6 cm et de hauteur 4 cm. On veut l'agrandir avec un rapport k = 2,5.",
+    draw(){ return drawAgrandi(1,false); },
+    calc:`<div class="enonce en2">Agrandissement de rapport k = 2,5.</div>
+          <div class="ligne">Mesures originales : base = <span class="hl-b">6 cm</span>, hauteur = <span class="hl-b">4 cm</span></div>
+          <div class="ligne">Pour agrandir, on <span class="hl-g">multiplie chaque dimension par k</span>.</div>
+          <div class="ligne">Nouvelle mesure = mesure originale × <span class="hl-g">k</span></div>`
+  },
+  {
+    explic:"On calcule la nouvelle base : 6 × 2,5 = 15 cm.",
+    draw(){ return drawAgrandi(2,true); },
+    calc:`<div class="enonce en2">Calcul de la nouvelle base</div>
+          <div class="ligne">Nouvelle base = 6 × <span class="hl-g">2,5</span> = <span class="hl-g">15 cm</span></div>`
+  },
+  {
+    explic:"On calcule la nouvelle hauteur : 4 × 2,5 = 10 cm.",
+    draw(){ return drawAgrandi(3,true); },
+    calc:`<div class="enonce en2">Calcul de la nouvelle hauteur</div>
+          <div class="ligne">Nouvelle hauteur = 4 × <span class="hl-g">2,5</span> = <span class="hl-g">10 cm</span></div>`
+  },
+  {
+    explic:"Le rectangle agrandi a pour dimensions 15 cm × 10 cm. Toutes les dimensions ont été multipliées par 2,5.",
+    draw(){ return drawAgrandi(4,true); },
+    calc:`<div class="enonce en2">Résultat de l'agrandissement</div>
+          <div class="ligne">Base : 6 × 2,5 = <span class="hl-g">15 cm</span></div>
+          <div class="ligne">Hauteur : 4 × 2,5 = <span class="hl-g">10 cm</span></div>
+          <div class="conclusion c2">Rectangle agrandi : 15 cm × 10 cm</div>
+          <div class="attention">⚠️ Toutes les longueurs sont multipliées par k. Mais l'aire, elle, est multipliée par k² = 2,5² = 6,25 !</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — CALCULER UNE RÉDUCTION
+// Photo : 20 cm × 15 cm → réduction rapport k = 0,4 → 8 cm × 6 cm
+// On cherche aussi le rapport à partir des dimensions
+// ============================================================
+
+function drawReduc(step){
+  let h=defs();
+
+  // Grande photo (originale)
+  const gx=20, gy=30, gw=180, gh=135; // 20cm×15cm → ratio 4:3
+  h+=rect(gx,gy,gw,gh,'#b45309','#b45309',2.5);
+  h+=txt(gx+gw/2, gy-10, 'Photo originale', '#b45309', 11);
+  h+=cote(gx,gy,gx+gw,gy,'20 cm','#b45309',-10);
+  h+=cote(gx+gw,gy,gx+gw,gy+gh,'15 cm','#b45309',14);
+
+  // Petite photo (réduite) k=0.4 → 8cm×6cm → en pixels: 72×54
+  const px=310, py=80, pw=72, ph=54;
+  h+=rect(px,py,pw,ph,'#15803d','#15803d',2.5);
+  h+=txt(px+pw/2, py-10, 'Photo réduite', '#15803d', 11);
+
+  if(step>=2){
+    h+=cote(px,py+ph,px+pw,py+ph,'8 cm','#15803d',12);
+    h+=cote(px+pw,py,px+pw,py+ph,'6 cm','#15803d',14);
+  } else {
+    h+=cote(px,py+ph,px+pw,py+ph,'? cm','#15803d',12);
+    h+=cote(px+pw,py,px+pw,py+ph,'? cm','#15803d',14);
+  }
+
+  if(step>=1){
+    h+=`<line x1="${gx+gw+8}" y1="${gy+gh/2}" x2="${px-6}" y2="${py+ph/2}" stroke="#b45309" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrorange)"/>`;
+    h+=txt((gx+gw+8+px-6)/2, gy+gh/2-14, 'k = 0,4', '#b45309', 12);
+  }
+
+  return h;
+}
+
+const e2=[
+  {
+    explic:"On a une photo de 20 cm × 15 cm. On veut la réduire avec un rapport k = 0,4. Quelles seront les nouvelles dimensions ?",
+    draw(){ return drawReduc(0); },
+    calc:`<div class="enonce en3">Réduction de rapport k = 0,4.</div>
+          <div class="ligne">Mesures originales : <span class="hl-o">20 cm × 15 cm</span></div>
+          <div class="ligne">Pour réduire, on <span class="hl-g">multiplie chaque dimension par k</span>.</div>
+          <div class="ligne">Nouvelle mesure = mesure originale × <span class="hl-g">0,4</span></div>`
+  },
+  {
+    explic:"On calcule le rapport k = 0,4. Puis on multiplie chaque dimension par k.",
+    draw(){ return drawReduc(1); },
+    calc:`<div class="enonce en3">Calcul des nouvelles dimensions</div>
+          <div class="ligne">Nouvelle largeur = 20 × <span class="hl-g">0,4</span> = <span class="hl-g">8 cm</span></div>
+          <div class="ligne">Nouvelle hauteur = 15 × <span class="hl-g">0,4</span> = <span class="hl-g">6 cm</span></div>`
+  },
+  {
+    explic:"La photo réduite mesure 8 cm × 6 cm. On peut vérifier : 8 ÷ 20 = 0,4 et 6 ÷ 15 = 0,4. ✓",
+    draw(){ return drawReduc(2); },
+    calc:`<div class="enonce en3">Photo réduite : 8 cm × 6 cm</div>
+          <div class="ligne">Vérification : 8 ÷ 20 = <span class="hl-g">0,4</span> ✓ &nbsp; 6 ÷ 15 = <span class="hl-g">0,4</span> ✓</div>
+          <div class="conclusion c3">Photo réduite : 8 cm × 6 cm, rapport k = 0,4</div>`
+  },
+  {
+    explic:"Si on connaît une dimension de l'original et son image, on peut trouver le rapport : k = mesure image ÷ mesure originale.",
+    draw(){ return drawReduc(2); },
+    calc:`<div class="enonce en3">Trouver le rapport à partir des dimensions</div>
+          <div class="ligne">k = mesure image ÷ mesure originale</div>
+          <div class="ligne">k = 8 ÷ 20 = <span class="hl-o">0,4</span></div>
+          <div class="ligne">On peut aussi trouver une dimension inconnue :</div>
+          <div class="ligne">Si on sait que la largeur image = 8 cm et k = 0,4 :</div>
+          <div class="ligne">hauteur image = 15 × 0,4 = <span class="hl-g">6 cm</span></div>
+          <div class="attention">⚠️ On peut aussi trouver la mesure originale si on connaît l'image : mesure originale = mesure image ÷ k</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2];
+const COLS=['#1d4ed8','#15803d','#b45309'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

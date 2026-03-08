@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Théorème de Thalès</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #064e3b; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 14px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #064e3b; border: 2px solid #6ee7b7; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab1.active { background: #064e3b; color: white; border-color: #064e3b; }
+  .tab2.active { background: #1e3a8a; color: white; border-color: #1e3a8a; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 260px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .thm-box { background: white; border-radius: 12px; padding: 9px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; border-left: 5px solid #064e3b; font-size: 0.9em; color: #222; line-height: 1.7; }
+  .thm-box.blue { border-left-color: #1e3a8a; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #064e3b; font-size: 0.97em; line-height: 2.1; }
+  .calc-box.blue { border-left-color: #1e3a8a; }
+  .enonce { font-weight: bold; background: #dcfce7; color: #064e3b; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .enonce.blue { background: #dbeafe; color: #1e3a8a; }
+  .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .eq { min-width: 16px; color: #374151; }
+  .hl-g  { color: #064e3b; font-weight: bold; }
+  .hl-b  { color: #1e3a8a; font-weight: bold; }
+  .hl-o  { color: #b45309; font-weight: bold; }
+  .hl-r  { color: #9d174d; font-weight: bold; }
+  .frac  { display: inline-flex; flex-direction: column; align-items: center; font-size: 0.9em; vertical-align: middle; margin: 0 3px; }
+  .frac .n { border-bottom: 1.5px solid currentColor; padding: 0 4px 1px; }
+  .frac .d { padding: 1px 4px 0; }
+  .conclusion { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; font-family: 'Courier New', monospace; font-size: 1.02em; }
+  .conclusion.blue { background: #dbeafe; border-left-color: #3b82f6; color: #1e3a8a; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #064e3b; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Théorème de Thalès — Calcul de longueur</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Configuration emboîtée</button>
+  <button class="tab tab2" onclick="setMode(1)">Configuration papillon</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 260"></svg>
+  <div class="thm-box" id="thm-box"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// ================================================================
+// DESSIN — CONFIG EMBOÎTÉE
+// S en haut, A et B sur les demi-droites (grand triangle SAB)
+// M sur [SA], N sur [SB], MN parallèle à AB
+// S=(240,30), A=(80,230), B=(400,230)
+// M = S + 0.55*(A-S) = (240+0.55*(80-240), 30+0.55*(230-30)) = (152, 140)
+// N = S + 0.55*(B-S) = (240+0.55*(400-240), 30+0.55*(230-30)) = (328, 140)
+// ================================================================
+const S={x:240,y:28}, A={x:70,y:238}, B={x:410,y:238};
+const k=0.55; // SM/SA = SN/SB = 0.55
+const M={x:S.x+k*(A.x-S.x), y:S.y+k*(A.y-S.y)};
+const N={x:S.x+k*(B.x-S.x), y:S.y+k*(B.y-S.y)};
+
+// Données numériques emboîtée :
+// SA=8, SM=? → chercher SM  avec SN=2.4, SB=4, MN=3
+// Appliquons : SM/SA = SN/SB  →  SM/8 = 2.4/4  → SM = 8*2.4/4 = 4.8
+// AB/MN = SA/SM  → AB = MN*SA/SM = 3*8/4.8 = 5
+
+const vals0 = { SA:'8', SM:'?', SN:'2,4', SB:'4', MN:'3', AB:'?' };
+
+// ================================================================
+// DESSIN — CONFIG PAPILLON
+// Deux droites se coupent en O
+// O au centre, A et A' sur une droite, B et B' sur l'autre
+// MN ∥ M'N' (les deux parallèles de chaque côté)
+// O=(240,130), A=(80,50), Ap=(400,210), B=(380,55), Bp=(100,205)
+// M = O + 0.6*(A-O), N = O + 0.6*(B-O)
+// Mp = O + 0.6*(Ap-O), Np = O + 0.6*(Bp-O)
+// ================================================================
+const O={x:240,y:128};
+const PA={x:75,y:42}, PAp={x:405,y:214};
+const PB={x:390,y:48}, PBp={x:90,y:208};
+const kp=0.55;
+const PM={x:O.x+kp*(PA.x-O.x), y:O.y+kp*(PA.y-O.y)};
+const PN={x:O.x+kp*(PB.x-O.x), y:O.y+kp*(PB.y-O.y)};
+const PMp={x:O.x+kp*(PAp.x-O.x), y:O.y+kp*(PAp.y-O.y)};
+const PNp={x:O.x+kp*(PBp.x-O.x), y:O.y+kp*(PBp.y-O.y)};
+
+// ================================================================
+// Helpers SVG
+// ================================================================
+function seg(p1,p2,col,w=2,dash=''){
+  return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}"/>`;
+}
+function pt(p,col,r=5){
+  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+function lbl(p,txt,col,dx=0,dy=0){
+  return `<text x="${(p.x+dx).toFixed(1)}" y="${(p.y+dy).toFixed(1)}" font-size="13" font-weight="bold" fill="${col}" text-anchor="middle">${txt}</text>`;
+}
+function dim(p1,p2,val,col,offset=10){
+  // Étiquette de dimension au milieu d'un segment
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  // Perpendiculaire
+  const dx=p2.x-p1.x, dy=p2.y-p1.y;
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*offset, ny=dx/len*offset;
+  return `<text x="${(mx+nx).toFixed(1)}" y="${(my+ny).toFixed(1)}" font-size="12" font-weight="bold" fill="${col}" text-anchor="middle">${val}</text>`;
+}
+
+// Marque parallèle (petit // sur un segment)
+function parallel(p1,p2,col,nb=2){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const dx=p2.x-p1.x, dy=p2.y-p1.y;
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/len, uy=dy/len;
+  const nx=-uy, ny=ux;
+  let h='';
+  for(let i=0;i<nb;i++){
+    const off=(i-(nb-1)/2)*5;
+    const px1=mx+ux*(-4)+nx*off, py1=my+uy*(-4)+ny*off;
+    const px2=mx+ux*4+nx*off, py2=my+uy*4+ny*off;
+    h+=`<line x1="${px1.toFixed(1)}" y1="${py1.toFixed(1)}" x2="${px2.toFixed(1)}" y2="${py2.toFixed(1)}" stroke="${col}" stroke-width="2"/>`;
+  }
+  return h;
+}
+
+// ================================================================
+// ÉTAPES MODE 0 — emboîtée
+// ================================================================
+const etapes0=[
+  {
+    explic:"Configuration emboîtée : M est sur [SA], N est sur [SB] et MN est parallèle à AB. On cherche SM et AB.",
+    draw(){
+      let h='';
+      // Grand triangle SAB
+      h+=seg(S,A,'#064e3b',2.5);
+      h+=seg(S,B,'#064e3b',2.5);
+      h+=seg(A,B,'#064e3b',2.5);
+      // Petit triangle SMN
+      h+=seg(M,N,'#15803d',2.5);
+      // Points
+      h+=pt(S,'#064e3b'); h+=lbl(S,'S','#064e3b',0,-10);
+      h+=pt(A,'#064e3b'); h+=lbl(A,'A','#064e3b',-14,0);
+      h+=pt(B,'#064e3b'); h+=lbl(B,'B','#064e3b',14,0);
+      h+=pt(M,'#15803d'); h+=lbl(M,'M','#15803d',-14,0);
+      h+=pt(N,'#15803d'); h+=lbl(N,'N','#15803d',14,0);
+      // Marques parallèles
+      h+=parallel(M,N,'#f97316',2);
+      h+=parallel(A,B,'#f97316',2);
+      return h;
+    },
+    thm:`<b>Situation :</b> M ∈ [SA], N ∈ [SB], <span style="color:#f97316;font-weight:bold">(MN) ∥ (AB)</span><br>
+         <b>Données :</b> SA = 8, SN = 2,4, SB = 4, MN = 3<br>
+         <b>Chercher :</b> SM = ? et AB = ?`,
+    calc:`<div class="enonce">Données : SA = 8, SN = 2,4, SB = 4, MN = 3</div>
+          <div class="ligne">On va appliquer le <span class="hl-g">théorème de Thalès</span>.</div>`
+  },
+  {
+    explic:"On vérifie les conditions : M ∈ [SA], N ∈ [SB] et (MN) ∥ (AB). Les conditions sont remplies.",
+    draw(){
+      let h='';
+      h+=seg(S,A,'#064e3b',2.5); h+=seg(S,B,'#064e3b',2.5); h+=seg(A,B,'#064e3b',2.5);
+      h+=seg(M,N,'#15803d',2.5);
+      // Surligner M sur [SA] et N sur [SB]
+      h+=seg(S,M,'#f59e0b',4);
+      h+=seg(S,N,'#f59e0b',4);
+      h+=pt(S,'#064e3b'); h+=lbl(S,'S','#064e3b',0,-10);
+      h+=pt(A,'#064e3b'); h+=lbl(A,'A','#064e3b',-14,0);
+      h+=pt(B,'#064e3b'); h+=lbl(B,'B','#064e3b',14,0);
+      h+=pt(M,'#b45309'); h+=lbl(M,'M','#b45309',-14,0);
+      h+=pt(N,'#b45309'); h+=lbl(N,'N','#b45309',14,0);
+      h+=parallel(M,N,'#f97316',2); h+=parallel(A,B,'#f97316',2);
+      return h;
+    },
+    thm:`<b>Théorème de Thalès :</b> Si M ∈ [SA], N ∈ [SB] et (MN) ∥ (AB), alors :<br>
+         <span style="font-family:Courier New,monospace;color:#064e3b;font-weight:bold">SM/SA = SN/SB = MN/AB</span>`,
+    calc:`<div class="enonce">Conditions vérifiées : M ∈ [SA], N ∈ [SB], (MN) ∥ (AB)</div>
+          <div class="ligne">On peut donc écrire :</div>
+          <div class="ligne" style="font-family:Courier New,monospace;font-weight:bold;color:#064e3b">SM/SA = SN/SB = MN/AB</div>`
+  },
+  {
+    explic:"On substitue les valeurs connues dans l'égalité des rapports.",
+    draw(){
+      let h='';
+      h+=seg(S,A,'#064e3b',2.5); h+=seg(S,B,'#064e3b',2.5); h+=seg(A,B,'#064e3b',2.5);
+      h+=seg(M,N,'#15803d',2.5);
+      // Dimensions
+      h+=dim(S,M,'?','#b45309',-14);
+      h+=dim(M,A,'SA=8','#064e3b',-22);
+      h+=dim(S,N,'2,4','#1d4ed8',14);
+      h+=dim(N,B,'SB=4','#064e3b',22);
+      h+=dim(M,N,'3','#15803d',-12);
+      h+=pt(S,'#064e3b'); h+=lbl(S,'S','#064e3b',0,-10);
+      h+=pt(A,'#064e3b'); h+=lbl(A,'A','#064e3b',-14,0);
+      h+=pt(B,'#064e3b'); h+=lbl(B,'B','#064e3b',14,0);
+      h+=pt(M,'#b45309'); h+=lbl(M,'M','#b45309',-15,5);
+      h+=pt(N,'#1d4ed8'); h+=lbl(N,'N','#1d4ed8',15,5);
+      h+=parallel(M,N,'#f97316',2); h+=parallel(A,B,'#f97316',2);
+      return h;
+    },
+    thm:`<span style="font-family:Courier New,monospace;font-weight:bold;color:#064e3b">SM/SA = SN/SB = MN/AB</span>`,
+    calc:`<div class="enonce">SM/SA = SN/SB = MN/AB</div>
+          <div class="ligne"><span class="hl-o">SM</span> / <span class="hl-g">8</span> = <span class="hl-b">2,4</span> / <span class="hl-g">4</span> = <span class="hl-g">3</span> / AB</div>
+          <div class="ligne">On calcule d'abord SN/SB = 2,4 ÷ 4 = <span class="hl-g">0,6</span></div>`
+  },
+  {
+    explic:"On calcule SM en utilisant SM/SA = 0,6.",
+    draw(){
+      let h='';
+      h+=seg(S,A,'#064e3b',2.5); h+=seg(S,B,'#064e3b',2.5); h+=seg(A,B,'#064e3b',2.5);
+      h+=seg(M,N,'#15803d',2.5);
+      h+=dim(S,M,'?','#b45309',-14);
+      h+=dim(M,A,'SA=8','#064e3b',-22);
+      h+=dim(S,N,'2,4','#1d4ed8',14);
+      h+=dim(N,B,'SB=4','#064e3b',22);
+      h+=dim(M,N,'3','#15803d',-12);
+      h+=pt(S,'#064e3b'); h+=lbl(S,'S','#064e3b',0,-10);
+      h+=pt(A,'#064e3b'); h+=lbl(A,'A','#064e3b',-14,0);
+      h+=pt(B,'#064e3b'); h+=lbl(B,'B','#064e3b',14,0);
+      h+=pt(M,'#b45309'); h+=lbl(M,'M','#b45309',-15,5);
+      h+=pt(N,'#1d4ed8'); h+=lbl(N,'N','#1d4ed8',15,5);
+      h+=parallel(M,N,'#f97316',2); h+=parallel(A,B,'#f97316',2);
+      return h;
+    },
+    thm:`<span style="font-family:Courier New,monospace;font-weight:bold;color:#064e3b">SM/SA = SN/SB = MN/AB = 0,6</span>`,
+    calc:`<div class="enonce">SM/SA = SN/SB = 0,6</div>
+          <div class="ligne"><span class="hl-o">SM</span> / 8 = 0,6</div>
+          <div class="ligne"><span class="hl-o">SM</span> = 0,6 × 8 = <span class="hl-o">4,8</span></div>`
+  },
+  {
+    explic:"On calcule AB en utilisant MN/AB = 0,6.",
+    draw(){
+      let h='';
+      h+=seg(S,A,'#064e3b',2.5); h+=seg(S,B,'#064e3b',2.5); h+=seg(A,B,'#9d174d',3);
+      h+=seg(M,N,'#15803d',2.5);
+      h+=dim(S,M,'4,8','#b45309',-14);
+      h+=dim(M,A,'SA=8','#064e3b',-22);
+      h+=dim(S,N,'2,4','#1d4ed8',14);
+      h+=dim(N,B,'SB=4','#064e3b',22);
+      h+=dim(M,N,'3','#15803d',-12);
+      h+=dim(A,B,'?','#9d174d',14);
+      h+=pt(S,'#064e3b'); h+=lbl(S,'S','#064e3b',0,-10);
+      h+=pt(A,'#064e3b'); h+=lbl(A,'A','#064e3b',-14,0);
+      h+=pt(B,'#064e3b'); h+=lbl(B,'B','#064e3b',14,0);
+      h+=pt(M,'#b45309'); h+=lbl(M,'M','#b45309',-15,5);
+      h+=pt(N,'#1d4ed8'); h+=lbl(N,'N','#1d4ed8',15,5);
+      h+=parallel(M,N,'#f97316',2); h+=parallel(A,B,'#f97316',2);
+      return h;
+    },
+    thm:`<span style="font-family:Courier New,monospace;font-weight:bold;color:#064e3b">SM/SA = SN/SB = MN/AB = 0,6</span>`,
+    calc:`<div class="enonce">MN/AB = 0,6</div>
+          <div class="ligne">3 / <span class="hl-r">AB</span> = 0,6</div>
+          <div class="ligne"><span class="hl-r">AB</span> = 3 ÷ 0,6 = <span class="hl-r">5</span></div>
+          <div class="conclusion">SM = 4,8 &nbsp; et &nbsp; AB = 5</div>`
+  },
+];
+
+// ================================================================
+// ÉTAPES MODE 1 — papillon
+// Droite 1 : A-O-N  |  Droite 2 : B-O-M
+// AB ∥ MN
+// OA/ON = OB/OM = AB/MN
+// Données : OA=4, OB=6, ON=6, MN=9 → chercher OM et AB
+// ratio = OA/ON = 4/6 = 2/3
+// OM = OB / (OA/ON) = 6 × 3/2 = 9
+// AB = MN × OA/ON = 9 × 2/3 = 6
+// ================================================================
+
+// Coordonnées papillon
+const pO={x:240,y:120};
+const pA={x:150,y:55};  // A en haut gauche
+const pB={x:350,y:50};  // B en haut droite
+const pN={x:375,y:218}; // N opposé à A (ON = 1.5*OA)
+const pM={x:75, y:225}; // M opposé à B (OM = 1.5*OB)
+
+const etapes1=[
+  {
+    explic:"Configuration papillon : deux droites se coupent en O. A et N sont sur la même droite (de part et d'autre de O). B et M sont sur l'autre droite. AB ∥ MN.",
+    draw(){
+      let h='';
+      // Les deux droites complètes en pointillé
+      h+=seg(pA,pN,'#94a3b8',1.5,'5,3');
+      h+=seg(pB,pM,'#94a3b8',1.5,'5,3');
+      // Segments AB et MN
+      h+=seg(pA,pB,'#1e3a8a',3);
+      h+=seg(pM,pN,'#9d174d',3);
+      // Marques parallèles
+      h+=parallel(pA,pB,'#f97316',1);
+      h+=parallel(pM,pN,'#f97316',1);
+      // Points
+      h+=pt(pO,'#374151',5); h+=lbl(pO,'O','#374151',12,0);
+      h+=pt(pA,'#1e3a8a'); h+=lbl(pA,'A','#1e3a8a',0,-12);
+      h+=pt(pB,'#1e3a8a'); h+=lbl(pB,'B','#1e3a8a',0,-12);
+      h+=pt(pN,'#9d174d'); h+=lbl(pN,'N','#9d174d',14,0);
+      h+=pt(pM,'#9d174d'); h+=lbl(pM,'M','#9d174d',-14,0);
+      return h;
+    },
+    thm:`<b>Situation papillon :</b> A, O, N alignés &nbsp;|&nbsp; B, O, M alignés<br>
+         <span style="color:#f97316;font-weight:bold">(AB) ∥ (MN)</span><br>
+         <b>Données :</b> OA = 4, OB = 6, ON = 6, MN = 9<br>
+         <b>Chercher :</b> OM = ? &nbsp; AB = ?`,
+    calc:`<div class="enonce blue">Données : OA = 4, OB = 6, ON = 6, MN = 9</div>
+          <div class="ligne">On va appliquer le <span class="hl-b">théorème de Thalès</span>.</div>`
+  },
+  {
+    explic:"On vérifie les conditions : A, O, N sont alignés ; B, O, M sont alignés ; et (AB) ∥ (MN). Les conditions sont remplies.",
+    draw(){
+      let h='';
+      h+=seg(pA,pN,'#94a3b8',1.5,'5,3');
+      h+=seg(pB,pM,'#94a3b8',1.5,'5,3');
+      // Mettre en valeur les deux droites
+      h+=seg(pA,pO,'#1e3a8a',3.5);
+      h+=seg(pO,pN,'#9d174d',3.5);
+      h+=seg(pB,pO,'#1e3a8a',3.5);
+      h+=seg(pO,pM,'#9d174d',3.5);
+      h+=seg(pA,pB,'#1e3a8a',3);
+      h+=seg(pM,pN,'#9d174d',3);
+      h+=parallel(pA,pB,'#f97316',1);
+      h+=parallel(pM,pN,'#f97316',1);
+      h+=pt(pO,'#374151',5); h+=lbl(pO,'O','#374151',12,0);
+      h+=pt(pA,'#1e3a8a'); h+=lbl(pA,'A','#1e3a8a',0,-12);
+      h+=pt(pB,'#1e3a8a'); h+=lbl(pB,'B','#1e3a8a',0,-12);
+      h+=pt(pN,'#9d174d'); h+=lbl(pN,'N','#9d174d',14,0);
+      h+=pt(pM,'#9d174d'); h+=lbl(pM,'M','#9d174d',-14,0);
+      return h;
+    },
+    thm:`<b>Théorème de Thalès :</b> A, O, N alignés ; B, O, M alignés ; (AB) ∥ (MN) ⟹<br>
+         <span style="font-family:Courier New,monospace;color:#1e3a8a;font-weight:bold">OA/ON = OB/OM = AB/MN</span>`,
+    calc:`<div class="enonce blue">Conditions vérifiées</div>
+          <div class="ligne" style="font-family:Courier New,monospace;font-weight:bold;color:#1e3a8a">OA/ON = OB/OM = AB/MN</div>
+          <div class="attention">⚠️ Les rapports sont toujours écrits <strong>depuis O</strong>, côté A / côté N, etc.</div>`
+  },
+  {
+    explic:"On substitue les valeurs connues et on calcule le rapport OA/ON.",
+    draw(){
+      let h='';
+      h+=seg(pA,pN,'#94a3b8',1.5,'5,3');
+      h+=seg(pB,pM,'#94a3b8',1.5,'5,3');
+      h+=seg(pA,pB,'#1e3a8a',3);
+      h+=seg(pM,pN,'#9d174d',3);
+      h+=parallel(pA,pB,'#f97316',1);
+      h+=parallel(pM,pN,'#f97316',1);
+      // Cotes
+      h+=dim(pO,pA,'4','#1e3a8a',-14);
+      h+=dim(pO,pN,'6','#9d174d',14);
+      h+=dim(pO,pB,'6','#1e3a8a',-14);
+      h+=dim(pO,pM,'?','#9d174d',14);
+      h+=dim(pA,pB,'?','#b45309',-12);
+      h+=dim(pM,pN,'9','#9d174d',12);
+      h+=pt(pO,'#374151',5); h+=lbl(pO,'O','#374151',12,0);
+      h+=pt(pA,'#1e3a8a'); h+=lbl(pA,'A','#1e3a8a',0,-12);
+      h+=pt(pB,'#1e3a8a'); h+=lbl(pB,'B','#1e3a8a',0,-12);
+      h+=pt(pN,'#9d174d'); h+=lbl(pN,'N','#9d174d',14,0);
+      h+=pt(pM,'#9d174d'); h+=lbl(pM,'M','#9d174d',-14,0);
+      return h;
+    },
+    thm:`<span style="font-family:Courier New,monospace;font-weight:bold;color:#1e3a8a">OA/ON = OB/OM = AB/MN</span>`,
+    calc:`<div class="enonce blue">OA/ON = OB/OM = AB/MN</div>
+          <div class="ligne"><span class="hl-b">4</span> / <span class="hl-r">6</span> = <span class="hl-b">6</span> / <span class="hl-r">OM</span> = AB / <span class="hl-r">9</span></div>
+          <div class="ligne">Ratio = 4 ÷ 6 = <span class="hl-g">2/3</span></div>`
+  },
+  {
+    explic:"On calcule OM : OB/OM = 2/3 donc OM = OB × 3/2 = 6 × 3/2 = 9.",
+    draw(){
+      let h='';
+      h+=seg(pA,pN,'#94a3b8',1.5,'5,3');
+      h+=seg(pB,pM,'#94a3b8',1.5,'5,3');
+      h+=seg(pA,pB,'#1e3a8a',3);
+      h+=seg(pM,pN,'#9d174d',3);
+      h+=parallel(pA,pB,'#f97316',1);
+      h+=parallel(pM,pN,'#f97316',1);
+      h+=dim(pO,pA,'4','#1e3a8a',-14);
+      h+=dim(pO,pN,'6','#9d174d',14);
+      h+=dim(pO,pB,'6','#1e3a8a',-14);
+      h+=dim(pO,pM,'9','#9d174d',14);
+      h+=dim(pA,pB,'?','#b45309',-12);
+      h+=dim(pM,pN,'9','#9d174d',12);
+      h+=pt(pO,'#374151',5); h+=lbl(pO,'O','#374151',12,0);
+      h+=pt(pA,'#1e3a8a'); h+=lbl(pA,'A','#1e3a8a',0,-12);
+      h+=pt(pB,'#1e3a8a'); h+=lbl(pB,'B','#1e3a8a',0,-12);
+      h+=pt(pN,'#9d174d'); h+=lbl(pN,'N','#9d174d',14,0);
+      h+=pt(pM,'#9d174d'); h+=lbl(pM,'M','#9d174d',-14,0);
+      return h;
+    },
+    thm:`<span style="font-family:Courier New,monospace;font-weight:bold;color:#1e3a8a">OA/ON = OB/OM = AB/MN = 2/3</span>`,
+    calc:`<div class="enonce blue">OB/OM = 2/3</div>
+          <div class="ligne">6 / OM = 2/3</div>
+          <div class="ligne">OM = 6 × 3/2 = <span class="hl-g">9</span></div>`
+  },
+  {
+    explic:"On calcule AB : AB/MN = 2/3 donc AB = MN × 2/3 = 9 × 2/3 = 6.",
+    draw(){
+      let h='';
+      h+=seg(pA,pN,'#94a3b8',1.5,'5,3');
+      h+=seg(pB,pM,'#94a3b8',1.5,'5,3');
+      h+=seg(pA,pB,'#1e3a8a',3);
+      h+=seg(pM,pN,'#9d174d',3);
+      h+=parallel(pA,pB,'#f97316',1);
+      h+=parallel(pM,pN,'#f97316',1);
+      h+=dim(pO,pA,'4','#1e3a8a',-14);
+      h+=dim(pO,pN,'6','#9d174d',14);
+      h+=dim(pO,pB,'6','#1e3a8a',-14);
+      h+=dim(pO,pM,'9','#9d174d',14);
+      h+=dim(pA,pB,'6','#b45309',-12);
+      h+=dim(pM,pN,'9','#9d174d',12);
+      h+=pt(pO,'#374151',5); h+=lbl(pO,'O','#374151',12,0);
+      h+=pt(pA,'#1e3a8a'); h+=lbl(pA,'A','#1e3a8a',0,-12);
+      h+=pt(pB,'#1e3a8a'); h+=lbl(pB,'B','#1e3a8a',0,-12);
+      h+=pt(pN,'#9d174d'); h+=lbl(pN,'N','#9d174d',14,0);
+      h+=pt(pM,'#9d174d'); h+=lbl(pM,'M','#9d174d',-14,0);
+      return h;
+    },
+    thm:`<span style="font-family:Courier New,monospace;font-weight:bold;color:#1e3a8a">OA/ON = OB/OM = AB/MN = 2/3</span>`,
+    calc:`<div class="enonce blue">AB/MN = 2/3</div>
+          <div class="ligne">AB / 9 = 2/3</div>
+          <div class="ligne">AB = 9 × 2/3 = <span class="hl-g">6</span></div>
+          <div class="conclusion blue">OM = 9 &nbsp; et &nbsp; AB = 6</div>`
+  },
+];
+
+const ETAPES=[etapes0,etapes1];
+const COLS=['#064e3b','#1e3a8a'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').className='calc-box'+(m?' blue':'');
+  document.getElementById('thm-box').className='thm-box'+(m?' blue':'');
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('thm-box').innerHTML=e.thm;
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistiques</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf8f0; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #7c2d12; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 10px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 16px; border: none; font-size: 0.77em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab4 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab4.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  .tbl-wrap { background: white; border-radius: 12px; box-shadow: 0 1px 6px #0002; overflow: hidden; margin: 6px auto; max-width: 480px; width: 95%; }
+  .tbl-wrap table { border-collapse: collapse; width: 100%; }
+  .tbl-wrap th { padding: 8px 10px; font-size: 0.84em; color: white; text-align: center; }
+  .tbl-wrap td { padding: 9px 10px; text-align: center; font-size: 0.97em; border: 1px solid #e5e7eb; }
+  .hl-row td { background: #fef9c3; font-weight: bold; }
+  .hl-med td { background: #dbeafe !important; font-weight: bold; }
+
+  .bar-wrap { background: white; border-radius: 12px; padding: 10px 8px 6px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; display: none; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #b45309; font-size: 0.97em; line-height: 2.2; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.93em; }
+  .en1 { background: #fef3c7; color: #78350f; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .en3 { background: #dcfce7; color: #14532d; }
+  .en4 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-o  { color: #b45309; font-weight: bold; }
+  .hl-b  { color: #1d4ed8; font-weight: bold; }
+  .hl-g  { color: #15803d; font-weight: bold; }
+  .hl-r  { color: #9d174d; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1.02em; }
+  .c1 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .c2 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c3 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c4 { background: #fce7f3; border-color: #ec4899; color: #831843; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #b45309; color: white; }
+</style>
+</head>
+<body>
+<h1>📊 Statistiques</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Moyenne</button>
+  <button class="tab tab2" onclick="setMode(1)">Médiane</button>
+  <button class="tab tab3" onclick="setMode(2)">Fréquence</button>
+  <button class="tab tab4" onclick="setMode(3)">Étendue</button>
+</div>
+<div class="scene">
+  <div class="tbl-wrap" id="tbl-wrap"></div>
+  <div class="bar-wrap" id="bar-wrap"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// Données : notes et effectifs
+const notes   = [8,  10,  12,  14,  16];
+const effec   = [3,   5,   8,   6,   2];
+const total   = 24; // 3+5+8+6+2
+// Produits note × effectif
+const prods   = [24, 50, 96, 84, 32]; // 8×3, 10×5, 12×8, 14×6, 16×2
+const somme   = 286; // 24+50+96+84+32
+// Effectifs cumulés croissants
+const cumul   = [3,  8,  16, 22, 24];
+// Fréquences en %
+const freqs   = ['12,5', '20,8', '33,3', '25,0', '8,3'];
+
+// ============================================================
+// RENDU TABLEAU
+// ============================================================
+function table(hlRows=[], showProd=false, showCum=false, showFreq=false) {
+  const c = ['#b45309','#1d4ed8','#15803d','#9d174d'][mode];
+  let th = `<th style="background:${c}">Note</th><th style="background:${c}">Nombre d'élèves</th>`;
+  if(showProd) th += `<th style="background:#7c3aed">Note × élèves</th>`;
+  if(showCum)  th += `<th style="background:#0f766e">Effectifs cumulés</th>`;
+  if(showFreq) th += `<th style="background:#9d174d">Fréquence</th>`;
+
+  let rows='';
+  notes.forEach((n,i)=>{
+    const hl = hlRows.includes(i);
+    const isMed = showCum && hl;
+    rows += `<tr class="${hl?'hl-row':''}">
+      <td>${n}</td>
+      <td>${effec[i]}</td>
+      ${showProd ? `<td style="color:#7c3aed;font-weight:bold">${prods[i]}</td>` : ''}
+      ${showCum  ? `<td style="${isMed?'background:#dbeafe;':''}color:#0f766e;font-weight:bold">${cumul[i]}</td>` : ''}
+      ${showFreq ? `<td style="color:#9d174d;font-weight:bold">${freqs[i]} %</td>` : ''}
+    </tr>`;
+  });
+
+  if(showProd) {
+    rows += `<tr style="background:#f5f3ff;font-weight:bold">
+      <td colspan="2" style="text-align:right;color:#7c3aed;font-size:0.9em">Total</td>
+      <td style="color:#7c3aed">${somme}</td>
+    </tr>`;
+  }
+
+  document.getElementById('tbl-wrap').innerHTML =
+    `<table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('tbl-wrap').style.display='block';
+}
+
+// ============================================================
+// BARRE VISUELLE MÉDIANE
+// ============================================================
+function barre(phase) {
+  const bw = document.getElementById('bar-wrap');
+  if(!phase){ bw.style.display='none'; return; }
+  const colors=['#fde68a','#fed7aa','#bbf7d0','#bfdbfe','#e9d5ff'];
+  let svg=`<svg width="100%" viewBox="0 0 440 72" style="display:block">`;
+  let cx=10;
+  effec.forEach((e,i)=>{
+    const w=(e/total)*420;
+    svg+=`<rect x="${cx.toFixed(1)}" y="14" width="${w.toFixed(1)}" height="38" fill="${colors[i]}" stroke="white" stroke-width="1.5"/>`;
+    if(w>18) svg+=`<text x="${(cx+w/2).toFixed(1)}" y="38" font-size="11" text-anchor="middle" font-weight="bold" fill="#374151">${notes[i]}</text>`;
+    cx+=w;
+  });
+  // position rang 12 et 13
+  const r12 = (12/total)*420+10;
+  const r13 = (13/total)*420+10;
+  const med = (r12+r13)/2;
+  if(phase==='rang'){
+    svg+=`<line x1="${r12.toFixed(1)}" y1="10" x2="${r12.toFixed(1)}" y2="56" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="4,2"/>`;
+    svg+=`<text x="${r12.toFixed(1)}" y="65" font-size="10" text-anchor="middle" fill="#1d4ed8">rang 12</text>`;
+    svg+=`<line x1="${r13.toFixed(1)}" y1="10" x2="${r13.toFixed(1)}" y2="56" stroke="#1d4ed8" stroke-width="2" stroke-dasharray="4,2"/>`;
+    svg+=`<text x="${r13.toFixed(1)}" y="72" font-size="10" text-anchor="start" fill="#1d4ed8"> rang 13</text>`;
+  } else {
+    svg+=`<line x1="${med.toFixed(1)}" y1="8" x2="${med.toFixed(1)}" y2="56" stroke="#dc2626" stroke-width="2.5"/>`;
+    svg+=`<text x="${med.toFixed(1)}" y="66" font-size="11" text-anchor="middle" font-weight="bold" fill="#dc2626">Médiane = 12</text>`;
+  }
+  svg+='</svg>';
+  bw.style.display='block';
+  bw.innerHTML=svg;
+}
+
+// ============================================================
+// MODE 0 — MOYENNE PONDÉRÉE
+// ============================================================
+const e0=[
+  {
+    explic: "On veut calculer la moyenne de 24 notes. On ne peut pas juste additionner 8+10+12+14+16 et diviser par 5 : certaines notes apparaissent plusieurs fois !",
+    render(){ table(); barre(null); },
+    calc: `<div class="enonce en1">Calculer la moyenne de la série.</div>
+           <div class="ligne">Il y a <span class="hl-o">24 élèves</span> au total.</div>
+           <div class="ligne">On va multiplier chaque note par le nombre d'élèves qui l'ont obtenue.</div>`
+  },
+  {
+    explic: "Pour chaque note, on calcule : note × nombre d'élèves. Par exemple, la note 8 a été obtenue par 3 élèves : 8 × 3 = 24.",
+    render(){ table([],true); barre(null); },
+    calc: `<div class="enonce en1">Note × nombre d'élèves</div>
+           <div class="ligne">8 × 3 = <span class="hl-o">24</span></div>
+           <div class="ligne">10 × 5 = <span class="hl-o">50</span></div>
+           <div class="ligne">12 × 8 = <span class="hl-o">96</span></div>
+           <div class="ligne">14 × 6 = <span class="hl-o">84</span></div>
+           <div class="ligne">16 × 2 = <span class="hl-o">32</span></div>`
+  },
+  {
+    explic: "On additionne tous ces résultats pour obtenir la somme de toutes les notes.",
+    render(){ table([],true); barre(null); },
+    calc: `<div class="enonce en1">On additionne tous les résultats.</div>
+           <div class="ligne">24 + 50 + 96 + 84 + 32 = <span class="hl-o">286</span></div>
+           <div class="ligne">C'est comme si on avait additionné les <span class="hl-o">24 notes</span> une par une.</div>`
+  },
+  {
+    explic: "On divise la somme de toutes les notes par le nombre total d'élèves.",
+    render(){ table([],true); barre(null); },
+    calc: `<div class="enonce en1">Moyenne = somme de toutes les notes ÷ nombre d'élèves</div>
+           <div class="ligne">Moyenne = <span class="hl-o">286</span> ÷ <span class="hl-o">24</span></div>
+           <div class="ligne">Moyenne ≈ <span class="hl-g">11,92</span></div>
+           <div class="conclusion c1">Moyenne ≈ 11,92</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — MÉDIANE
+// ============================================================
+const e1=[
+  {
+    explic: "La médiane est la valeur du milieu : la moitié des élèves a une note inférieure ou égale à la médiane, l'autre moitié a une note supérieure ou égale.",
+    render(){ table(); barre(null); },
+    calc: `<div class="enonce en2">Trouver la médiane. Il y a 24 élèves.</div>
+           <div class="ligne">On cherche la valeur qui est au milieu de toutes les notes rangées dans l'ordre.</div>
+           <div class="ligne">Avec 24 valeurs, le milieu se situe entre le <span class="hl-b">12ème</span> et le <span class="hl-b">13ème</span> élève.</div>`
+  },
+  {
+    explic: "Pour repérer où se trouvent le 12ème et le 13ème élève, on calcule les effectifs cumulés croissants : on additionne les effectifs au fur et à mesure.",
+    render(){ table([],false,true); barre(null); },
+    calc: `<div class="enonce en2">Effectifs cumulés croissants</div>
+           <div class="ligne">Après la note 8 → <span class="hl-g">3</span> élèves au total</div>
+           <div class="ligne">Après la note 10 → 3 + 5 = <span class="hl-g">8</span> élèves au total</div>
+           <div class="ligne">Après la note 12 → 8 + 8 = <span class="hl-g">16</span> élèves au total</div>
+           <div class="ligne">Après la note 14 → 16 + 6 = <span class="hl-g">22</span> élèves au total</div>
+           <div class="ligne">Après la note 16 → 22 + 2 = <span class="hl-g">24</span> élèves au total</div>`
+  },
+  {
+    explic: "Le 8ème élève a la note 10, le 16ème a la note 12. Donc le 12ème et le 13ème élève ont forcément la note 12.",
+    render(){ table([2],false,true); barre('rang'); },
+    calc: `<div class="enonce en2">Où sont les élèves n°12 et n°13 ?</div>
+           <div class="ligne">Les élèves 1 à 3 ont la note 8</div>
+           <div class="ligne">Les élèves 4 à 8 ont la note 10</div>
+           <div class="ligne">Les élèves 9 à 16 ont la note <span class="hl-b">12</span></div>
+           <div class="ligne">→ L'élève n°12 et l'élève n°13 ont la note <span class="hl-b">12</span>.</div>`
+  },
+  {
+    explic: "Le 12ème et le 13ème élève ont tous les deux la note 12. La médiane est donc 12.",
+    render(){ table([2],false,true); barre('med'); },
+    calc: `<div class="enonce en2">Médiane = ?</div>
+           <div class="ligne">Élève n°12 → note <span class="hl-b">12</span></div>
+           <div class="ligne">Élève n°13 → note <span class="hl-b">12</span></div>
+           <div class="ligne">Médiane = (12 + 12) ÷ 2 = <span class="hl-b">12</span></div>
+           <div class="conclusion c2">Médiane = 12</div>
+           <div class="attention">La moitié des élèves a une note ≤ 12, l'autre moitié a une note ≥ 12.</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — FRÉQUENCE
+// ============================================================
+const e2=[
+  {
+    explic: "La fréquence d'une note indique quelle proportion des élèves l'a obtenue. On l'exprime en pourcentage.",
+    render(){ table(); barre(null); },
+    calc: `<div class="enonce en3">Calculer les fréquences. Total = 24 élèves.</div>
+           <div class="ligne">Fréquence = <span class="hl-g">nombre d'élèves ÷ total × 100</span></div>`
+  },
+  {
+    explic: "Pour chaque note, on divise le nombre d'élèves qui l'ont obtenue par 24, puis on multiplie par 100 pour avoir un pourcentage.",
+    render(){ table([],false,false,true); barre(null); },
+    calc: `<div class="enonce en3">Fréquence = nombre d'élèves ÷ 24 × 100</div>
+           <div class="ligne">Note 8 : 3 ÷ 24 × 100 = <span class="hl-g">12,5 %</span></div>
+           <div class="ligne">Note 10 : 5 ÷ 24 × 100 ≈ <span class="hl-g">20,8 %</span></div>
+           <div class="ligne">Note 12 : 8 ÷ 24 × 100 ≈ <span class="hl-g">33,3 %</span></div>
+           <div class="ligne">Note 14 : 6 ÷ 24 × 100 = <span class="hl-g">25,0 %</span></div>
+           <div class="ligne">Note 16 : 2 ÷ 24 × 100 ≈ <span class="hl-g">8,3 %</span></div>`
+  },
+  {
+    explic: "La somme de toutes les fréquences doit toujours donner 100 %. C'est une bonne façon de vérifier son calcul.",
+    render(){ table([],false,false,true); barre(null); },
+    calc: `<div class="enonce en3">Vérification</div>
+           <div class="ligne">12,5 + 20,8 + 33,3 + 25,0 + 8,3 ≈ <span class="hl-g">100 %</span> ✓</div>
+           <div class="conclusion c3">La somme des fréquences est toujours égale à 100 %.</div>
+           <div class="attention">La note 12 est la plus fréquente : 33,3 % des élèves l'ont obtenue. C'est le <strong>mode</strong> de la série.</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — ÉTENDUE
+// ============================================================
+const e3=[
+  {
+    explic: "L'étendue mesure l'écart entre la note la plus haute et la note la plus basse. Elle indique à quel point les notes sont dispersées.",
+    render(){ table(); barre(null); },
+    calc: `<div class="enonce en4">Calculer l'étendue.</div>
+           <div class="ligne">Étendue = <span class="hl-r">note la plus grande − note la plus petite</span></div>`
+  },
+  {
+    explic: "On repère la note la plus petite et la note la plus grande dans le tableau.",
+    render(){ table([0,4]); barre(null); },
+    calc: `<div class="enonce en4">Étendue = note max − note min</div>
+           <div class="ligne">Note la plus petite = <span class="hl-r">8</span></div>
+           <div class="ligne">Note la plus grande = <span class="hl-r">16</span></div>`
+  },
+  {
+    explic: "On calcule l'étendue : 16 − 8 = 8.",
+    render(){ table([0,4]); barre(null); },
+    calc: `<div class="enonce en4">Étendue = note max − note min</div>
+           <div class="ligne">Étendue = <span class="hl-r">16</span> − <span class="hl-r">8</span> = <span class="hl-r">8</span></div>
+           <div class="conclusion c4">Étendue = 8</div>
+           <div class="attention">Une grande étendue signifie que les notes sont très dispersées. Une petite étendue signifie que les élèves ont des notes proches les unes des autres.</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+const COLS=['#b45309','#1d4ed8','#15803d','#9d174d'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  e.render();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

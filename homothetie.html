@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homothétie</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 8px 13px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab3 { background: #fee2e2; color: #7f1d1d; border: 2px solid #fca5a5; }
+  .tab1.active { background: #3730a3; color: white; border-color: #3730a3; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #991b1b; color: white; border-color: #991b1b; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 270px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #3730a3; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #3730a3; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .en3 { background: #fee2e2; color: #7f1d1d; }
+  .ligne { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-p { color: #6d28d9; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .conclusion-ok  { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .conclusion-non { background: #fee2e2; border-left: 4px solid #ef4444; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #7f1d1d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #3730a3; color: white; }
+</style>
+</head>
+<body>
+<h1>🔭 Homothétie</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Construire (rapport 2)</button>
+  <button class="tab tab2" onclick="setMode(1)">Construire (rapport −½)</button>
+  <button class="tab tab3" onclick="setMode(2)">Reconnaître une homothétie</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 270"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(p1,p2,col,w=2,dash=''){
+  return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function dot(p,col,r=5){
+  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+function lbl(p,txt,col,dx=0,dy=0,size=13){
+  return `<text x="${(p.x+dx).toFixed(1)}" y="${(p.y+dy).toFixed(1)}" font-size="${size}" font-weight="bold" text-anchor="middle" fill="${col}">${txt}</text>`;
+}
+function poly(pts,fill,stroke,w=2,opacity=0.18){
+  const d=pts.map((p,i)=>`${i===0?'M':'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')+'Z';
+  return `<path d="${d}" fill="${fill}" fill-opacity="${opacity}" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round"/>`;
+}
+// Vecteur : flèche de O vers P (prolongée d'un facteur k)
+function arrow(O,P,col,dash=''){
+  const dx=P.x-O.x, dy=P.y-O.y;
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/len, uy=dy/len;
+  const ex=P.x-ux*6, ey=P.y-uy*6;
+  let h=`<line x1="${O.x.toFixed(1)}" y1="${O.y.toFixed(1)}" x2="${P.x.toFixed(1)}" y2="${P.y.toFixed(1)}" stroke="${col}" stroke-width="1.8" stroke-dasharray="${dash}"/>`;
+  const perp=10;
+  h+=`<polygon points="${P.x.toFixed(1)},${P.y.toFixed(1)} ${(ex-uy*4).toFixed(1)},${(ey+ux*4).toFixed(1)} ${(ex+uy*4).toFixed(1)},${(ey-ux*4).toFixed(1)}" fill="${col}"/>`;
+  return h;
+}
+function midLbl(p1,p2,txt,col,off=14){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*off, ny=dx/len*off;
+  return lbl({x:mx+nx,y:my+ny},txt,col,0,4,11);
+}
+
+// ============================================================
+// MODE 0 — Construire l'image par homothétie de rapport 2
+// Centre O, triangle ABC, rapport k=2
+// ============================================================
+const O0 = {x:80, y:200};
+// Triangle ABC (original)
+const A0 = {x:160, y:180};
+const B0 = {x:210, y:110};
+const C0 = {x:240, y:185};
+
+function hom(O,P,k){ return {x: O.x+k*(P.x-O.x), y: O.y+k*(P.y-O.y)}; }
+
+const A0p = hom(O0,A0,2);
+const B0p = hom(O0,B0,2);
+const C0p = hom(O0,C0,2);
+
+const e0=[
+  {
+    explic:"On veut construire l'image du triangle ABC par l'homothétie de centre O et de rapport 2. On part du centre O.",
+    draw(){
+      let h='';
+      h+=poly([A0,B0,C0],'#6d28d9','#6d28d9');
+      h+=dot(O0,'#374151',6); h+=lbl(O0,'O','#374151',-12,0);
+      h+=dot(A0,'#6d28d9'); h+=lbl(A0,'A','#6d28d9',0,-10);
+      h+=dot(B0,'#6d28d9'); h+=lbl(B0,'B','#6d28d9',0,-10);
+      h+=dot(C0,'#6d28d9'); h+=lbl(C0,'C','#6d28d9',12,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Homothétie de centre O, rapport k = 2.</div>
+          <div class="ligne">Pour construire l'image d'un point P, on place son image P' sur la demi-droite [OP) à une distance <span class="hl-p">deux fois plus grande</span>.</div>
+          <div class="ligne">On a : <span class="hl-p">OP' = 2 × OP</span>, et O, P, P' sont alignés.</div>`
+  },
+  {
+    explic:"On trace la demi-droite [OA). L'image A' est sur cette droite, à une distance OA' = 2 × OA.",
+    draw(){
+      let h='';
+      h+=poly([A0,B0,C0],'#6d28d9','#6d28d9');
+      h+=seg(O0,A0p,'#94a3b8',1.5,'5,3');
+      h+=arrow(O0,A0p,'#9d174d');
+      h+=midLbl(O0,A0,'OA','#6d28d9',-12);
+      h+=midLbl(A0,A0p,'OA','#9d174d',-12);
+      h+=dot(O0,'#374151',6); h+=lbl(O0,'O','#374151',-12,0);
+      h+=dot(A0,'#6d28d9'); h+=lbl(A0,'A','#6d28d9',0,-10);
+      h+=dot(B0,'#6d28d9'); h+=lbl(B0,'B','#6d28d9',0,-10);
+      h+=dot(C0,'#6d28d9'); h+=lbl(C0,'C','#6d28d9',12,0);
+      h+=dot(A0p,'#9d174d'); h+=lbl(A0p,"A'","#9d174d",12,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Image du point A → A'</div>
+          <div class="ligne">On trace la demi-droite partant de O vers A.</div>
+          <div class="ligne"><span class="hl-p">OA' = 2 × OA</span></div>
+          <div class="ligne">A' est sur [OA), au-delà de A, à distance double.</div>`
+  },
+  {
+    explic:"On fait de même pour B : on trace [OB) et on place B' à OB' = 2 × OB.",
+    draw(){
+      let h='';
+      h+=poly([A0,B0,C0],'#6d28d9','#6d28d9');
+      h+=seg(O0,A0p,'#94a3b8',1.5,'5,3');
+      h+=seg(O0,B0p,'#94a3b8',1.5,'5,3');
+      h+=arrow(O0,A0p,'#9d174d');
+      h+=arrow(O0,B0p,'#9d174d');
+      h+=dot(O0,'#374151',6); h+=lbl(O0,'O','#374151',-12,0);
+      h+=dot(A0,'#6d28d9'); h+=lbl(A0,'A','#6d28d9',0,-10);
+      h+=dot(B0,'#6d28d9'); h+=lbl(B0,'B','#6d28d9',0,-10);
+      h+=dot(C0,'#6d28d9'); h+=lbl(C0,'C','#6d28d9',12,0);
+      h+=dot(A0p,'#9d174d'); h+=lbl(A0p,"A'","#9d174d",12,0);
+      h+=dot(B0p,'#9d174d'); h+=lbl(B0p,"B'","#9d174d",0,-10);
+      return h;
+    },
+    calc:`<div class="enonce en1">Image du point B → B'</div>
+          <div class="ligne">On trace la demi-droite partant de O vers B.</div>
+          <div class="ligne"><span class="hl-p">OB' = 2 × OB</span></div>`
+  },
+  {
+    explic:"On fait de même pour C : on trace [OC) et on place C' à OC' = 2 × OC.",
+    draw(){
+      let h='';
+      h+=poly([A0,B0,C0],'#6d28d9','#6d28d9');
+      h+=seg(O0,A0p,'#94a3b8',1.5,'5,3');
+      h+=seg(O0,B0p,'#94a3b8',1.5,'5,3');
+      h+=seg(O0,C0p,'#94a3b8',1.5,'5,3');
+      h+=arrow(O0,A0p,'#9d174d');
+      h+=arrow(O0,B0p,'#9d174d');
+      h+=arrow(O0,C0p,'#9d174d');
+      h+=dot(O0,'#374151',6); h+=lbl(O0,'O','#374151',-12,0);
+      h+=dot(A0,'#6d28d9'); h+=lbl(A0,'A','#6d28d9',0,-10);
+      h+=dot(B0,'#6d28d9'); h+=lbl(B0,'B','#6d28d9',0,-10);
+      h+=dot(C0,'#6d28d9'); h+=lbl(C0,'C','#6d28d9',12,0);
+      h+=dot(A0p,'#9d174d'); h+=lbl(A0p,"A'","#9d174d",12,0);
+      h+=dot(B0p,'#9d174d'); h+=lbl(B0p,"B'","#9d174d",0,-10);
+      h+=dot(C0p,'#9d174d'); h+=lbl(C0p,"C'","#9d174d",12,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Image du point C → C'</div>
+          <div class="ligne">On trace la demi-droite partant de O vers C.</div>
+          <div class="ligne"><span class="hl-p">OC' = 2 × OC</span></div>`
+  },
+  {
+    explic:"On relie A', B' et C' pour former le triangle image A'B'C'. Il est deux fois plus grand que ABC et du même côté de O.",
+    draw(){
+      let h='';
+      h+=seg(O0,A0p,'#94a3b8',1.5,'5,3');
+      h+=seg(O0,B0p,'#94a3b8',1.5,'5,3');
+      h+=seg(O0,C0p,'#94a3b8',1.5,'5,3');
+      h+=poly([A0,B0,C0],'#6d28d9','#6d28d9',2.5);
+      h+=poly([A0p,B0p,C0p],'#9d174d','#9d174d',2.5);
+      h+=dot(O0,'#374151',6); h+=lbl(O0,'O','#374151',-12,0);
+      h+=dot(A0,'#6d28d9'); h+=lbl(A0,'A','#6d28d9',0,-10);
+      h+=dot(B0,'#6d28d9'); h+=lbl(B0,'B','#6d28d9',0,-10);
+      h+=dot(C0,'#6d28d9'); h+=lbl(C0,'C','#6d28d9',12,0);
+      h+=dot(A0p,'#9d174d'); h+=lbl(A0p,"A'","#9d174d",12,0);
+      h+=dot(B0p,'#9d174d'); h+=lbl(B0p,"B'","#9d174d",0,-10);
+      h+=dot(C0p,'#9d174d'); h+=lbl(C0p,"C'","#9d174d",12,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Triangle image A'B'C' ✓</div>
+          <div class="ligne">On relie A', B' et C' : c'est l'image du triangle ABC.</div>
+          <div class="ligne">Le triangle image est <span class="hl-p">2 fois plus grand</span> que le triangle original.</div>
+          <div class="ligne">Rapport positif → les deux triangles sont <span class="hl-p">du même côté</span> de O.</div>
+          <div class="attention">⚠️ Les côtés correspondants sont parallèles : (AB) ∥ (A'B'), (BC) ∥ (B'C'), (AC) ∥ (A'C').</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — rapport −½
+// Centre O au milieu, rapport k=−½ → image de l'autre côté, plus petite
+// ============================================================
+const O1 = {x:240, y:140};
+const A1 = {x:80,  y:220};
+const B1 = {x:130, y:60};
+const C1 = {x:200, y:230};
+
+const A1p = hom(O1,A1,-0.5);
+const B1p = hom(O1,B1,-0.5);
+const C1p = hom(O1,C1,-0.5);
+
+const e1=[
+  {
+    explic:"Rapport k = −½ : l'image est de l'autre côté de O (car k est négatif) et deux fois plus petite (car |k| = ½).",
+    draw(){
+      let h='';
+      h+=poly([A1,B1,C1],'#15803d','#15803d');
+      h+=dot(O1,'#374151',6); h+=lbl(O1,'O','#374151',12,0);
+      h+=dot(A1,'#15803d'); h+=lbl(A1,'A','#15803d',-12,0);
+      h+=dot(B1,'#15803d'); h+=lbl(B1,'B','#15803d',0,-10);
+      h+=dot(C1,'#15803d'); h+=lbl(C1,'C','#15803d',0,14);
+      return h;
+    },
+    calc:`<div class="enonce en2">Homothétie de centre O, rapport k = −½.</div>
+          <div class="ligne"><span class="hl-r">k négatif</span> → l'image est <span class="hl-r">de l'autre côté de O</span>.</div>
+          <div class="ligne"><span class="hl-g">|k| = ½</span> → l'image est <span class="hl-g">deux fois plus petite</span>.</div>
+          <div class="ligne">On a : <span class="hl-p">OP' = ½ × OP</span>, de l'autre côté de O.</div>`
+  },
+  {
+    explic:"Pour A' : on trace [OA). A' est de l'autre côté de O, sur la demi-droite opposée, à une distance OA' = ½ × OA.",
+    draw(){
+      let h='';
+      h+=poly([A1,B1,C1],'#15803d','#15803d');
+      // Droite complète O-A (des deux côtés)
+      h+=seg(A1,A1p,'#94a3b8',1.5,'5,3');
+      h+=dot(O1,'#374151',6); h+=lbl(O1,'O','#374151',12,0);
+      h+=dot(A1,'#15803d'); h+=lbl(A1,'A','#15803d',-12,0);
+      h+=dot(B1,'#15803d'); h+=lbl(B1,'B','#15803d',0,-10);
+      h+=dot(C1,'#15803d'); h+=lbl(C1,'C','#15803d',0,14);
+      h+=dot(A1p,'#9d174d'); h+=lbl(A1p,"A'","#9d174d",12,0);
+      h+=midLbl(O1,A1p,"OA' = ½×OA",'#9d174d',14);
+      return h;
+    },
+    calc:`<div class="enonce en2">Image du point A → A'</div>
+          <div class="ligne">A' est <span class="hl-r">de l'autre côté de O</span> par rapport à A.</div>
+          <div class="ligne"><span class="hl-p">OA' = ½ × OA</span></div>`
+  },
+  {
+    explic:"On fait de même pour B et C : de l'autre côté de O, à moitié distance.",
+    draw(){
+      let h='';
+      h+=poly([A1,B1,C1],'#15803d','#15803d');
+      h+=seg(A1,A1p,'#94a3b8',1.5,'5,3');
+      h+=seg(B1,B1p,'#94a3b8',1.5,'5,3');
+      h+=seg(C1,C1p,'#94a3b8',1.5,'5,3');
+      h+=dot(O1,'#374151',6); h+=lbl(O1,'O','#374151',12,0);
+      h+=dot(A1,'#15803d'); h+=lbl(A1,'A','#15803d',-12,0);
+      h+=dot(B1,'#15803d'); h+=lbl(B1,'B','#15803d',0,-10);
+      h+=dot(C1,'#15803d'); h+=lbl(C1,'C','#15803d',0,14);
+      h+=dot(A1p,'#9d174d'); h+=lbl(A1p,"A'","#9d174d",12,0);
+      h+=dot(B1p,'#9d174d'); h+=lbl(B1p,"B'","#9d174d",12,0);
+      h+=dot(C1p,'#9d174d'); h+=lbl(C1p,"C'","#9d174d",-12,0);
+      return h;
+    },
+    calc:`<div class="enonce en2">Images de B → B' et C → C'</div>
+          <div class="ligne"><span class="hl-p">OB' = ½ × OB</span>, de l'autre côté de O</div>
+          <div class="ligne"><span class="hl-p">OC' = ½ × OC</span>, de l'autre côté de O</div>`
+  },
+  {
+    explic:"On relie A', B', C' : le triangle image est plus petit, de l'autre côté de O, et retourné (car k est négatif).",
+    draw(){
+      let h='';
+      h+=seg(A1,A1p,'#94a3b8',1.5,'5,3');
+      h+=seg(B1,B1p,'#94a3b8',1.5,'5,3');
+      h+=seg(C1,C1p,'#94a3b8',1.5,'5,3');
+      h+=poly([A1,B1,C1],'#15803d','#15803d',2.5);
+      h+=poly([A1p,B1p,C1p],'#9d174d','#9d174d',2.5);
+      h+=dot(O1,'#374151',6); h+=lbl(O1,'O','#374151',12,0);
+      h+=dot(A1,'#15803d'); h+=lbl(A1,'A','#15803d',-12,0);
+      h+=dot(B1,'#15803d'); h+=lbl(B1,'B','#15803d',0,-10);
+      h+=dot(C1,'#15803d'); h+=lbl(C1,'C','#15803d',0,14);
+      h+=dot(A1p,'#9d174d'); h+=lbl(A1p,"A'","#9d174d",12,0);
+      h+=dot(B1p,'#9d174d'); h+=lbl(B1p,"B'","#9d174d",12,0);
+      h+=dot(C1p,'#9d174d'); h+=lbl(C1p,"C'","#9d174d",-12,0);
+      return h;
+    },
+    calc:`<div class="enonce en2">Triangle image A'B'C' ✓</div>
+          <div class="ligne">Le triangle est <span class="hl-g">2 fois plus petit</span> (rapport ½).</div>
+          <div class="ligne">Il est <span class="hl-r">retourné de l'autre côté de O</span> (rapport négatif).</div>
+          <div class="attention">⚠️ Les côtés correspondants sont toujours parallèles, mais les triangles sont dans le sens opposé.</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — RECONNAÎTRE une homothétie
+// Deux triangles dessinés. On vérifie : O, A, A' alignés + rapport constant.
+// Cas OUI : triangles semblables, droites passant par un même point.
+// Cas NON : droites ne se croisent pas en un seul point.
+// ============================================================
+
+// Cas OUI : centre O, rapport 2
+const Ov = {x:100, y:230};
+const Av = {x:160, y:185}; const Avp = hom(Ov,Av,2);
+const Bv = {x:185, y:120}; const Bvp = hom(Ov,Bv,2);
+const Cv = {x:210, y:190}; const Cvp = hom(Ov,Cv,2);
+
+const e2=[
+  {
+    explic:"On a deux triangles. Pour savoir s'il s'agit d'une homothétie, on relie chaque sommet à son image et on vérifie si toutes les droites se croisent en un seul point.",
+    draw(){
+      let h='';
+      h+=poly([Av,Bv,Cv],'#6d28d9','#6d28d9',2.5);
+      h+=poly([Avp,Bvp,Cvp],'#9d174d','#9d174d',2.5);
+      h+=dot(Av,'#6d28d9'); h+=lbl(Av,'A','#6d28d9',-12,0);
+      h+=dot(Bv,'#6d28d9'); h+=lbl(Bv,'B','#6d28d9',0,-10);
+      h+=dot(Cv,'#6d28d9'); h+=lbl(Cv,'C','#6d28d9',12,0);
+      h+=dot(Avp,'#9d174d'); h+=lbl(Avp,"A'","#9d174d",14,0);
+      h+=dot(Bvp,'#9d174d'); h+=lbl(Bvp,"B'","#9d174d",0,-12);
+      h+=dot(Cvp,'#9d174d'); h+=lbl(Cvp,"C'","#9d174d",14,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Ces deux triangles sont-ils en situation d'homothétie ?</div>
+          <div class="ligne">Méthode : on relie chaque sommet à son image (A à A', B à B', C à C').</div>
+          <div class="ligne">Si les trois droites se croisent en <span class="hl-p">un même point</span>, c'est une homothétie.</div>`
+  },
+  {
+    explic:"On trace les droites (AA'), (BB') et (CC'). Elles semblent se couper au même endroit.",
+    draw(){
+      let h='';
+      // Droites prolongées jusqu'à Ov
+      h+=seg(Ov,Avp,'#94a3b8',1.5,'5,3');
+      h+=seg(Ov,Bvp,'#94a3b8',1.5,'5,3');
+      h+=seg(Ov,Cvp,'#94a3b8',1.5,'5,3');
+      h+=poly([Av,Bv,Cv],'#6d28d9','#6d28d9',2.5);
+      h+=poly([Avp,Bvp,Cvp],'#9d174d','#9d174d',2.5);
+      h+=dot(Av,'#6d28d9'); h+=lbl(Av,'A','#6d28d9',-12,0);
+      h+=dot(Bv,'#6d28d9'); h+=lbl(Bv,'B','#6d28d9',0,-10);
+      h+=dot(Cv,'#6d28d9'); h+=lbl(Cv,'C','#6d28d9',12,0);
+      h+=dot(Avp,'#9d174d'); h+=lbl(Avp,"A'","#9d174d",14,0);
+      h+=dot(Bvp,'#9d174d'); h+=lbl(Bvp,"B'","#9d174d",0,-12);
+      h+=dot(Cvp,'#9d174d'); h+=lbl(Cvp,"C'","#9d174d",14,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Les droites (AA'), (BB') et (CC') se croisent-elles en un même point ?</div>
+          <div class="ligne">On prolonge les droites vers l'arrière...</div>`
+  },
+  {
+    explic:"Les trois droites se croisent toutes en O. C'est donc bien une homothétie de centre O.",
+    draw(){
+      let h='';
+      h+=seg(Ov,Avp,'#94a3b8',1.5,'5,3');
+      h+=seg(Ov,Bvp,'#94a3b8',1.5,'5,3');
+      h+=seg(Ov,Cvp,'#94a3b8',1.5,'5,3');
+      h+=poly([Av,Bv,Cv],'#6d28d9','#6d28d9',2.5);
+      h+=poly([Avp,Bvp,Cvp],'#9d174d','#9d174d',2.5);
+      h+=dot(Ov,'#374151',7); h+=lbl(Ov,'O','#374151',-14,0,14);
+      h+=dot(Av,'#6d28d9'); h+=lbl(Av,'A','#6d28d9',-12,0);
+      h+=dot(Bv,'#6d28d9'); h+=lbl(Bv,'B','#6d28d9',0,-10);
+      h+=dot(Cv,'#6d28d9'); h+=lbl(Cv,'C','#6d28d9',12,0);
+      h+=dot(Avp,'#9d174d'); h+=lbl(Avp,"A'","#9d174d",14,0);
+      h+=dot(Bvp,'#9d174d'); h+=lbl(Bvp,"B'","#9d174d",0,-12);
+      h+=dot(Cvp,'#9d174d'); h+=lbl(Cvp,"C'","#9d174d",14,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Les trois droites passent par O ✓</div>
+          <div class="ligne">On calcule le rapport : OA'/OA = <span class="hl-p">2</span>, OB'/OB = <span class="hl-p">2</span>, OC'/OC = <span class="hl-p">2</span></div>
+          <div class="ligne">Le rapport est constant = <span class="hl-p">2</span>.</div>
+          <div class="conclusion-ok">C'est bien une homothétie de centre O et de rapport 2.</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2];
+const COLS=['#3730a3','#15803d','#991b1b'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construire un histogramme</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a5f; color: white; font-size: 1.2em; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Tableau */
+  .tbl-wrap { background: white; border-radius: 12px; box-shadow: 0 1px 6px #0002; overflow: hidden; margin: 6px auto; max-width: 480px; width: 95%; }
+  .tbl-wrap table { border-collapse: collapse; width: 100%; }
+  .tbl-wrap th { padding: 8px 10px; font-size: 0.84em; color: white; text-align: center; background: #1e3a5f; }
+  .tbl-wrap td { padding: 9px 10px; text-align: center; font-size: 0.97em; border: 1px solid #e5e7eb; }
+  .hl-row td { font-weight: bold; }
+
+  /* SVG graphique */
+  svg#histo { width: 100%; max-width: 480px; height: 240px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1e3a5f; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; background: #dbeafe; color: #1e3a8a; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .ligne { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin: 1px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-r { color: #9d174d; font-weight: bold; }
+  .conclusion { background: #dbeafe; border-left: 4px solid #3b82f6; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #1e3a8a; margin-top: 6px; font-size: 1em; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1e3a5f; color: white; }
+</style>
+</head>
+<body>
+<h1>📊 Construire un histogramme</h1>
+<div class="scene">
+  <div class="tbl-wrap" id="tbl-wrap"></div>
+  <svg id="histo" viewBox="0 0 480 240"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let etape = 0;
+
+// ============================================================
+// DONNÉES
+// Temps de trajet (en minutes) — classes de taille 10
+// Classes : [0;10[  [10;20[  [20;30[  [30;40[  [40;50[
+// Effectifs :  4      9       12        7        3
+// ============================================================
+const classes  = ['[0 ; 10[', '[10 ; 20[', '[20 ; 30[', '[30 ; 40[', '[40 ; 50['];
+const bornes   = [0, 10, 20, 30, 40, 50];
+const effectifs= [4, 9, 12, 7, 3];
+const total    = 35;
+const colors   = ['#93c5fd','#6ee7b7','#fde68a','#f9a8d4','#c4b5fd'];
+const colsDark = ['#1d4ed8','#15803d','#b45309','#9d174d','#7c3aed'];
+
+// Repère graphique
+const OX=50, OY=200, W=380, H=170;
+const maxEff=14; // un peu au-dessus de 12 pour la marge
+
+function xPos(val){ return OX + (val/50)*W; }
+function yPos(eff){ return OY - (eff/maxEff)*H; }
+
+// ============================================================
+// RENDU TABLEAU
+// ============================================================
+function renderTable(hlIdx=-1, showEffec=true) {
+  let th = `<th>Temps (min)</th>`;
+  if(showEffec) th += `<th>Nombre d'élèves</th>`;
+
+  let rows='';
+  classes.forEach((c,i)=>{
+    const hl = i===hlIdx;
+    const style = hl ? `style="background:${colors[i]};font-weight:bold"` : '';
+    rows+=`<tr>
+      <td ${hl?`style="background:${colors[i]};font-weight:bold"`:''} >${c}</td>
+      ${showEffec ? `<td ${hl?`style="background:${colors[i]};font-weight:bold"`:''} >${effectifs[i]}</td>` : ''}
+    </tr>`;
+  });
+
+  document.getElementById('tbl-wrap').innerHTML=
+    `<table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ============================================================
+// RENDU HISTOGRAMME
+// ============================================================
+function renderHisto(nbBarres=0, hlIdx=-1, showAxes=true, showGrid=false, showLabels=false) {
+  let h='';
+
+  // Fond blanc
+  h+=`<rect x="0" y="0" width="480" height="240" fill="white"/>`;
+
+  if(showGrid){
+    for(let e=0;e<=maxEff;e+=2){
+      const y=yPos(e);
+      h+=`<line x1="${OX}" y1="${y.toFixed(1)}" x2="${OX+W}" y2="${y.toFixed(1)}" stroke="#f1f5f9" stroke-width="1"/>`;
+      h+=`<text x="${OX-6}" y="${(y+4).toFixed(1)}" font-size="11" text-anchor="end" fill="#94a3b8">${e}</text>`;
+    }
+  }
+
+  // Barres
+  for(let i=0;i<nbBarres;i++){
+    const x1=xPos(bornes[i]);
+    const x2=xPos(bornes[i+1]);
+    const bw=x2-x1;
+    const bh=(effectifs[i]/maxEff)*H;
+    const by=OY-bh;
+    const isHL=i===hlIdx;
+    const fill=isHL ? colsDark[i] : colors[i];
+    const stroke=isHL ? colsDark[i] : '#94a3b8';
+    h+=`<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${isHL?2:1.5}" opacity="${isHL?1:0.85}"/>`;
+    // Valeur au-dessus
+    if(showLabels || isHL){
+      h+=`<text x="${((x1+x2)/2).toFixed(1)}" y="${(by-5).toFixed(1)}" font-size="12" font-weight="bold" text-anchor="middle" fill="${colsDark[i]}">${effectifs[i]}</text>`;
+    }
+  }
+
+  if(showAxes){
+    // Axe horizontal
+    h+=`<line x1="${OX}" y1="${OY}" x2="${OX+W}" y2="${OY}" stroke="#374151" stroke-width="2"/>`;
+    // Axe vertical
+    h+=`<line x1="${OX}" y1="${OY}" x2="${OX}" y2="${OY-H-15}" stroke="#374151" stroke-width="2"/>`;
+    // Flèche Y
+    h+=`<polygon points="${OX},${OY-H-15} ${OX-4},${OY-H-3} ${OX+4},${OY-H-3}" fill="#374151"/>`;
+    // Flèche X
+    h+=`<polygon points="${OX+W},${OY} ${OX+W-10},${OY-4} ${OX+W-10},${OY+4}" fill="#374151"/>`;
+
+    // Labels axe X (bornes)
+    bornes.forEach((b,i)=>{
+      const x=xPos(b);
+      h+=`<text x="${x.toFixed(1)}" y="${OY+16}" font-size="11" text-anchor="middle" fill="#6b7280">${b}</text>`;
+    });
+
+    // Label axe X
+    h+=`<text x="${(OX+W/2).toFixed(1)}" y="232" font-size="11" text-anchor="middle" fill="#6b7280">Temps (minutes)</text>`;
+    // Label axe Y
+    h+=`<text x="12" y="${(OY-H/2).toFixed(1)}" font-size="11" text-anchor="middle" fill="#6b7280" transform="rotate(-90,12,${OY-H/2})">Nombre d'élèves</text>`;
+    // Tick Y à 0
+    h+=`<text x="${OX-6}" y="${OY+4}" font-size="11" text-anchor="end" fill="#6b7280">0</text>`;
+  }
+
+  document.getElementById('histo').innerHTML=h;
+}
+
+// ============================================================
+// ÉTAPES
+// ============================================================
+const etapes=[
+  {
+    explic:"On veut représenter les temps de trajet de 35 élèves. Les données sont regroupées en classes de même taille : chaque classe fait 10 minutes.",
+    render(){
+      renderTable(-1, true);
+      renderHisto(0, -1, false, false);
+    },
+    calc:`<div class="enonce">Construire l'histogramme des temps de trajet.</div>
+          <div class="ligne">Les données sont regroupées par tranches de <span class="hl-b">10 minutes</span>.</div>
+          <div class="ligne">Chaque tranche s'appelle une <span class="hl-b">classe</span>.</div>
+          <div class="attention">⚠️ Un histogramme représente des données groupées en classes. Les barres sont collées les unes aux autres (pas d'espace entre elles).</div>`
+  },
+  {
+    explic:"On trace d'abord les deux axes : l'axe horizontal pour le temps (les bornes des classes) et l'axe vertical pour le nombre d'élèves.",
+    render(){
+      renderTable(-1, true);
+      renderHisto(0, -1, true, false);
+    },
+    calc:`<div class="enonce">Étape 1 : tracer les axes.</div>
+          <div class="ligne"><span class="hl-b">Axe horizontal</span> : le temps en minutes, de 0 à 50.</div>
+          <div class="ligne"><span class="hl-b">Axe vertical</span> : le nombre d'élèves.</div>
+          <div class="ligne">On place les bornes des classes sur l'axe horizontal : 0, 10, 20, 30, 40, 50.</div>`
+  },
+  {
+    explic:"On trace la première barre : la classe [0 ; 10[ a 4 élèves. La barre va de 0 à 10 en largeur, et monte jusqu'à 4 en hauteur.",
+    render(){
+      renderTable(0, true);
+      renderHisto(1, 0, true, true);
+    },
+    calc:`<div class="enonce">Classe [0 ; 10[ → 4 élèves</div>
+          <div class="ligne"><span class="hl-b">Largeur</span> de la barre : de 0 à 10</div>
+          <div class="ligne"><span class="hl-b">Hauteur</span> de la barre : jusqu'à <span class="hl-o">4</span></div>
+          <div class="ligne">On trace un rectangle qui va de x=0 à x=10, et dont le haut est à y=4.</div>`
+  },
+  {
+    explic:"Deuxième barre : la classe [10 ; 20[ a 9 élèves. La barre va de 10 à 20 en largeur, et monte jusqu'à 9.",
+    render(){
+      renderTable(1, true);
+      renderHisto(2, 1, true, true);
+    },
+    calc:`<div class="enonce">Classe [10 ; 20[ → 9 élèves</div>
+          <div class="ligne"><span class="hl-b">Largeur</span> : de 10 à 20</div>
+          <div class="ligne"><span class="hl-b">Hauteur</span> : jusqu'à <span class="hl-o">9</span></div>
+          <div class="ligne">La barre est collée à la précédente : pas d'espace entre elles.</div>`
+  },
+  {
+    explic:"Troisième barre : la classe [20 ; 30[ est la plus grande avec 12 élèves. C'est la barre la plus haute.",
+    render(){
+      renderTable(2, true);
+      renderHisto(3, 2, true, true);
+    },
+    calc:`<div class="enonce">Classe [20 ; 30[ → 12 élèves</div>
+          <div class="ligne"><span class="hl-b">Largeur</span> : de 20 à 30</div>
+          <div class="ligne"><span class="hl-b">Hauteur</span> : jusqu'à <span class="hl-o">12</span></div>
+          <div class="ligne">C'est la classe avec le plus d'élèves → la barre la plus haute.</div>`
+  },
+  {
+    explic:"Quatrième barre : la classe [30 ; 40[ a 7 élèves. La barre est plus petite que la précédente.",
+    render(){
+      renderTable(3, true);
+      renderHisto(4, 3, true, true);
+    },
+    calc:`<div class="enonce">Classe [30 ; 40[ → 7 élèves</div>
+          <div class="ligne"><span class="hl-b">Largeur</span> : de 30 à 40</div>
+          <div class="ligne"><span class="hl-b">Hauteur</span> : jusqu'à <span class="hl-o">7</span></div>`
+  },
+  {
+    explic:"Cinquième et dernière barre : la classe [40 ; 50[ a 3 élèves.",
+    render(){
+      renderTable(4, true);
+      renderHisto(5, 4, true, true);
+    },
+    calc:`<div class="enonce">Classe [40 ; 50[ → 3 élèves</div>
+          <div class="ligne"><span class="hl-b">Largeur</span> : de 40 à 50</div>
+          <div class="ligne"><span class="hl-b">Hauteur</span> : jusqu'à <span class="hl-o">3</span></div>`
+  },
+  {
+    explic:"L'histogramme est terminé ! On lit que la classe la plus fréquente est [20 ; 30[ : la majorité des élèves met entre 20 et 30 minutes.",
+    render(){
+      renderTable(-1, true);
+      renderHisto(5, -1, true, true, true);
+    },
+    calc:`<div class="enonce">Histogramme terminé ✓</div>
+          <div class="ligne">On peut lire directement le nombre d'élèves par classe grâce à la hauteur des barres.</div>
+          <div class="conclusion">La classe [20 ; 30[ est la plus fréquente : 12 élèves.</div>
+          <div class="attention">⚠️ Les barres sont toutes de la même largeur car les classes sont de même taille (10 min). Les barres sont collées : pas d'espace entre elles.</div>`
+  },
+];
+
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<etapes.length-1){etape++;render();} }
+
+function render(){
+  const e=etapes[etape];
+  e.render();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

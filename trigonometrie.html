@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trigonométrie</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 7px 11px; border-radius: 16px; border: none; font-size: 0.76em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab4 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #3730a3; color: white; border-color: #3730a3; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab4.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#tri { width: 100%; max-width: 480px; height: 220px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  /* Formule visuelle */
+  .formule-box { background: white; border-radius: 14px; padding: 12px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .token { padding: 6px 14px; border-radius: 10px; font-weight: bold; font-size: 1.05em; font-family: 'Courier New', monospace; }
+  .tok-fn   { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tok-eq   { color: #374151; font-size: 1.2em; }
+  .tok-frac { display: flex; flex-direction: column; align-items: center; }
+  .tok-frac .num { border-bottom: 2.5px solid #374151; padding: 2px 10px 3px; font-weight: bold; }
+  .tok-frac .den { padding: 3px 10px 2px; font-weight: bold; }
+  .tok-opp  { background: #fce7f3; color: #9d174d; border: 2px solid #f9a8d4; }
+  .tok-adj  { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tok-hyp  { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tok-val  { background: #f0fdf4; color: #15803d; border: 2px solid #6ee7b7; font-size: 1.1em; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #3730a3; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #3730a3; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .en3 { background: #fef3c7; color: #78350f; }
+  .en4 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-p { color: #3730a3; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #9d174d; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1.02em; font-family: 'Courier New', monospace; }
+  .c1 { background: #ede9fe; border-color: #6366f1; color: #1e1b4b; }
+  .c2 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c3 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .c4 { background: #fce7f3; border-color: #ec4899; color: #831843; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #3730a3; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Trigonométrie — sin, cos, tan</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Vocabulaire</button>
+  <button class="tab tab2" onclick="setMode(1)">Calculer avec sin</button>
+  <button class="tab tab3" onclick="setMode(2)">Calculer avec cos</button>
+  <button class="tab tab4" onclick="setMode(3)">Calculer avec tan</button>
+</div>
+<div class="scene">
+  <svg id="tri" viewBox="0 0 480 220"></svg>
+  <div class="formule-box" id="formule-box"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// ============================================================
+// TRIANGLE RECTANGLE — coordonnées fixes
+// C = angle droit (bas gauche)
+// A = angle aigu dont on parle (bas droite)  ← angle de référence
+// B = sommet haut
+// Angle en A = 35°
+// Adjacent (AC) = 8 → Opposé (BC) = 8*tan(35°) ≈ 5.6 → Hyp (AB) = 8/cos(35°) ≈ 9.76
+// ============================================================
+const C = {x:100, y:175};
+const A = {x:360, y:175};
+const B = {x:100, y: 65};
+
+const angleA = 35; // degrés
+// Valeurs numériques propres pour chaque mode :
+// Mode 1 (sin) : hyp=10, angle=30° → opp = 10*sin(30°) = 5
+// Mode 2 (cos) : hyp=10, angle=40° → adj = 10*cos(40°) ≈ 7,66
+// Mode 3 (tan) : adj=6, angle=35°  → opp = 6*tan(35°) ≈ 4,20
+
+// Pour la figure : triangle basé sur angle 35°, adj=8 pour visualisation
+// Calcul approx : BC = 8*tan(35°) ≈ 5.6 → en pixels : B est à y=175-5.6/8*110 = 175-77 ≈ 98
+// adj (AC) = A.x - C.x = 360-100 = 260px pour "8"
+// opp (BC) = C.y - B.y = 175-65 = 110px pour ~5.6
+// hyp (AB) calculé
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(p1,p2,col,w=2.5,dash=''){
+  return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function dot(p,col,r=5){
+  return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+function txt(x,y,s,col,size=13,anchor='middle',bold=true){
+  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="${bold?'bold':'normal'}" text-anchor="${anchor}" fill="${col}">${s}</text>`;
+}
+// Angle droit
+function rightAngle(corner, p1, p2, size=12){
+  const dx1=(p1.x-corner.x), dy1=(p1.y-corner.y), l1=Math.sqrt(dx1*dx1+dy1*dy1);
+  const dx2=(p2.x-corner.x), dy2=(p2.y-corner.y), l2=Math.sqrt(dx2*dx2+dy2*dy2);
+  const ux1=dx1/l1*size, uy1=dy1/l1*size;
+  const ux2=dx2/l2*size, uy2=dy2/l2*size;
+  const mx=corner.x+ux1+ux2, my=corner.y+uy1+uy2;
+  return `<polyline points="${corner.x+ux1},${corner.y+uy1} ${mx},${my} ${corner.x+ux2},${corner.y+uy2}" fill="none" stroke="#374151" stroke-width="1.8"/>`;
+}
+// Arc angle
+function arcAngle(center, r, startDeg, endDeg, col){
+  const s=startDeg*Math.PI/180, e=endDeg*Math.PI/180;
+  const x1=center.x+r*Math.cos(s), y1=center.y+r*Math.sin(s);
+  const x2=center.x+r*Math.cos(e), y2=center.y+r*Math.sin(e);
+  return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 0,1 ${x2.toFixed(1)},${y2.toFixed(1)}" fill="none" stroke="${col}" stroke-width="2.5"/>`;
+}
+// Étiquette côté (milieu du segment + décalage)
+function sideLbl(p1,p2,val,col,off=16){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*off, ny=dx/len*off;
+  return txt(mx+nx, my+ny+4, val, col, 12);
+}
+
+// ============================================================
+// TRIANGLE DE BASE (angle A en bas droite)
+// ============================================================
+function drawTri(hlOpp=false, hlAdj=false, hlHyp=false, hlAngle=false, showAngle=true) {
+  let h='';
+  const colOpp = hlOpp ? '#9d174d' : '#6b7280';
+  const colAdj = hlAdj ? '#15803d' : '#6b7280';
+  const colHyp = hlHyp ? '#b45309' : '#6b7280';
+  const wOpp = hlOpp ? 4 : 2.5;
+  const wAdj = hlAdj ? 4 : 2.5;
+  const wHyp = hlHyp ? 4 : 2.5;
+
+  h+=seg(C,B,colOpp,wOpp);  // côté opposé (vertical)
+  h+=seg(C,A,colAdj,wAdj);  // côté adjacent (horizontal)
+  h+=seg(A,B,colHyp,wHyp);  // hypoténuse
+
+  // Angle droit en C
+  h+=rightAngle(C,B,A,14);
+
+  // Arc angle en A
+  if(showAngle){
+    const angRad=Math.atan2(C.y-B.y, C.x-B.x); // direction vers B depuis A
+    // Angle de la droite AB par rapport à l'horizontal
+    const dxAB=B.x-A.x, dyAB=B.y-A.y;
+    const angAB=Math.atan2(dyAB,dxAB)*180/Math.PI; // ≈ -160°
+    const angAC=180; // vers la gauche
+    const r=30;
+    // On dessine l'arc de angAB à angAC (sens anti-horaire)
+    const a1=angAB*Math.PI/180, a2=angAC*Math.PI/180;
+    const x1=A.x+r*Math.cos(a1), y1=A.y+r*Math.sin(a1);
+    const x2=A.x+r*Math.cos(a2), y2=A.y+r*Math.sin(a2);
+    const colArc = hlAngle ? '#3730a3' : '#94a3b8';
+    h+=`<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 0,0 ${x2.toFixed(1)},${y2.toFixed(1)}" fill="none" stroke="${colArc}" stroke-width="${hlAngle?2.5:1.8}"/>`;
+  }
+
+  // Points et labels
+  h+=dot(C,'#374151',4);
+  h+=dot(A,'#374151',6);
+  h+=dot(B,'#374151',4);
+  h+=txt(C.x-14, C.y+4, 'C', '#374151', 13);
+  h+=txt(A.x+14, A.y+4, 'A', '#3730a3', 14);  // angle de référence
+  h+=txt(B.x-14, B.y-8, 'B', '#374151', 13);
+
+  // Angle en A
+  if(showAngle) h+=txt(A.x-42, A.y-10, '35°', hlAngle?'#3730a3':'#94a3b8', 12);
+
+  return h;
+}
+
+// ============================================================
+// FORMULE HTML
+// ============================================================
+function formule(fn, top, bot, val='') {
+  const cols = {
+    'côté opposé':  {bg:'#fce7f3', color:'#9d174d', border:'#f9a8d4', cls:'tok-opp'},
+    'côté adjacent':{bg:'#dcfce7', color:'#14532d', border:'#6ee7b7', cls:'tok-adj'},
+    'hypoténuse':   {bg:'#fef3c7', color:'#78350f', border:'#fcd34d', cls:'tok-hyp'},
+  };
+  const topC = cols[top]||{bg:'#f8fafc',color:'#374151',border:'#cbd5e1',cls:''};
+  const botC = cols[bot]||{bg:'#f8fafc',color:'#374151',border:'#cbd5e1',cls:''};
+  return `
+    <span class="token tok-fn">${fn}</span>
+    <span class="tok-eq">=</span>
+    <span class="tok-frac">
+      <span class="num" style="background:${topC.bg};color:${topC.color};border-radius:6px;padding:3px 10px">${top}</span>
+      <span class="den" style="background:${botC.bg};color:${botC.color};border-radius:6px;padding:3px 10px">${bot}</span>
+    </span>
+    ${val ? `<span class="tok-eq">=</span><span class="token tok-val">${val}</span>` : ''}
+  `;
+}
+
+// ============================================================
+// MODE 0 — VOCABULAIRE
+// ============================================================
+const e0=[
+  {
+    explic:"Dans un triangle rectangle, les noms des côtés dépendent de l'angle de référence. Ici l'angle de référence est l'angle A.",
+    draw(){ return drawTri(false,false,false,true,true)+
+      txt(230,210,'angle de référence : A','#3730a3',11); },
+    formule:`<span style="font-size:1em;color:#3730a3;font-weight:bold">L'angle de référence est A (en bas à droite)</span>`,
+    calc:`<div class="enonce en1">Les trois côtés ont chacun un nom selon l'angle A.</div>
+          <div class="ligne"><span class="hl-o">Hypoténuse</span> : le côté en face de l'angle droit (le plus long côté).</div>
+          <div class="ligne"><span class="hl-r">Côté opposé</span> : le côté en face de l'angle A.</div>
+          <div class="ligne"><span class="hl-g">Côté adjacent</span> : le côté qui forme l'angle A (et qui n'est pas l'hypoténuse).</div>`
+  },
+  {
+    explic:"L'hypoténuse est le côté en face de l'angle droit. C'est toujours le côté le plus long du triangle rectangle.",
+    draw(){ return drawTri(false,false,true,false,true)+
+      sideLbl(A,B,'Hypoténuse','#b45309',18); },
+    formule:`<span class="token tok-hyp" style="font-size:1.1em">Hypoténuse = côté en face de l'angle droit = [AB]</span>`,
+    calc:`<div class="enonce en1">Hypoténuse = [AB]</div>
+          <div class="ligne">C'est le côté le plus <span class="hl-o">long</span>.</div>
+          <div class="ligne">Il est toujours <span class="hl-o">en face de l'angle droit</span>.</div>
+          <div class="ligne">Il ne dépend pas du choix de l'angle de référence.</div>`
+  },
+  {
+    explic:"Le côté opposé à l'angle A est le côté [BC] : il est en face de l'angle A, sans le toucher.",
+    draw(){ return drawTri(true,false,false,false,true)+
+      sideLbl(B,C,'Côté opposé','#9d174d',-16); },
+    formule:`<span class="token tok-opp" style="font-size:1.1em">Côté opposé à A = côté en face de A = [BC]</span>`,
+    calc:`<div class="enonce en1">Côté opposé = [BC]</div>
+          <div class="ligne">C'est le côté qui est <span class="hl-r">en face</span> de l'angle A.</div>
+          <div class="ligne">Il ne touche pas l'angle A.</div>`
+  },
+  {
+    explic:"Le côté adjacent à l'angle A est le côté [CA] : il touche l'angle A et ce n'est pas l'hypoténuse.",
+    draw(){ return drawTri(false,true,false,false,true)+
+      sideLbl(C,A,'Côté adjacent','#15803d',16); },
+    formule:`<span class="token tok-adj" style="font-size:1.1em">Côté adjacent à A = côté qui touche A (≠ hyp.) = [CA]</span>`,
+    calc:`<div class="enonce en1">Côté adjacent = [CA]</div>
+          <div class="ligne">C'est le côté qui <span class="hl-g">touche</span> l'angle A.</div>
+          <div class="ligne">Ce n'est pas l'hypoténuse.</div>
+          <div class="attention">⚠️ Si on changeait d'angle de référence, les côtés opposé et adjacent changeraient. L'hypoténuse, elle, reste toujours la même.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — sin : opp / hyp — chercher côté opposé
+// Triangle : angle A = 30°, hyp AB = 10 → opp BC = 5
+// sin(30°) = opp/hyp → opp = hyp × sin(30°) = 10 × 0,5 = 5
+// ============================================================
+const e1=[
+  {
+    explic:"On connaît l'angle A = 30° et l'hypoténuse AB = 10. On cherche le côté opposé BC.",
+    draw(){
+      let h=drawTri(true,false,true,true,true);
+      h+=sideLbl(A,B,'10','#b45309',18);
+      h+=sideLbl(B,C,'?','#9d174d',-16);
+      h+=txt(A.x-42,A.y-10,'30°','#3730a3',12);
+      return h;
+    },
+    formule: formule('sin A','côté opposé','hypoténuse'),
+    calc:`<div class="enonce en2">Données : angle A = 30°, hyp = 10. Chercher : côté opposé BC.</div>
+          <div class="ligne">sin A = <span class="hl-r">côté opposé</span> ÷ <span class="hl-o">hypoténuse</span></div>
+          <div class="ligne">On connaît l'hypoténuse et l'angle → on peut trouver le côté opposé.</div>`
+  },
+  {
+    explic:"On écrit l'égalité avec les valeurs connues : sin(30°) = BC ÷ 10.",
+    draw(){
+      let h=drawTri(true,false,true,true,true);
+      h+=sideLbl(A,B,'10','#b45309',18);
+      h+=sideLbl(B,C,'?','#9d174d',-16);
+      h+=txt(A.x-42,A.y-10,'30°','#3730a3',12);
+      return h;
+    },
+    formule: formule('sin 30°','côté opposé','10'),
+    calc:`<div class="enonce en2">sin 30° = BC ÷ 10</div>
+          <div class="ligne">On isole BC en multipliant des deux côtés par 10 :</div>
+          <div class="ligne">BC = 10 × sin 30°</div>`
+  },
+  {
+    explic:"On calcule avec la calculatrice : sin(30°) = 0,5. Donc BC = 10 × 0,5 = 5.",
+    draw(){
+      let h=drawTri(true,false,true,true,true);
+      h+=sideLbl(A,B,'10','#b45309',18);
+      h+=sideLbl(B,C,'5','#9d174d',-16);
+      h+=txt(A.x-42,A.y-10,'30°','#3730a3',12);
+      return h;
+    },
+    formule: formule('sin 30°','côté opposé','hypoténuse','0,5'),
+    calc:`<div class="enonce en2">BC = 10 × sin 30°</div>
+          <div class="ligne">BC = 10 × <span class="hl-g">0,5</span></div>
+          <div class="ligne">BC = <span class="hl-g">5</span></div>
+          <div class="conclusion c2">BC = 5</div>
+          <div class="attention">⚠️ Sur la calculatrice : vérifier que tu es en mode DEGRÉS (DEG).</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — cos : adj / hyp — chercher côté adjacent
+// Triangle : angle A = 40°, hyp AB = 12 → adj CA = 12×cos(40°) ≈ 9,19
+// Pour valeurs propres : hyp=10, angle=40° → adj ≈ 7,66 → arrondi à 7,66
+// ============================================================
+const e2=[
+  {
+    explic:"On connaît l'angle A = 40° et l'hypoténuse AB = 10. On cherche le côté adjacent CA.",
+    draw(){
+      let h=drawTri(false,true,true,true,true);
+      h+=sideLbl(A,B,'10','#b45309',18);
+      h+=sideLbl(C,A,'?','#15803d',16);
+      h+=txt(A.x-42,A.y-10,'40°','#3730a3',12);
+      return h;
+    },
+    formule: formule('cos A','côté adjacent','hypoténuse'),
+    calc:`<div class="enonce en3">Données : angle A = 40°, hyp = 10. Chercher : côté adjacent CA.</div>
+          <div class="ligne">cos A = <span class="hl-g">côté adjacent</span> ÷ <span class="hl-o">hypoténuse</span></div>
+          <div class="ligne">On connaît l'hypoténuse et l'angle → on peut trouver le côté adjacent.</div>`
+  },
+  {
+    explic:"On écrit l'égalité avec les valeurs : cos(40°) = CA ÷ 10.",
+    draw(){
+      let h=drawTri(false,true,true,true,true);
+      h+=sideLbl(A,B,'10','#b45309',18);
+      h+=sideLbl(C,A,'?','#15803d',16);
+      h+=txt(A.x-42,A.y-10,'40°','#3730a3',12);
+      return h;
+    },
+    formule: formule('cos 40°','côté adjacent','10'),
+    calc:`<div class="enonce en3">cos 40° = CA ÷ 10</div>
+          <div class="ligne">On isole CA :</div>
+          <div class="ligne">CA = 10 × cos 40°</div>`
+  },
+  {
+    explic:"On calcule avec la calculatrice : cos(40°) ≈ 0,766. Donc CA ≈ 10 × 0,766 ≈ 7,66.",
+    draw(){
+      let h=drawTri(false,true,true,true,true);
+      h+=sideLbl(A,B,'10','#b45309',18);
+      h+=sideLbl(C,A,'7,66','#15803d',16);
+      h+=txt(A.x-42,A.y-10,'40°','#3730a3',12);
+      return h;
+    },
+    formule: formule('cos 40°','côté adjacent','hypoténuse','≈ 0,766'),
+    calc:`<div class="enonce en3">CA = 10 × cos 40°</div>
+          <div class="ligne">CA = 10 × <span class="hl-o">0,766</span></div>
+          <div class="ligne">CA ≈ <span class="hl-o">7,66</span></div>
+          <div class="conclusion c3">CA ≈ 7,66</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — tan : opp / adj — chercher l'hypoténuse
+// On va varier : chercher hyp avec sin, pour montrer une autre utilisation
+// tan A = opp/adj → si on cherche l'hyp, mieux vaut sin ou cos
+// Ici : angle A = 35°, adj = 6 → opp = 6 × tan(35°) ≈ 4,20
+// Puis : chercher hyp si on connaît opp et angle : hyp = opp/sin(angle)
+// On fait deux sous-étapes : 1) opp avec tan, 2) hyp avec sin (récap)
+// ============================================================
+const e3=[
+  {
+    explic:"On connaît l'angle A = 35° et le côté adjacent CA = 6. On cherche le côté opposé BC avec la tangente.",
+    draw(){
+      let h=drawTri(true,true,false,true,true);
+      h+=sideLbl(C,A,'6','#15803d',16);
+      h+=sideLbl(B,C,'?','#9d174d',-16);
+      h+=txt(A.x-42,A.y-10,'35°','#3730a3',12);
+      return h;
+    },
+    formule: formule('tan A','côté opposé','côté adjacent'),
+    calc:`<div class="enonce en4">Données : angle A = 35°, adj = 6. Chercher : côté opposé BC.</div>
+          <div class="ligne">tan A = <span class="hl-r">côté opposé</span> ÷ <span class="hl-g">côté adjacent</span></div>
+          <div class="ligne">On utilise tan quand on connaît un côté et l'angle, sans l'hypoténuse.</div>`
+  },
+  {
+    explic:"On écrit l'égalité : tan(35°) = BC ÷ 6. On isole BC.",
+    draw(){
+      let h=drawTri(true,true,false,true,true);
+      h+=sideLbl(C,A,'6','#15803d',16);
+      h+=sideLbl(B,C,'?','#9d174d',-16);
+      h+=txt(A.x-42,A.y-10,'35°','#3730a3',12);
+      return h;
+    },
+    formule: formule('tan 35°','côté opposé','6'),
+    calc:`<div class="enonce en4">tan 35° = BC ÷ 6</div>
+          <div class="ligne">BC = 6 × tan 35°</div>`
+  },
+  {
+    explic:"tan(35°) ≈ 0,700. Donc BC ≈ 6 × 0,700 = 4,20.",
+    draw(){
+      let h=drawTri(true,true,false,true,true);
+      h+=sideLbl(C,A,'6','#15803d',16);
+      h+=sideLbl(B,C,'4,20','#9d174d',-16);
+      h+=txt(A.x-42,A.y-10,'35°','#3730a3',12);
+      return h;
+    },
+    formule: formule('tan 35°','côté opposé','côté adjacent','≈ 0,700'),
+    calc:`<div class="enonce en4">BC = 6 × tan 35°</div>
+          <div class="ligne">BC = 6 × <span class="hl-r">0,700</span></div>
+          <div class="ligne">BC ≈ <span class="hl-r">4,20</span></div>
+          <div class="conclusion c4">BC ≈ 4,20</div>`
+  },
+  {
+    explic:"Récapitulatif : quelle formule choisir ? Cela dépend de ce qu'on connaît et de ce qu'on cherche.",
+    draw(){
+      let h=drawTri(true,true,true,true,true);
+      h+=sideLbl(A,B,'hyp','#b45309',18);
+      h+=sideLbl(C,A,'adj','#15803d',16);
+      h+=sideLbl(B,C,'opp','#9d174d',-16);
+      return h;
+    },
+    formule:`<span style="font-size:0.9em;color:#374151;font-weight:bold">sin A = opp/hyp &nbsp;|&nbsp; cos A = adj/hyp &nbsp;|&nbsp; tan A = opp/adj</span>`,
+    calc:`<div class="enonce en4">Récapitulatif — quelle formule choisir ?</div>
+          <div class="ligne"><span class="hl-p">sin</span> → quand on connaît <span class="hl-o">hyp</span> et on cherche <span class="hl-r">opp</span>, ou inversement</div>
+          <div class="ligne"><span class="hl-p">cos</span> → quand on connaît <span class="hl-o">hyp</span> et on cherche <span class="hl-g">adj</span>, ou inversement</div>
+          <div class="ligne"><span class="hl-p">tan</span> → quand on connaît <span class="hl-g">adj</span> et on cherche <span class="hl-r">opp</span>, ou inversement</div>
+          <div class="attention">Moyen mnémotechnique : <strong>SOH-CAH-TOA</strong><br>Sin = Opp/Hyp · Cos = Adj/Hyp · Tan = Opp/Adj</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+const COLS=['#3730a3','#15803d','#b45309','#9d174d'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('tri').innerHTML=e.draw();
+  document.getElementById('formule-box').innerHTML=e.formule;
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

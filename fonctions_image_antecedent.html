@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fonctions - image et antécédent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #0c4a6e; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 10px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #e0f2fe; color: #0c4a6e; border: 2px solid #7dd3fc; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab4 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #0c4a6e; color: white; border-color: #0c4a6e; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab4.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* DÉFINITION */
+  .def-box { background: white; border-radius: 12px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; border-left: 5px solid #0c4a6e; font-size: 0.93em; color: #222; }
+  .def-box .mot { font-weight: bold; }
+  .hl-blue   { color: #0369a1; font-weight: bold; }
+  .hl-pink   { color: #9d174d; font-weight: bold; }
+  .hl-green  { color: #15803d; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+
+  /* SVG SCHÉMA FLÈCHE */
+  svg#schema { width: 100%; max-width: 480px; height: 130px; display: block; background: white; border-radius: 14px; box-shadow: 0 2px 8px #0002; margin: 6px auto; }
+
+  /* TABLEAU DE VALEURS */
+  .table-wrap { background: white; border-radius: 12px; box-shadow: 0 1px 6px #0002; overflow: hidden; margin: 6px auto; max-width: 480px; width: 95%; }
+  .table-wrap table { border-collapse: collapse; width: 100%; }
+  .table-wrap th { padding: 8px 12px; font-size: 0.85em; color: white; }
+  .table-wrap td { padding: 9px 12px; text-align: center; font-size: 1em; font-weight: bold; border: 1px solid #e5e7eb; }
+  .cell-hl-x   { background: #e0f2fe; color: #0c4a6e; }
+  .cell-hl-fx  { background: #fce7f3; color: #9d174d; }
+  .cell-found  { background: #fef9c3; color: #713f12; border: 2px solid #f59e0b !important; }
+  .cell-ant    { background: #dcfce7; color: #14532d; border: 2px solid #22c55e !important; }
+
+  /* CALCUL */
+  .calcul-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #0c4a6e; font-size: 0.97em; line-height: 2.1; }
+  .calcul-box .enonce { font-weight: bold; background: #e0f2fe; color: #0c4a6e; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.93em; }
+  .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .eq { min-width: 18px; color: #374151; }
+  .conclusion-ok { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 7px 12px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; font-family: 'Courier New', monospace; font-size: 1em; }
+  .conclusion-blue { background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 7px 12px; border-radius: 8px; font-weight: bold; color: #0c4a6e; margin-top: 6px; font-family: 'Courier New', monospace; font-size: 1em; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 26px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #0c4a6e; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Fonctions — Image et antécédent</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">C'est quoi ?</button>
+  <button class="tab tab2" onclick="setMode(1)">Image (tableau)</button>
+  <button class="tab tab3" onclick="setMode(2)">Antécédent (tableau)</button>
+  <button class="tab tab4" onclick="setMode(3)">Par une expression</button>
+</div>
+<div class="scene">
+  <div class="def-box" id="def-box"></div>
+  <svg id="schema" viewBox="0 0 480 130"></svg>
+  <div class="table-wrap" id="table-wrap" style="display:none"></div>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// Tableau de valeurs commun pour modes 1 et 2
+// f : x → 2x + 1
+const xVals  = [-2, -1, 0, 1, 3, 5];
+const fxVals = [ -3,  -1, 1, 3, 7, 11];
+
+// ============================================================
+// MODE 0 — VOCABULAIRE
+// ============================================================
+const etapes0 = [
+  {
+    text: "Une fonction f associe à chaque nombre x un seul résultat, noté f(x). On dit que f est une machine qui transforme x en f(x).",
+    schema: 'machine', hlX: false, hlFx: false,
+    def: `Une <span class="mot">fonction</span> f associe à tout nombre <span class="hl-blue">x</span> un unique résultat <span class="hl-pink">f(x)</span>.`,
+    calcul: `<div class="ligne">On note : <span class="hl-blue">x</span> <span style="font-size:1.3em">→</span> <span class="hl-pink">f(x)</span></div>
+             <div class="ligne"><span class="hl-blue">x</span> est le nombre de <strong>départ</strong>.</div>
+             <div class="ligne"><span class="hl-pink">f(x)</span> est le nombre d'<strong>arrivée</strong>.</div>`
+  },
+  {
+    text: "L'image de x par f est le résultat f(x). C'est ce que la fonction produit quand on lui donne x.",
+    schema: 'machine', hlX: true, hlFx: false,
+    def: `<span class="hl-pink">f(x)</span> est l'<span class="mot">image</span> de <span class="hl-blue">x</span> par f.`,
+    calcul: `<div class="ligne">On donne <span class="hl-blue">x = 2</span> à la machine.</div>
+             <div class="ligne">La machine produit <span class="hl-pink">f(2)</span>.</div>
+             <div class="ligne"><span class="hl-pink">f(2)</span> est l'<strong>image</strong> de <span class="hl-blue">2</span> par f.</div>`
+  },
+  {
+    text: "L'antécédent de y par f est le nombre x tel que f(x) = y. C'est ce qu'on donne à la machine pour obtenir y.",
+    schema: 'machine', hlX: false, hlFx: true,
+    def: `<span class="hl-blue">x</span> est un <span class="mot">antécédent</span> de <span class="hl-pink">y</span> par f si <span class="hl-pink">f(x) = y</span>.`,
+    calcul: `<div class="ligne">On cherche quel <span class="hl-blue">x</span> donne <span class="hl-pink">f(x) = 5</span>.</div>
+             <div class="ligne">Si f(3) = 5, alors <span class="hl-blue">3</span> est un <strong>antécédent</strong> de <span class="hl-pink">5</span>.</div>
+             <div class="attention">⚠️ Une image est unique. Un antécédent peut ne pas exister ou en avoir plusieurs.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — IMAGE (tableau)
+// Trouver l'image de x = 3 puis x = −1
+// ============================================================
+const etapes1 = [
+  {
+    text: "Voici le tableau de valeurs de la fonction f. On veut trouver l'image de 3 par f, c'est-à-dire f(3).",
+    hlX: -1, hlFx: -1, question: 'image', target: 3,
+    def: `Trouver l'<span class="hl-pink">image</span> de <span class="hl-blue">x = 3</span> par f, c'est-à-dire <span class="hl-pink">f(3)</span>.`,
+    calcul: `<div class="enonce">Quel est f(3) ?</div>
+             <div class="ligne">On cherche la colonne où <span class="hl-blue">x = 3</span> dans la ligne x.</div>`
+  },
+  {
+    text: "On repère la colonne x = 3 dans le tableau.",
+    hlX: 3, hlFx: -1, question: 'image', target: 3,
+    def: `On repère <span class="hl-blue">x = 3</span> dans la première ligne du tableau.`,
+    calcul: `<div class="enonce">Quel est f(3) ?</div>
+             <div class="ligne">On a trouvé la colonne <span class="hl-blue">x = 3</span>.</div>
+             <div class="ligne">On lit la valeur juste en dessous, dans la ligne f(x).</div>`
+  },
+  {
+    text: "On lit la valeur de f(x) dans la même colonne : f(3) = 7.",
+    hlX: 3, hlFx: 3, question: 'image', target: 3,
+    def: `<span class="hl-pink">f(3) = 7</span> : l'image de 3 par f est 7.`,
+    calcul: `<div class="enonce">Quel est f(3) ?</div>
+             <div class="ligne">Colonne <span class="hl-blue">x = 3</span> → valeur en dessous = <span class="hl-pink">7</span></div>
+             <div class="conclusion-blue">f(3) = 7 &nbsp; → &nbsp; l'image de 3 par f est 7.</div>`
+  },
+  {
+    text: "Autre exemple : trouver l'image de −1. On repère x = −1 et on lit f(−1).",
+    hlX: 1, hlFx: 1, question: 'image', target: -1,
+    def: `Trouver l'<span class="hl-pink">image</span> de <span class="hl-blue">x = −1</span> par f.`,
+    calcul: `<div class="enonce">Quel est f(−1) ?</div>
+             <div class="ligne">Colonne <span class="hl-blue">x = −1</span> → valeur en dessous = <span class="hl-pink">−1</span></div>
+             <div class="conclusion-blue">f(−1) = −1 &nbsp; → &nbsp; l'image de −1 par f est −1.</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — ANTÉCÉDENT (tableau)
+// Trouver l'antécédent de 7 puis de −3
+// ============================================================
+const etapes2 = [
+  {
+    text: "On veut trouver l'antécédent de 7 par f : quel x donne f(x) = 7 ?",
+    hlX: -1, hlFx: -1, question: 'ant', target: 7,
+    def: `Trouver l'<span class="hl-green">antécédent</span> de <span class="hl-pink">7</span> par f : quel <span class="hl-blue">x</span> vérifie <span class="hl-pink">f(x) = 7</span> ?`,
+    calcul: `<div class="enonce">Quel x vérifie f(x) = 7 ?</div>
+             <div class="ligne">On cherche <span class="hl-pink">7</span> dans la ligne f(x) du tableau.</div>`
+  },
+  {
+    text: "On repère 7 dans la ligne f(x).",
+    hlX: -1, hlFx: 4, question: 'ant', target: 7,
+    def: `On repère <span class="hl-pink">f(x) = 7</span> dans la deuxième ligne du tableau.`,
+    calcul: `<div class="enonce">Quel x vérifie f(x) = 7 ?</div>
+             <div class="ligne">On a trouvé <span class="hl-pink">7</span> dans la ligne f(x).</div>
+             <div class="ligne">On lit la valeur juste au-dessus, dans la ligne x.</div>`
+  },
+  {
+    text: "On lit x au-dessus de 7 : c'est x = 3. Donc 3 est l'antécédent de 7.",
+    hlX: 3, hlFx: 3, question: 'ant', target: 7,
+    def: `<span class="hl-blue">x = 3</span> est l'<span class="hl-green">antécédent</span> de <span class="hl-pink">7</span> par f.`,
+    calcul: `<div class="enonce">Quel x vérifie f(x) = 7 ?</div>
+             <div class="ligne">Au-dessus de <span class="hl-pink">f(x) = 7</span> : <span class="hl-blue">x = 3</span></div>
+             <div class="conclusion-ok">L'antécédent de 7 par f est 3. &nbsp; f(3) = 7 ✓</div>`
+  },
+  {
+    text: "Autre exemple : antécédent de −3. On cherche −3 dans la ligne f(x).",
+    hlX: 0, hlFx: 0, question: 'ant', target: -3,
+    def: `Trouver l'<span class="hl-green">antécédent</span> de <span class="hl-pink">−3</span> par f.`,
+    calcul: `<div class="enonce">Quel x vérifie f(x) = −3 ?</div>
+             <div class="ligne">Au-dessus de <span class="hl-pink">f(x) = −3</span> : <span class="hl-blue">x = −2</span></div>
+             <div class="conclusion-ok">L'antécédent de −3 par f est −2. &nbsp; f(−2) = −3 ✓</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — PAR UNE EXPRESSION f(x) = 2x + 1
+// image de 4, antécédent de 9
+// ============================================================
+const etapes3 = [
+  {
+    text: "La fonction f est définie par f(x) = 2x + 1. On va calculer f(4) : l'image de 4.",
+    schema: 'expr', question: 'image',
+    def: `f est définie par <span class="hl-orange">f(x) = 2x + 1</span>. Calculer <span class="hl-pink">f(4)</span>.`,
+    calcul: `<div class="enonce">Calculer f(4)</div>
+             <div class="ligne">On remplace <span class="hl-blue">x</span> par <span class="hl-blue">4</span> dans l'expression.</div>`
+  },
+  {
+    text: "On remplace x par 4 dans 2x + 1 : f(4) = 2 × 4 + 1.",
+    schema: 'expr', question: 'image',
+    def: `f(x) = 2x + 1. On substitue <span class="hl-blue">x = 4</span>.`,
+    calcul: `<div class="enonce">Calculer f(4)</div>
+             <div class="ligne">f(<span class="hl-blue">x</span>) = 2<span class="hl-blue">x</span> + 1</div>
+             <div class="ligne">f(<span class="hl-blue">4</span>) = 2 × <span class="hl-blue">4</span> + 1</div>`
+  },
+  {
+    text: "On calcule : 2 × 4 = 8, puis 8 + 1 = 9. Donc f(4) = 9.",
+    schema: 'expr', question: 'image',
+    def: `<span class="hl-pink">f(4) = 9</span> : l'image de 4 par f est 9.`,
+    calcul: `<div class="enonce">Calculer f(4)</div>
+             <div class="ligne">f(<span class="hl-blue">4</span>) = 2 × <span class="hl-blue">4</span> + 1</div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-orange">8</span> + 1</div>
+             <div class="ligne"><span class="eq">=</span> <span class="hl-pink">9</span></div>
+             <div class="conclusion-blue">f(4) = 9 &nbsp; → &nbsp; l'image de 4 par f est 9.</div>`
+  },
+  {
+    text: "Maintenant on cherche l'antécédent de 9 : quel x vérifie f(x) = 9 ?",
+    schema: 'expr', question: 'ant',
+    def: `Trouver l'<span class="hl-green">antécédent</span> de <span class="hl-pink">9</span> : résoudre <span class="hl-orange">f(x) = 9</span>.`,
+    calcul: `<div class="enonce">Quel x vérifie f(x) = 9 ?</div>
+             <div class="ligne">On pose <span class="hl-orange">f(x) = 9</span>, c'est-à-dire <span class="hl-orange">2x + 1 = 9</span>.</div>`
+  },
+  {
+    text: "On résout 2x + 1 = 9 : on soustrait 1, puis on divise par 2.",
+    schema: 'expr', question: 'ant',
+    def: `Résoudre <span class="hl-orange">2x + 1 = 9</span>.`,
+    calcul: `<div class="enonce">Quel x vérifie f(x) = 9 ?</div>
+             <div class="ligne">2x + 1 <span class="eq">=</span> <span class="hl-pink">9</span></div>
+             <div class="ligne">2x <span class="eq">=</span> <span class="hl-pink">9</span> − 1 <span class="eq">=</span> <span class="hl-orange">8</span></div>
+             <div class="ligne">x <span class="eq">=</span> <span class="hl-orange">8</span> ÷ 2 <span class="eq">=</span> <span class="hl-green">4</span></div>
+             <div class="conclusion-ok">L'antécédent de 9 par f est 4. &nbsp; f(4) = 9 ✓</div>
+             <div class="attention">On retrouve bien le résultat de tout à l'heure !</div>`
+  },
+];
+
+// ============================================================
+function setMode(m) {
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#0c4a6e','#9d174d','#15803d','#b45309'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('calcul-box').style.borderLeftColor=cols[m];
+  document.getElementById('def-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){if(etape>0){etape--;render();}}
+function next(){const maxE=[etapes0,etapes1,etapes2,etapes3][mode].length;if(etape<maxE-1){etape++;render();}}
+
+// ============================================================
+// SCHÉMA MACHINE
+// ============================================================
+function drawSchema(e) {
+  const svg = document.getElementById('schema');
+  const isExpr = e.schema === 'expr';
+  let h='';
+
+  // Fond
+  h+=`<rect x="0" y="0" width="480" height="130" fill="white"/>`;
+
+  if(e.schema==='machine' || !e.schema) {
+    const hlX  = e.hlX;
+    const hlFx = e.hlFx;
+
+    // Bulle x
+    const xCol  = '#0369a1';
+    const fxCol = '#9d174d';
+    const xFill  = hlX  ? '#e0f2fe' : '#f8fafc';
+    const fxFill = hlFx ? '#fce7f3' : '#f8fafc';
+
+    // x (gauche)
+    h+=`<ellipse cx="80" cy="65" rx="55" ry="35" fill="${xFill}" stroke="${xCol}" stroke-width="2.5"/>`;
+    h+=`<text x="80" y="60" font-size="14" font-weight="bold" text-anchor="middle" fill="${xCol}">x</text>`;
+    h+=`<text x="80" y="78" font-size="12" text-anchor="middle" fill="${xCol}">(départ)</text>`;
+
+    // Machine (centre)
+    h+=`<rect x="180" y="30" width="120" height="70" rx="14" fill="#fef9c3" stroke="#f59e0b" stroke-width="2.5"/>`;
+    h+=`<text x="240" y="62" font-size="13" font-weight="bold" text-anchor="middle" fill="#78350f">f</text>`;
+    h+=`<text x="240" y="80" font-size="11" text-anchor="middle" fill="#78350f">machine</text>`;
+
+    // f(x) (droite)
+    h+=`<ellipse cx="400" cy="65" rx="60" ry="35" fill="${fxFill}" stroke="${fxCol}" stroke-width="2.5"/>`;
+    h+=`<text x="400" y="60" font-size="14" font-weight="bold" text-anchor="middle" fill="${fxCol}">f(x)</text>`;
+    h+=`<text x="400" y="78" font-size="12" text-anchor="middle" fill="${fxCol}">(arrivée)</text>`;
+
+    // Flèches
+    const arrowCol1 = hlX  ? '#0369a1' : '#94a3b8';
+    const arrowCol2 = hlFx ? '#9d174d' : '#94a3b8';
+    h+=`<line x1="136" y1="65" x2="178" y2="65" stroke="${arrowCol1}" stroke-width="2.5"/>`;
+    h+=`<polygon points="178,65 166,59 166,71" fill="${arrowCol1}"/>`;
+    h+=`<line x1="302" y1="65" x2="338" y2="65" stroke="${arrowCol2}" stroke-width="2.5"/>`;
+    h+=`<polygon points="338,65 326,59 326,71" fill="${arrowCol2}"/>`;
+
+    // Labels "image" / "antécédent"
+    if(hlX)  h+=`<text x="80" y="112" font-size="11" text-anchor="middle" font-weight="bold" fill="#9d174d">antécédent</text>`;
+    if(hlFx) h+=`<text x="400" y="112" font-size="11" text-anchor="middle" font-weight="bold" fill="#9d174d">image</text>`;
+
+  } else if(isExpr) {
+    // Schéma expression f(x) = 2x+1
+    const isImage = e.question === 'image';
+    const xVal='4', fxVal='9';
+
+    h+=`<ellipse cx="70" cy="65" rx="52" ry="32" fill="${isImage?'#e0f2fe':'#f8fafc'}" stroke="#0369a1" stroke-width="2.5"/>`;
+    h+=`<text x="70" y="62" font-size="14" font-weight="bold" text-anchor="middle" fill="#0369a1">x</text>`;
+    if(isImage) h+=`<text x="70" y="78" font-size="13" font-weight="bold" text-anchor="middle" fill="#0369a1">= ${xVal}</text>`;
+
+    h+=`<rect x="175" y="28" width="130" height="74" rx="14" fill="#fef9c3" stroke="#f59e0b" stroke-width="2.5"/>`;
+    h+=`<text x="240" y="58" font-size="12" font-weight="bold" text-anchor="middle" fill="#78350f">f(x)</text>`;
+    h+=`<text x="240" y="76" font-size="13" font-weight="bold" text-anchor="middle" fill="#b45309">= 2x + 1</text>`;
+    h+=`<text x="240" y="94" font-size="10" text-anchor="middle" fill="#92400e">expression</text>`;
+
+    h+=`<ellipse cx="410" cy="65" rx="52" ry="32" fill="${!isImage?'#fce7f3':'#f8fafc'}" stroke="#9d174d" stroke-width="2.5"/>`;
+    h+=`<text x="410" y="62" font-size="14" font-weight="bold" text-anchor="middle" fill="#9d174d">f(x)</text>`;
+    if(!isImage) h+=`<text x="410" y="78" font-size="13" font-weight="bold" text-anchor="middle" fill="#9d174d">= ${fxVal}</text>`;
+
+    // Flèches
+    const a1c = isImage ? '#0369a1' : '#94a3b8';
+    const a2c = isImage ? '#9d174d' : '#94a3b8';
+    h+=`<line x1="124" y1="65" x2="173" y2="65" stroke="${a1c}" stroke-width="2.5"/>`;
+    h+=`<polygon points="173,65 161,59 161,71" fill="${a1c}"/>`;
+    h+=`<line x1="307" y1="65" x2="356" y2="65" stroke="${a2c}" stroke-width="2.5"/>`;
+    h+=`<polygon points="356,65 344,59 344,71" fill="${a2c}"/>`;
+
+    if(isImage)  h+=`<text x="410" y="108" font-size="11" text-anchor="middle" font-weight="bold" fill="#9d174d">image</text>`;
+    if(!isImage) h+=`<text x="70" y="108" font-size="11" text-anchor="middle" font-weight="bold" fill="#15803d">antécédent</text>`;
+  }
+
+  svg.innerHTML = h;
+  svg.style.display='block';
+}
+
+// ============================================================
+// TABLEAU
+// ============================================================
+function renderTable(e) {
+  const tw = document.getElementById('table-wrap');
+  const col = mode===1 ? '#9d174d' : '#15803d';
+
+  let xRow='', fxRow='';
+  xVals.forEach((x,i)=>{
+    const idx = xVals.indexOf(x);
+    // Mode 1 image : hlX = valeur de x à surligner, hlFx = valeur de x dont on montre f(x)
+    let xCls='', fxCls='';
+    if(mode===1){
+      // hlX et hlFx sont des indices dans xVals (0..5)
+      // On les mappe : etape 1 hl colonne idx=3 (x=1 → idx=3)
+      // en fait on stocke hlX comme valeur de x
+      const hlXval = e.hlX; // valeur de x
+      const hlFxval = e.hlFx; // valeur de x dont on montre f(x)
+      if(x===hlXval && hlXval!==-1) xCls='cell-found';
+      if(x===hlFxval && hlFxval!==-1) fxCls='cell-found';
+    } else if(mode===2){
+      // antécédent
+      // hlX = valeur x à montrer, hlFx = valeur x dont on surligne f(x)
+      // stocker comme valeur de x directement
+      // En fait dans etapes2 : hlX et hlFx sont des indices 0..5 de xVals... corrigeons
+      // Non, je vais utiliser des valeurs directement dans les étapes
+      if(i===e.hlFx && e.hlFx!==-1) fxCls='cell-ant';
+      if(i===e.hlX && e.hlX!==-1)  xCls='cell-ant';
+    }
+    xRow  +=`<td class="${xCls}">${x}</td>`;
+    fxRow +=`<td class="${fxCls}">${fxVals[i]}</td>`;
+  });
+
+  tw.innerHTML=`<table>
+    <thead><tr><th style="background:${mode===1?'#9d174d':'#15803d'}">x</th>${xVals.map(v=>`<th style="background:${mode===1?'#0c4a6e':'#0c4a6e'};font-size:0.85em">${v}</th>`).join('')}</tr></thead>
+    <tbody>
+      <tr><td style="font-weight:bold;color:${mode===1?'#9d174d':'#15803d'}">f(x)</td>${fxRow}</tr>
+    </tbody></table>`;
+  tw.style.display='block';
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render(){
+  const etapesArr=[etapes0,etapes1,etapes2,etapes3][mode];
+  const e=etapesArr[etape];
+
+  // Schéma
+  if(mode===0||mode===3) {
+    drawSchema(e);
+    document.getElementById('table-wrap').style.display='none';
+  } else {
+    document.getElementById('schema').style.display='none';
+    renderTable(e);
+  }
+
+  document.getElementById('def-box').innerHTML=e.def;
+  document.getElementById('calcul-box').innerHTML=e.calcul;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

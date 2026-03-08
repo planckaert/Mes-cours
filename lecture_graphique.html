@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lecture graphique</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a5f; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 8px 13px; border-radius: 18px; border: none; font-size: 0.8em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #1e3a5f; color: white; border-color: #1e3a5f; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#graph { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+  .info-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 8px auto; max-width: 460px; width: 95%; font-size: 0.97em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #1e3a5f; line-height: 2; }
+  .enonce { font-weight: bold; background: #dbeafe; color: #1e3a8a; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.93em; }
+  .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .hl-blue   { color: #1d4ed8; font-weight: bold; }
+  .hl-pink   { color: #9d174d; font-weight: bold; }
+  .hl-green  { color: #15803d; font-weight: bold; }
+  .hl-orange { color: #b45309; font-weight: bold; }
+  .conclusion-blue { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 7px 12px; border-radius: 8px; font-weight: bold; color: #1e3a8a; margin-top: 6px; font-family: 'Courier New', monospace; }
+  .conclusion-ok   { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 7px 12px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; font-family: 'Courier New', monospace; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 460px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 26px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1e3a5f; color: white; }
+</style>
+</head>
+<body>
+<h1>📈 Lecture graphique d'une fonction</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Lire une image</button>
+  <button class="tab tab2" onclick="setMode(1)">Lire un antécédent</button>
+  <button class="tab tab3" onclick="setMode(2)">Antécédents multiples</button>
+</div>
+<div class="scene">
+  <svg id="graph" viewBox="0 0 480 290"></svg>
+  <div class="info-box" id="info-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+<script>
+let mode = 0, etape = 0;
+
+// Repère
+const OX = 80, OY = 210, PAS = 44;
+function px(x,y){ return {sx: OX+x*PAS, sy: OY-y*PAS}; }
+
+// f(x) = -x²/4 + 4  → f(0)=4, f(2)=3, f(4)=0
+function f(x){ return -(x*x)/4+4; }
+// g(x) = (x-2)²/2 - 1  → g(2)=-1 (min), g(0)=1, g(4)=1
+function g(x){ return (x-2)*(x-2)/2-1; }
+
+function grid(xMn,xMx,yMn,yMx){
+  let h='';
+  for(let x=xMn;x<=xMx;x++){
+    const p=px(x,0);
+    h+=`<line x1="${p.sx}" y1="12" x2="${p.sx}" y2="278" stroke="#e5e7eb" stroke-width="0.8"/>`;
+    if(x!==0) h+=`<text x="${p.sx}" y="${OY+16}" font-size="11" text-anchor="middle" fill="#9ca3af">${x}</text>`;
+  }
+  for(let y=yMn;y<=yMx;y++){
+    const p=px(0,y);
+    h+=`<line x1="12" y1="${p.sy}" x2="468" y2="${p.sy}" stroke="#e5e7eb" stroke-width="0.8"/>`;
+    if(y!==0) h+=`<text x="${OX-8}" y="${p.sy+4}" font-size="11" text-anchor="end" fill="#9ca3af">${y}</text>`;
+  }
+  h+=`<line x1="12" y1="${OY}" x2="468" y2="${OY}" stroke="#374151" stroke-width="2"/>`;
+  h+=`<line x1="${OX}" y1="12" x2="${OX}" y2="278" stroke="#374151" stroke-width="2"/>`;
+  h+=`<polygon points="468,${OY} 456,${OY-5} 456,${OY+5}" fill="#374151"/>`;
+  h+=`<polygon points="${OX},12 ${OX-5},24 ${OX+5},24" fill="#374151"/>`;
+  h+=`<text x="464" y="${OY-10}" font-size="13" font-weight="bold" fill="#374151">x</text>`;
+  h+=`<text x="${OX+8}" y="22" font-size="13" font-weight="bold" fill="#374151">y</text>`;
+  h+=`<text x="${OX-8}" y="${OY+16}" font-size="11" text-anchor="middle" fill="#374151">0</text>`;
+  return h;
+}
+
+function crv(fn,xA,xB,col){
+  const pts=[];
+  for(let x=xA;x<=xB;x+=0.04){
+    const p=px(x,fn(x));
+    pts.push(`${p.sx.toFixed(1)},${p.sy.toFixed(1)}`);
+  }
+  return `<polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+}
+
+function dot(x,y,col,r=6){
+  const p=px(x,y);
+  return `<circle cx="${p.sx.toFixed(1)}" cy="${p.sy.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2.5"/>`;
+}
+
+function vd(x,y0,y1,col){
+  const a=px(x,y0),b=px(x,y1);
+  return `<line x1="${a.sx.toFixed(1)}" y1="${a.sy.toFixed(1)}" x2="${b.sx.toFixed(1)}" y2="${b.sy.toFixed(1)}" stroke="${col}" stroke-width="2.2" stroke-dasharray="7,4"/>`;
+}
+
+function hd(x0,x1,y,col){
+  const a=px(x0,y),b=px(x1,y);
+  return `<line x1="${a.sx.toFixed(1)}" y1="${a.sy.toFixed(1)}" x2="${b.sx.toFixed(1)}" y2="${b.sy.toFixed(1)}" stroke="${col}" stroke-width="2.2" stroke-dasharray="7,4"/>`;
+}
+
+function txX(x,lbl,col){
+  const p=px(x,0);
+  return `<line x1="${p.sx}" y1="${OY-5}" x2="${p.sx}" y2="${OY+5}" stroke="${col}" stroke-width="2"/>
+          <text x="${p.sx}" y="${OY+20}" font-size="12" font-weight="bold" text-anchor="middle" fill="${col}">${lbl}</text>`;
+}
+
+function txY(y,lbl,col){
+  const p=px(0,y);
+  return `<line x1="${OX-5}" y1="${p.sy}" x2="${OX+5}" y2="${p.sy}" stroke="${col}" stroke-width="2"/>
+          <text x="${OX-10}" y="${p.sy+5}" font-size="12" font-weight="bold" text-anchor="end" fill="${col}">${lbl}</text>`;
+}
+
+function labelF(fn,x,nom,col){
+  const p=px(x,fn(x));
+  return `<text x="${(p.sx+8).toFixed(0)}" y="${(p.sy-8).toFixed(0)}" font-size="14" font-weight="bold" fill="${col}">${nom}</text>`;
+}
+
+// ============================================================
+// MODE 0 — image de 2 → f(2)=3
+// ============================================================
+const etapes0=[
+  {
+    text:"Voici la courbe représentative de la fonction f. On veut trouver l'image de 2, c'est-à-dire f(2).",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      return h;
+    },
+    info:`<div class="enonce">Trouver graphiquement f(2).</div>
+          <div class="ligne"><span class="hl-blue">Méthode :</span> partir de <span class="hl-blue">x = 2</span> sur l'axe des abscisses.</div>`
+  },
+  {
+    text:"Étape 1 : depuis x = 2 sur l'axe horizontal, on monte verticalement jusqu'à la courbe.",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      h+=txX(2,'2','#1d4ed8');
+      h+=vd(2,0,f(2),'#1d4ed8');
+      h+=dot(2,f(2),'#1d4ed8',5);
+      return h;
+    },
+    info:`<div class="enonce">Trouver graphiquement f(2).</div>
+          <div class="ligne">On trace une verticale depuis <span class="hl-blue">x = 2</span> jusqu'à la courbe.</div>`
+  },
+  {
+    text:"Étape 2 : depuis le point sur la courbe, on trace une horizontale jusqu'à l'axe des ordonnées.",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      h+=txX(2,'2','#1d4ed8');
+      h+=vd(2,0,f(2),'#1d4ed8');
+      h+=hd(0,2,f(2),'#9d174d');
+      h+=txY(f(2),'3','#9d174d');
+      h+=dot(2,f(2),'#f59e0b',6);
+      return h;
+    },
+    info:`<div class="enonce">Trouver graphiquement f(2).</div>
+          <div class="ligne">On lit sur l'axe y : <span class="hl-pink">f(2) = 3</span>.</div>`
+  },
+  {
+    text:"On lit f(2) = 3. L'image de 2 par f est 3.",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      h+=txX(2,'2','#1d4ed8');
+      h+=vd(2,0,f(2),'#1d4ed8');
+      h+=hd(0,2,f(2),'#9d174d');
+      h+=txY(f(2),'3','#9d174d');
+      h+=dot(2,f(2),'#f59e0b',7);
+      return h;
+    },
+    info:`<div class="enonce">Trouver graphiquement f(2).</div>
+          <div class="conclusion-blue">f(2) = 3 &nbsp;→&nbsp; l'image de 2 par f est 3.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — antécédent de 0 → x=4
+// ============================================================
+const etapes1=[
+  {
+    text:"On veut trouver l'antécédent de 0 par f : quel x donne f(x) = 0 ?",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      return h;
+    },
+    info:`<div class="enonce">Trouver l'antécédent de 0 par f.</div>
+          <div class="ligne"><span class="hl-pink">Méthode :</span> partir de <span class="hl-pink">y = 0</span> sur l'axe des ordonnées.</div>`
+  },
+  {
+    text:"Étape 1 : depuis y = 0, on trace une horizontale jusqu'à la courbe.",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      h+=hd(0,4,0,'#9d174d');
+      h+=dot(4,0,'#9d174d',5);
+      return h;
+    },
+    info:`<div class="enonce">Trouver l'antécédent de 0 par f.</div>
+          <div class="ligne">On trace une horizontale depuis <span class="hl-pink">y = 0</span> jusqu'à la courbe.</div>`
+  },
+  {
+    text:"Étape 2 : depuis ce point on descend verticalement jusqu'à l'axe des abscisses.",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      h+=hd(0,4,0,'#9d174d');
+      h+=vd(4,0,f(4),'#1d4ed8');
+      h+=txX(4,'4','#1d4ed8');
+      h+=dot(4,0,'#f59e0b',7);
+      return h;
+    },
+    info:`<div class="enonce">Trouver l'antécédent de 0 par f.</div>
+          <div class="ligne">On lit sur l'axe x : <span class="hl-blue">x = 4</span>.</div>`
+  },
+  {
+    text:"On lit x = 4. L'antécédent de 0 par f est 4.",
+    draw(){
+      let h=grid(-1,9,-1,5);
+      h+=crv(f,-0.5,8.4,'#1e3a5f');
+      h+=labelF(f,7.5,'f','#1e3a5f');
+      h+=hd(0,4,0,'#9d174d');
+      h+=vd(4,0,f(4),'#1d4ed8');
+      h+=txX(4,'4','#1d4ed8');
+      h+=dot(4,0,'#f59e0b',7);
+      return h;
+    },
+    info:`<div class="enonce">Trouver l'antécédent de 0 par f.</div>
+          <div class="conclusion-ok">L'antécédent de 0 par f est 4. &nbsp; f(4) = 0 ✓</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — parabole g, deux antécédents de 1 (x=0 et x=4), aucun pour −2
+// ============================================================
+const etapes2=[
+  {
+    text:"Voici la courbe de g. On veut les antécédents de 1 : quels x donnent g(x) = 1 ?",
+    draw(){
+      let h=grid(-1,6,-2,4);
+      h+=crv(g,-0.5,4.5,'#15803d');
+      h+=labelF(g,4.3,'g','#15803d');
+      return h;
+    },
+    info:`<div class="enonce">Trouver les antécédents de 1 par g.</div>
+          <div class="ligne">On part de <span class="hl-pink">y = 1</span> sur l'axe des ordonnées.</div>`
+  },
+  {
+    text:"On trace y = 1 (horizontale). Elle coupe la courbe en deux points !",
+    draw(){
+      let h=grid(-1,6,-2,4);
+      h+=crv(g,-0.5,4.5,'#15803d');
+      h+=labelF(g,4.3,'g','#15803d');
+      h+=hd(-0.5,5,1,'#f97316');
+      const p=px(5.1,1);
+      h+=`<text x="${p.sx}" y="${p.sy+5}" font-size="12" font-weight="bold" fill="#f97316">y=1</text>`;
+      h+=dot(0,1,'#f97316',5);
+      h+=dot(4,1,'#f97316',5);
+      return h;
+    },
+    info:`<div class="enonce">Trouver les antécédents de 1 par g.</div>
+          <div class="ligne">y = 1 coupe la courbe en <span class="hl-orange">2 points</span> → il y a <span class="hl-orange">deux antécédents</span>.</div>`
+  },
+  {
+    text:"On descend depuis chaque point : on trouve x = 0 et x = 4.",
+    draw(){
+      let h=grid(-1,6,-2,4);
+      h+=crv(g,-0.5,4.5,'#15803d');
+      h+=labelF(g,4.3,'g','#15803d');
+      h+=hd(-0.5,5,1,'#f97316');
+      h+=vd(0,0,1,'#1d4ed8');
+      h+=vd(4,0,1,'#1d4ed8');
+      h+=txX(0,'0','#1d4ed8');
+      h+=txX(4,'4','#1d4ed8');
+      h+=dot(0,1,'#f59e0b',6);
+      h+=dot(4,1,'#f59e0b',6);
+      return h;
+    },
+    info:`<div class="enonce">Trouver les antécédents de 1 par g.</div>
+          <div class="conclusion-ok">Les antécédents de 1 par g sont <strong>0</strong> et <strong>4</strong>.<br>g(0) = 1 ✓ &nbsp;&nbsp; g(4) = 1 ✓</div>
+          <div class="attention">⚠️ Un antécédent n'est pas toujours unique.</div>`
+  },
+  {
+    text:"Cherchons maintenant les antécédents de −2. On trace y = −2.",
+    draw(){
+      let h=grid(-1,6,-2,4);
+      h+=crv(g,-0.5,4.5,'#15803d');
+      h+=labelF(g,4.3,'g','#15803d');
+      h+=hd(-0.5,5,-2,'#dc2626');
+      const p=px(5.1,-2);
+      h+=`<text x="${p.sx}" y="${p.sy+5}" font-size="12" font-weight="bold" fill="#dc2626">y=−2</text>`;
+      return h;
+    },
+    info:`<div class="enonce">Trouver les antécédents de −2 par g.</div>
+          <div class="ligne">y = −2 ne coupe la courbe en <span class="hl-orange">aucun point</span>.</div>
+          <div class="attention">⚠️ −2 n'a <strong>aucun antécédent</strong> par g : cette valeur est sous le minimum de la courbe.</div>`
+  },
+];
+
+// ============================================================
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  const cols=['#1e3a5f','#9d174d','#15803d'];
+  document.querySelector('.btn-next').style.background=cols[m];
+  document.getElementById('info-box').style.borderLeftColor=cols[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ const mx=[etapes0,etapes1,etapes2][mode].length; if(etape<mx-1){etape++;render();} }
+
+function render(){
+  const arr=[etapes0,etapes1,etapes2][mode];
+  const e=arr[etape];
+  document.getElementById('graph').innerHTML=e.draw();
+  document.getElementById('info-box').innerHTML=e.info;
+  document.getElementById('explication').textContent=e.text;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

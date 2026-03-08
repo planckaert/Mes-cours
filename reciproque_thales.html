@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Réciproque de Thalès</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #14532d; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 14px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #fee2e2; color: #7f1d1d; border: 2px solid #fca5a5; }
+  .tab1.active { background: #14532d; color: white; border-color: #14532d; }
+  .tab2.active { background: #991b1b; color: white; border-color: #991b1b; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 270px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .thm-box { background: white; border-radius: 12px; padding: 9px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; border-left: 5px solid #14532d; font-size: 0.92em; color: #222; line-height: 1.7; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #14532d; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en-g { background: #dcfce7; color: #14532d; }
+  .en-r { background: #fee2e2; color: #7f1d1d; }
+  .ligne { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin: 1px 0; }
+  .hl-g  { color: #15803d; font-weight: bold; }
+  .hl-r  { color: #dc2626; font-weight: bold; }
+  .hl-b  { color: #1d4ed8; font-weight: bold; }
+  .hl-o  { color: #b45309; font-weight: bold; }
+  .conclusion-ok  { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .conclusion-non { background: #fee2e2; border-left: 4px solid #ef4444; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #7f1d1d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #14532d; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Réciproque du théorème de Thalès</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Les droites sont parallèles ✓</button>
+  <button class="tab tab2" onclick="setMode(1)">Les droites ne sont pas parallèles ✗</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 270"></svg>
+  <div class="thm-box" id="thm-box"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// ============================================================
+// GÉOMÉTRIE
+// S en haut, A et B en bas (grand triangle)
+// M sur [SA], N sur [SB]
+// Mode 0 : MN ∥ AB  → SM/SA = SN/SB (égaux)
+// Mode 1 : MN non ∥ AB → SM/SA ≠ SN/SB
+// ============================================================
+const S  = {x:240, y:28};
+const A  = {x:70,  y:248};
+const B  = {x:410, y:248};
+
+// Mode 0 — parallèle : ratio k=0.55
+// SM/SA = SN/SB = 0.55
+// SA : calculé en pixels ~ 244px
+// On va utiliser des valeurs NUMÉRIQUES propres
+// SA=10, SM=6, SB=15, SN=9  → 6/10 = 9/15 = 3/5 = 0.6 ✓
+// k_pixel = 0.6 pour placer M et N
+const kP0 = 0.6;
+const M0  = {x: S.x + kP0*(A.x-S.x), y: S.y + kP0*(A.y-S.y)};
+const N0  = {x: S.x + kP0*(B.x-S.x), y: S.y + kP0*(B.y-S.y)};
+
+// Mode 1 — non parallèle : M à 0.55, N à 0.45 → rapports différents
+// SA=10, SM=5.5, SB=15, SN=7.5  → 5.5/10 ≠ 7.5/15 → 0.55 ≠ 0.5
+// On choisit : SM=6, SA=10 → ratio 0.6 ; SN=6, SB=15 → ratio 0.4 ≠
+// Valeurs propres : SA=10, SM=6, SB=12, SN=6 → 6/10 vs 6/12 → 0.6 vs 0.5 ≠ ✓
+// kM = 0.6 sur SA, kN = 0.5 sur SB
+const kM1 = 0.6;
+const kN1 = 0.5;
+const M1  = {x: S.x + kM1*(A.x-S.x), y: S.y + kM1*(A.y-S.y)};
+const N1  = {x: S.x + kN1*(B.x-S.x), y: S.y + kN1*(B.y-S.y)};
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(p1,p2,col,w=2.5,dash=''){
+  return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function dot(p,col,r=5){
+  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+function lbl(p,txt,col,dx=0,dy=0){
+  return `<text x="${(p.x+dx).toFixed(1)}" y="${(p.y+dy).toFixed(1)}" font-size="14" font-weight="bold" fill="${col}" text-anchor="middle">${txt}</text>`;
+}
+function cote(p1,p2,val,col,offset=14){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const dx=p2.x-p1.x, dy=p2.y-p1.y;
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*offset, ny=dx/len*offset;
+  return `<text x="${(mx+nx).toFixed(1)}" y="${(my+ny+4).toFixed(1)}" font-size="12" font-weight="bold" fill="${col}" text-anchor="middle">${val}</text>`;
+}
+function parallel(p1,p2,col){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const dx=p2.x-p1.x, dy=p2.y-p1.y;
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  const ux=dx/len, uy=dy/len;
+  const nx=-uy*5, ny=ux*5;
+  let h='';
+  [-3,3].forEach(off=>{
+    h+=`<line x1="${(mx+ux*(-5)+nx*off/5).toFixed(1)}" y1="${(my+uy*(-5)+ny*off/5).toFixed(1)}"
+              x2="${(mx+ux*5+nx*off/5).toFixed(1)}"   y2="${(my+uy*5+ny*off/5).toFixed(1)}"
+              stroke="${col}" stroke-width="2"/>`;
+  });
+  return h;
+}
+
+// ============================================================
+// BASE DE LA FIGURE (triangle + points)
+// ============================================================
+function base(M, N, hlMN=false, hlAB=false, showMNparallel=false, showABparallel=false, fadeMN=false, fadeAB=false){
+  let h='';
+  // Côtés du grand triangle
+  h+=seg(S,A,'#14532d',2.5);
+  h+=seg(S,B,'#14532d',2.5);
+  h+=seg(A,B, fadeAB?'#d1fae5':'#14532d', hlAB?3.5:2.5);
+
+  // Segment MN
+  h+=seg(M,N, fadeMN?'#d1fae5': hlMN?'#dc2626':'#15803d', hlMN?3.5:2.5);
+
+  // Marques de parallélisme
+  if(showMNparallel) h+=parallel(M,N,'#f97316');
+  if(showABparallel) h+=parallel(A,B,'#f97316');
+
+  // Points
+  h+=dot(S,'#14532d');  h+=lbl(S,'S','#14532d',0,-12);
+  h+=dot(A,'#14532d');  h+=lbl(A,'A','#14532d',-14,0);
+  h+=dot(B,'#14532d');  h+=lbl(B,'B','#14532d',14,0);
+  h+=dot(M, hlMN?'#dc2626':'#15803d'); h+=lbl(M,'M', hlMN?'#dc2626':'#15803d',-14,0);
+  h+=dot(N, hlMN?'#dc2626':'#15803d'); h+=lbl(N,'N', hlMN?'#dc2626':'#15803d',14,0);
+  return h;
+}
+
+// ============================================================
+// MODE 0 — DROITES PARALLÈLES
+// SA=10, SM=6, SB=15, SN=9
+// SM/SA = 6/10 = 3/5   SN/SB = 9/15 = 3/5  → égaux → MN ∥ AB
+// ============================================================
+const e0=[
+  {
+    explic:"On connaît les longueurs SM, SA, SN et SB. On veut savoir si (MN) est parallèle à (AB).",
+    draw(){ return base(M0,N0); },
+    thm:`<b>Réciproque de Thalès :</b> Si M ∈ [SA], N ∈ [SB] et si
+         <span style="color:#14532d;font-weight:bold">SM/SA = SN/SB</span>,
+         alors (MN) ∥ (AB).`,
+    calc:`<div class="enonce en-g">M ∈ [SA], N ∈ [SB] — les points sont bien sur les bons côtés.</div>
+          <div class="ligne">Données : <span class="hl-g">SM = 6</span>, <span class="hl-g">SA = 10</span>, <span class="hl-g">SN = 9</span>, <span class="hl-g">SB = 15</span></div>
+          <div class="ligne">On va calculer les deux rapports SM/SA et SN/SB.</div>`
+  },
+  {
+    explic:"On calcule le premier rapport : SM divisé par SA.",
+    draw(){
+      let h=base(M0,N0);
+      h+=cote(S,M0,'6','#1d4ed8',-16);
+      h+=cote(M0,A,'SA=10','#15803d',-16);
+      return h;
+    },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA = SN/SB alors (MN) ∥ (AB).`,
+    calc:`<div class="enonce en-g">Premier rapport : SM / SA</div>
+          <div class="ligne">SM / SA = <span class="hl-b">6</span> ÷ <span class="hl-b">10</span></div>
+          <div class="ligne">SM / SA = <span class="hl-g">0,6</span></div>`
+  },
+  {
+    explic:"On calcule le deuxième rapport : SN divisé par SB.",
+    draw(){
+      let h=base(M0,N0);
+      h+=cote(S,N0,'9','#1d4ed8',16);
+      h+=cote(N0,B,'SB=15','#15803d',16);
+      return h;
+    },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA = SN/SB alors (MN) ∥ (AB).`,
+    calc:`<div class="enonce en-g">Deuxième rapport : SN / SB</div>
+          <div class="ligne">SN / SB = <span class="hl-b">9</span> ÷ <span class="hl-b">15</span></div>
+          <div class="ligne">SN / SB = <span class="hl-g">0,6</span></div>`
+  },
+  {
+    explic:"Les deux rapports sont égaux : 0,6 = 0,6. On peut conclure que (MN) est parallèle à (AB).",
+    draw(){
+      let h=base(M0,N0,false,false,true,true);
+      h+=cote(S,M0,'6','#1d4ed8',-16);
+      h+=cote(M0,A,'SA=10','#15803d',-16);
+      h+=cote(S,N0,'9','#1d4ed8',16);
+      h+=cote(N0,B,'SB=15','#15803d',16);
+      return h;
+    },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA = SN/SB alors (MN) ∥ (AB).`,
+    calc:`<div class="enonce en-g">Comparaison des deux rapports</div>
+          <div class="ligne">SM / SA = <span class="hl-g">0,6</span></div>
+          <div class="ligne">SN / SB = <span class="hl-g">0,6</span></div>
+          <div class="ligne">SM / SA <span class="hl-g">= </span> SN / SB ✓</div>
+          <div class="conclusion-ok">D'après la réciproque du théorème de Thalès, les rapports sont égaux donc (MN) ∥ (AB).</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — DROITES NON PARALLÈLES
+// SA=10, SM=6 → 6/10=0,6   SB=12, SN=6 → 6/12=0,5  ≠
+// ============================================================
+const e1=[
+  {
+    explic:"On connaît SM, SA, SN et SB. On veut savoir si (MN) est parallèle à (AB). On calcule les deux rapports.",
+    draw(){ return base(M1,N1); },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA = SN/SB alors (MN) ∥ (AB).<br>
+         Si <span style="color:#dc2626;font-weight:bold">SM/SA ≠ SN/SB</span>, alors (MN) <b>n'est pas</b> parallèle à (AB).`,
+    calc:`<div class="enonce en-r">M ∈ [SA], N ∈ [SB] — les points sont bien sur les bons côtés.</div>
+          <div class="ligne">Données : <span class="hl-r">SM = 6</span>, <span class="hl-r">SA = 10</span>, <span class="hl-r">SN = 6</span>, <span class="hl-r">SB = 12</span></div>
+          <div class="ligne">On va calculer les deux rapports SM/SA et SN/SB.</div>`
+  },
+  {
+    explic:"On calcule le premier rapport : SM / SA.",
+    draw(){
+      let h=base(M1,N1);
+      h+=cote(S,M1,'6','#1d4ed8',-16);
+      h+=cote(M1,A,'SA=10','#dc2626',-16);
+      return h;
+    },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA ≠ SN/SB alors (MN) n'est pas parallèle à (AB).`,
+    calc:`<div class="enonce en-r">Premier rapport : SM / SA</div>
+          <div class="ligne">SM / SA = <span class="hl-b">6</span> ÷ <span class="hl-b">10</span></div>
+          <div class="ligne">SM / SA = <span class="hl-r">0,6</span></div>`
+  },
+  {
+    explic:"On calcule le deuxième rapport : SN / SB.",
+    draw(){
+      let h=base(M1,N1);
+      h+=cote(S,N1,'6','#1d4ed8',16);
+      h+=cote(N1,B,'SB=12','#dc2626',16);
+      return h;
+    },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA ≠ SN/SB alors (MN) n'est pas parallèle à (AB).`,
+    calc:`<div class="enonce en-r">Deuxième rapport : SN / SB</div>
+          <div class="ligne">SN / SB = <span class="hl-b">6</span> ÷ <span class="hl-b">12</span></div>
+          <div class="ligne">SN / SB = <span class="hl-r">0,5</span></div>`
+  },
+  {
+    explic:"Les deux rapports sont différents : 0,6 ≠ 0,5. On conclut que (MN) n'est pas parallèle à (AB).",
+    draw(){
+      // MN en rouge pour montrer non-parallèle
+      let h=base(M1,N1,true);
+      h+=cote(S,M1,'6','#1d4ed8',-16);
+      h+=cote(M1,A,'SA=10','#dc2626',-16);
+      h+=cote(S,N1,'6','#1d4ed8',16);
+      h+=cote(N1,B,'SB=12','#dc2626',16);
+      return h;
+    },
+    thm:`<b>Réciproque de Thalès :</b> Si SM/SA ≠ SN/SB alors (MN) n'est pas parallèle à (AB).`,
+    calc:`<div class="enonce en-r">Comparaison des deux rapports</div>
+          <div class="ligne">SM / SA = <span class="hl-r">0,6</span></div>
+          <div class="ligne">SN / SB = <span class="hl-r">0,5</span></div>
+          <div class="ligne">SM / SA <span class="hl-r">≠</span> SN / SB</div>
+          <div class="conclusion-non">D'après le théorème de Thalès, si (MN) était parallèle à (AB), on aurait SM/SA = SN/SB. Ce n'est pas le cas, donc (MN) n'est pas parallèle à (AB).</div>
+          <div class="attention">⚠️ Il ne suffit pas que les rapports aient le même numérateur ou dénominateur. Il faut que les deux rapports soient <strong>exactement égaux</strong>.</div>`
+  },
+];
+
+const ETAPES=[e0,e1];
+const COLS=['#14532d','#991b1b'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  document.getElementById('thm-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('thm-box').innerHTML=e.thm;
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opérations sur les fractions</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf8f0; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #7c2d12; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 16px; border: none; font-size: 0.77em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab4 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab4.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Zone visuelle fractions */
+  .frac-visual { background: white; border-radius: 14px; padding: 14px 10px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; min-height: 70px; }
+
+  /* Fraction stylée */
+  .fr { display: inline-flex; flex-direction: column; align-items: center; font-size: 1.3em; font-weight: bold; font-family: 'Courier New', monospace; }
+  .fr .n { border-bottom: 2.5px solid currentColor; padding: 1px 10px 3px; min-width: 28px; text-align: center; }
+  .fr .d { padding: 3px 10px 1px; min-width: 28px; text-align: center; }
+  .op { font-size: 1.6em; font-weight: bold; color: #374151; }
+  .eq { font-size: 1.4em; font-weight: bold; color: #374151; }
+  .fr.blue  { color: #1d4ed8; }
+  .fr.pink  { color: #9d174d; }
+  .fr.green { color: #15803d; }
+  .fr.orange{ color: #b45309; }
+  .fr.gray  { color: #6b7280; }
+  .fr.result{ color: #374151; background: #f9fafb; border-radius: 8px; padding: 4px 8px; }
+
+  /* Barre visuelle */
+  .bar-row { display: flex; gap: 2px; align-items: center; margin: 3px 0; }
+  .bar-lbl { font-size: 0.82em; color: #6b7280; min-width: 50px; text-align: right; margin-right: 6px; }
+  .bar-cell { height: 24px; border-radius: 3px; border: 1px solid #fff4; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72em; font-weight: bold; color: white; }
+  .bars-wrap { background: white; border-radius: 12px; padding: 10px 14px; margin: 4px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #fce7f3; color: #831843; }
+  .en3 { background: #dcfce7; color: #14532d; }
+  .en4 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; font-size: 0.97em; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-r { color: #9d174d; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1.05em; }
+  .c1 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c2 { background: #fce7f3; border-color: #ec4899; color: #831843; }
+  .c3 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c4 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>➗ Opérations sur les fractions</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Addition</button>
+  <button class="tab tab2" onclick="setMode(1)">Soustraction</button>
+  <button class="tab tab3" onclick="setMode(2)">Multiplication</button>
+  <button class="tab tab4" onclick="setMode(3)">Division</button>
+</div>
+<div class="scene">
+  <div class="frac-visual" id="frac-visual"></div>
+  <div class="bars-wrap" id="bars-wrap"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#1d4ed8','#9d174d','#15803d','#b45309'];
+
+// ============================================================
+// HELPERS FRACTIONS HTML
+// ============================================================
+function fr(n,d,cls='blue'){
+  return `<span class="fr ${cls}"><span class="n">${n}</span><span class="d">${d}</span></span>`;
+}
+function op(s){ return `<span class="op">${s}</span>`; }
+function eq(){ return `<span class="eq">=</span>`; }
+
+// ============================================================
+// BARRES VISUELLES
+// ============================================================
+function makeBars(rows){
+  // rows = [{label, cells:[{col,w}], total}]
+  let h='';
+  rows.forEach(r=>{
+    h+=`<div class="bar-row"><span class="bar-lbl">${r.label}</span>`;
+    const W=300;
+    r.cells.forEach(c=>{
+      const w=(c.w/r.total)*W;
+      h+=`<span class="bar-cell" style="width:${w.toFixed(0)}px;background:${c.col}">${c.txt||''}</span>`;
+    });
+    h+='</div>';
+  });
+  return h;
+}
+
+// ============================================================
+// MODE 0 — ADDITION
+// Même dénominateur : 2/7 + 3/7 = 5/7
+// Dénominateurs différents : 1/3 + 1/4 = 4/12 + 3/12 = 7/12
+// ============================================================
+const e0=[
+  {
+    explic:"On veut additionner deux fractions. Si les dénominateurs sont identiques, c'est simple : on additionne les numérateurs et on garde le dénominateur.",
+    visual(){ return fr(2,7,'blue')+op('+')+fr(3,7,'pink')+eq()+fr('?',7,'gray'); },
+    bars(){
+      return makeBars([
+        {label:'2/7', cells:[{col:'#1d4ed8',w:2,txt:'2'},{col:'#dbeafe',w:5,txt:''}], total:7},
+        {label:'3/7', cells:[{col:'#9d174d',w:3,txt:'3'},{col:'#fce7f3',w:4,txt:''}], total:7},
+      ]);
+    },
+    calc:`<div class="enonce en1">Même dénominateur : 2/7 + 3/7</div>
+          <div class="ligne">Les deux fractions ont le même dénominateur : <span class="hl-b">7</span>.</div>
+          <div class="ligne">On additionne les numérateurs et on garde le dénominateur :</div>
+          <div class="ligne">2/7 + 3/7 = (2 + 3) / 7</div>`
+  },
+  {
+    explic:"On additionne les numérateurs : 2 + 3 = 5. Le dénominateur reste 7.",
+    visual(){ return fr(2,7,'blue')+op('+')+fr(3,7,'pink')+eq()+fr(5,7,'result'); },
+    bars(){
+      return makeBars([
+        {label:'2/7', cells:[{col:'#1d4ed8',w:2,txt:'2'},{col:'#dbeafe',w:5}], total:7},
+        {label:'3/7', cells:[{col:'#9d174d',w:3,txt:'3'},{col:'#fce7f3',w:4}], total:7},
+        {label:'5/7', cells:[{col:'#1d4ed8',w:2},{col:'#9d174d',w:3},{col:'#f1f5f9',w:2}], total:7},
+      ]);
+    },
+    calc:`<div class="enonce en1">2/7 + 3/7 = (2 + 3) / 7</div>
+          <div class="ligne">2 + 3 = <span class="hl-b">5</span></div>
+          <div class="conclusion c1">2/7 + 3/7 = 5/7</div>`
+  },
+  {
+    explic:"Maintenant les dénominateurs sont différents : 1/3 + 1/4. On ne peut pas additionner directement. Il faut d'abord trouver le même dénominateur.",
+    visual(){ return fr(1,3,'blue')+op('+')+fr(1,4,'pink')+eq()+fr('?','?','gray'); },
+    bars(){
+      return makeBars([
+        {label:'1/3', cells:[{col:'#1d4ed8',w:1,txt:'1'},{col:'#dbeafe',w:2}], total:3},
+        {label:'1/4', cells:[{col:'#9d174d',w:1,txt:'1'},{col:'#fce7f3',w:3}], total:4},
+      ]);
+    },
+    calc:`<div class="enonce en1">Dénominateurs différents : 1/3 + 1/4</div>
+          <div class="ligne">Les dénominateurs sont <span class="hl-b">3</span> et <span class="hl-r">4</span> : ils sont différents.</div>
+          <div class="ligne">On cherche un dénominateur commun : 3 × 4 = <span class="hl-g">12</span>.</div>
+          <div class="attention">⚠️ On ne peut additionner des fractions que si elles ont le même dénominateur.</div>`
+  },
+  {
+    explic:"On transforme chaque fraction pour qu'elle ait le dénominateur 12 : 1/3 = 4/12 et 1/4 = 3/12.",
+    visual(){ return fr(4,12,'blue')+op('+')+fr(3,12,'pink')+eq()+fr('?',12,'gray'); },
+    bars(){
+      return makeBars([
+        {label:'4/12', cells:[{col:'#1d4ed8',w:4,txt:'4'},{col:'#dbeafe',w:8}], total:12},
+        {label:'3/12', cells:[{col:'#9d174d',w:3,txt:'3'},{col:'#fce7f3',w:9}], total:12},
+      ]);
+    },
+    calc:`<div class="enonce en1">Mise au même dénominateur : 12</div>
+          <div class="ligne">1/3 = (1×<span class="hl-b">4</span>) / (3×<span class="hl-b">4</span>) = <span class="hl-b">4/12</span></div>
+          <div class="ligne">1/4 = (1×<span class="hl-r">3</span>) / (4×<span class="hl-r">3</span>) = <span class="hl-r">3/12</span></div>
+          <div class="ligne">Maintenant les dénominateurs sont identiques → on peut additionner.</div>`
+  },
+  {
+    explic:"On additionne les numérateurs : 4 + 3 = 7. Le dénominateur reste 12.",
+    visual(){ return fr(4,12,'blue')+op('+')+fr(3,12,'pink')+eq()+fr(7,12,'result'); },
+    bars(){
+      return makeBars([
+        {label:'4/12', cells:[{col:'#1d4ed8',w:4},{col:'#dbeafe',w:8}], total:12},
+        {label:'3/12', cells:[{col:'#9d174d',w:3},{col:'#fce7f3',w:9}], total:12},
+        {label:'7/12', cells:[{col:'#1d4ed8',w:4},{col:'#9d174d',w:3},{col:'#f1f5f9',w:5}], total:12},
+      ]);
+    },
+    calc:`<div class="enonce en1">4/12 + 3/12 = (4 + 3) / 12</div>
+          <div class="ligne">4 + 3 = <span class="hl-g">7</span></div>
+          <div class="conclusion c1">1/3 + 1/4 = 7/12</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — SOUSTRACTION
+// Même dénom : 5/8 − 3/8 = 2/8 = 1/4
+// Dénoms différents : 3/4 − 1/6 = 9/12 − 2/12 = 7/12
+// ============================================================
+const e1=[
+  {
+    explic:"Pour soustraire deux fractions avec le même dénominateur, on soustrait les numérateurs et on garde le dénominateur.",
+    visual(){ return fr(5,8,'pink')+op('−')+fr(3,8,'blue')+eq()+fr('?',8,'gray'); },
+    bars(){
+      return makeBars([
+        {label:'5/8', cells:[{col:'#9d174d',w:5,txt:'5'},{col:'#fce7f3',w:3}], total:8},
+        {label:'3/8', cells:[{col:'#1d4ed8',w:3,txt:'3'},{col:'#dbeafe',w:5}], total:8},
+      ]);
+    },
+    calc:`<div class="enonce en2">Même dénominateur : 5/8 − 3/8</div>
+          <div class="ligne">Les deux fractions ont le même dénominateur : <span class="hl-r">8</span>.</div>
+          <div class="ligne">On soustrait les numérateurs : (5 − 3) / 8</div>`
+  },
+  {
+    explic:"5 − 3 = 2. Le résultat est 2/8. On peut simplifier : 2/8 = 1/4 (on divise numérateur et dénominateur par 2).",
+    visual(){ return fr(5,8,'pink')+op('−')+fr(3,8,'blue')+eq()+fr(2,8,'gray')+eq()+fr(1,4,'result'); },
+    bars(){
+      return makeBars([
+        {label:'5/8', cells:[{col:'#9d174d',w:5},{col:'#fce7f3',w:3}], total:8},
+        {label:'3/8', cells:[{col:'#1d4ed8',w:3},{col:'#dbeafe',w:5}], total:8},
+        {label:'2/8', cells:[{col:'#9d174d',w:2},{col:'#f1f5f9',w:6}], total:8},
+      ]);
+    },
+    calc:`<div class="enonce en2">5/8 − 3/8 = (5 − 3) / 8 = 2/8</div>
+          <div class="ligne">On simplifie 2/8 : 2 ÷ 2 = 1 et 8 ÷ 2 = 4</div>
+          <div class="conclusion c2">5/8 − 3/8 = 2/8 = 1/4</div>`
+  },
+  {
+    explic:"Dénominateurs différents : 3/4 − 1/6. On cherche le plus petit dénominateur commun : c'est 12 (ppcm de 4 et 6).",
+    visual(){ return fr(3,4,'pink')+op('−')+fr(1,6,'blue')+eq()+fr('?',12,'gray'); },
+    bars(){
+      return makeBars([
+        {label:'3/4', cells:[{col:'#9d174d',w:3,txt:'3'},{col:'#fce7f3',w:1}], total:4},
+        {label:'1/6', cells:[{col:'#1d4ed8',w:1,txt:'1'},{col:'#dbeafe',w:5}], total:6},
+      ]);
+    },
+    calc:`<div class="enonce en2">Dénominateurs différents : 3/4 − 1/6</div>
+          <div class="ligne">Dénominateur commun : 4 × 3 = 12, 6 × 2 = 12 → dénominateur commun = <span class="hl-r">12</span></div>
+          <div class="ligne">3/4 = (3×<span class="hl-r">3</span>) / (4×<span class="hl-r">3</span>) = <span class="hl-r">9/12</span></div>
+          <div class="ligne">1/6 = (1×<span class="hl-b">2</span>) / (6×<span class="hl-b">2</span>) = <span class="hl-b">2/12</span></div>`
+  },
+  {
+    explic:"On soustrait les numérateurs : 9 − 2 = 7. Le résultat est 7/12.",
+    visual(){ return fr(9,12,'pink')+op('−')+fr(2,12,'blue')+eq()+fr(7,12,'result'); },
+    bars(){
+      return makeBars([
+        {label:'9/12', cells:[{col:'#9d174d',w:9},{col:'#fce7f3',w:3}], total:12},
+        {label:'2/12', cells:[{col:'#1d4ed8',w:2},{col:'#dbeafe',w:10}], total:12},
+        {label:'7/12', cells:[{col:'#9d174d',w:7},{col:'#f1f5f9',w:5}], total:12},
+      ]);
+    },
+    calc:`<div class="enonce en2">9/12 − 2/12 = (9 − 2) / 12</div>
+          <div class="ligne">9 − 2 = <span class="hl-r">7</span></div>
+          <div class="conclusion c2">3/4 − 1/6 = 7/12</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — MULTIPLICATION
+// 2/3 × 3/5 = 6/15 = 2/5
+// ============================================================
+const e2=[
+  {
+    explic:"Pour multiplier deux fractions, on multiplie les numérateurs entre eux et les dénominateurs entre eux. Pas besoin de mettre au même dénominateur !",
+    visual(){ return fr(2,3,'green')+op('×')+fr(3,5,'blue')+eq()+fr('?','?','gray'); },
+    bars(){ return ''; },
+    calc:`<div class="enonce en3">Multiplier : 2/3 × 3/5</div>
+          <div class="ligne">Règle : numérateur × numérateur et dénominateur × dénominateur.</div>
+          <div class="ligne">(2 × 3) / (3 × 5)</div>
+          <div class="attention">⚠️ On ne met PAS au même dénominateur pour une multiplication !</div>`
+  },
+  {
+    explic:"On effectue les multiplications : 2 × 3 = 6 au numérateur, et 3 × 5 = 15 au dénominateur.",
+    visual(){ return fr(2,3,'green')+op('×')+fr(3,5,'blue')+eq()+fr(6,15,'gray'); },
+    bars(){ return ''; },
+    calc:`<div class="enonce en3">(2 × 3) / (3 × 5)</div>
+          <div class="ligne">Numérateur : 2 × 3 = <span class="hl-g">6</span></div>
+          <div class="ligne">Dénominateur : 3 × 5 = <span class="hl-g">15</span></div>
+          <div class="ligne">Résultat : 6/15</div>`
+  },
+  {
+    explic:"On simplifie 6/15 : le plus grand diviseur commun de 6 et 15 est 3. On divise les deux par 3.",
+    visual(){ return fr(2,3,'green')+op('×')+fr(3,5,'blue')+eq()+fr(6,15,'gray')+eq()+fr(2,5,'result'); },
+    bars(){ return ''; },
+    calc:`<div class="enonce en3">Simplification de 6/15</div>
+          <div class="ligne">6 ÷ 3 = <span class="hl-g">2</span></div>
+          <div class="ligne">15 ÷ 3 = <span class="hl-g">5</span></div>
+          <div class="conclusion c3">2/3 × 3/5 = 6/15 = 2/5</div>
+          <div class="attention">💡 Astuce : on peut aussi simplifier avant de multiplier. On remarque que 3 est au numérateur de 2/3 et au dénominateur de 3/5 → on simplifie par 3 dès le départ : (2/1) × (1/5) = 2/5.</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — DIVISION
+// 3/4 ÷ 2/5 = 3/4 × 5/2 = 15/8
+// ============================================================
+const e3=[
+  {
+    explic:"Diviser par une fraction, c'est multiplier par son inverse. L'inverse d'une fraction, c'est la même fraction retournée : on échange le numérateur et le dénominateur.",
+    visual(){ return fr(3,4,'orange')+op('÷')+fr(2,5,'blue')+eq()+fr(3,4,'orange')+op('×')+fr(5,2,'blue'); },
+    bars(){ return ''; },
+    calc:`<div class="enonce en4">Diviser : 3/4 ÷ 2/5</div>
+          <div class="ligne">Diviser par <span class="hl-b">2/5</span>, c'est multiplier par <span class="hl-b">5/2</span> (l'inverse).</div>
+          <div class="ligne">L'inverse de 2/5 est 5/2 : on retourne la fraction.</div>
+          <div class="ligne">3/4 ÷ 2/5 = 3/4 × 5/2</div>`
+  },
+  {
+    explic:"On effectue la multiplication : numérateur × numérateur et dénominateur × dénominateur.",
+    visual(){ return fr(3,4,'orange')+op('×')+fr(5,2,'blue')+eq()+fr(15,8,'result'); },
+    bars(){ return ''; },
+    calc:`<div class="enonce en4">3/4 × 5/2</div>
+          <div class="ligne">Numérateur : 3 × 5 = <span class="hl-o">15</span></div>
+          <div class="ligne">Dénominateur : 4 × 2 = <span class="hl-o">8</span></div>
+          <div class="ligne">Résultat : 15/8</div>`
+  },
+  {
+    explic:"15/8 ne se simplifie pas (15 et 8 n'ont pas de diviseur commun autre que 1). On peut l'écrire comme nombre mixte : 15/8 = 1 et 7/8.",
+    visual(){ return fr(3,4,'orange')+op('÷')+fr(2,5,'blue')+eq()+fr(15,8,'result'); },
+    bars(){ return ''; },
+    calc:`<div class="enonce en4">Résultat final</div>
+          <div class="ligne">15 et 8 n'ont pas de diviseur commun → la fraction est déjà simplifiée.</div>
+          <div class="ligne">On peut aussi écrire : 15/8 = 1 + 7/8 (car 15 = 1×8 + 7)</div>
+          <div class="conclusion c4">3/4 ÷ 2/5 = 15/8</div>
+          <div class="attention">⚠️ Résumé : pour diviser, on retourne la deuxième fraction et on multiplie.<br>a/b ÷ c/d = a/b × d/c</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+const ENS=['en1','en2','en3','en4'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('frac-visual').innerHTML=e.visual();
+  const b=e.bars();
+  const bw=document.getElementById('bars-wrap');
+  if(b){ bw.style.display='block'; bw.innerHTML=b; }
+  else bw.style.display='none';
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
