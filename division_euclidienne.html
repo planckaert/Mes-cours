@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Division euclidienne</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fff8f0; min-height: 100vh; }
+  h1 { text-align: center; padding: 18px; background: #e67700; color: white; font-size: 1.4em; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 14px; }
+  .division-box { background: white; border-radius: 16px; box-shadow: 0 3px 12px #0002; padding: 20px 30px; margin: 10px auto; max-width: 420px; width: 95%; }
+  .div-grid { display: grid; grid-template-columns: auto auto auto; gap: 0; align-items: start; justify-content: center; }
+  .dividende { font-size: 2.4em; font-weight: bold; color: #333; padding: 0 18px 0 0; }
+  .separateur { display: flex; flex-direction: column; align-items: center; }
+  .sep-line { width: 3px; background: #333; height: 100%; min-height: 80px; }
+  .diviseur-zone { padding: 0 0 0 10px; }
+  .diviseur { font-size: 2.4em; font-weight: bold; color: #e67700; border-bottom: 3px solid #333; padding-bottom: 4px; min-width: 40px; }
+  .quotient { font-size: 2.4em; font-weight: bold; color: #2f9e44; min-height: 40px; padding-top: 8px; }
+  .calcul-zone { margin-top: 16px; border-top: 2px dashed #e67700; padding-top: 12px; }
+  .calc-ligne { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 1.1em; }
+  .highlight { background: #fff3bf; border-radius: 6px; padding: 2px 8px; font-weight: bold; }
+  .red { color: #e63946; font-weight: bold; }
+  .green { color: #2f9e44; font-weight: bold; }
+  .orange { color: #e67700; font-weight: bold; }
+  .reste-box { margin-top: 14px; background: #f3faf3; border-radius: 10px; padding: 10px 16px; font-size: 1.1em; border: 2px solid #2f9e44; }
+  .explication { background: white; border-radius: 14px; padding: 14px 20px; margin: 10px auto; max-width: 420px; width: 95%; font-size: 1em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #e67700; min-height: 56px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 10px; }
+  button.nav { padding: 11px 30px; border-radius: 24px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #e67700; color: white; }
+  .etape-ind { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 4px; }
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<h1>➗ Division euclidienne : 534 ÷ 4</h1>
+<div class="scene">
+  <div class="division-box" id="div-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let etape = 0;
+
+// 534 ÷ 4 = 133 reste 2
+// Étapes : 5÷4=1 r1, 13÷4=3 r1, 14÷4=3 r2
+
+const etapes = [
+  {
+    text: "Posons la division de 534 par 4. Le dividende est 534, le diviseur est 4.",
+    quotient: '',
+    calculs: [],
+    dividende_highlight: [0,1,2]
+  },
+  {
+    text: "On regarde le premier chiffre du dividende : 5. Est-ce que 4 va dans 5 ? Oui, 1 fois (1 × 4 = 4). On écrit 1 au quotient.",
+    quotient: '1',
+    calculs: [
+      { ligne: "4 va dans 5 : 1 fois", style: 'normal' },
+      { ligne: "1 × 4 = 4", style: 'orange' },
+      { ligne: "5 − 4 = 1 (reste)", style: 'red' },
+    ]
+  },
+  {
+    text: "On abaisse le chiffre suivant : 3. On a maintenant 13. 4 va dans 13 : 3 fois (3 × 4 = 12).",
+    quotient: '13',
+    calculs: [
+      { ligne: "↓ On abaisse le 3 → 13", style: 'normal' },
+      { ligne: "4 va dans 13 : 3 fois", style: 'normal' },
+      { ligne: "3 × 4 = 12", style: 'orange' },
+      { ligne: "13 − 12 = 1 (reste)", style: 'red' },
+    ]
+  },
+  {
+    text: "On abaisse le dernier chiffre : 4. On a 14. 4 va dans 14 : 3 fois (3 × 4 = 12).",
+    quotient: '133',
+    calculs: [
+      { ligne: "↓ On abaisse le 4 → 14", style: 'normal' },
+      { ligne: "4 va dans 14 : 3 fois", style: 'normal' },
+      { ligne: "3 × 4 = 12", style: 'orange' },
+      { ligne: "14 − 12 = 2 (reste)", style: 'red' },
+    ],
+    reste: true
+  },
+  {
+    text: "✅ 534 ÷ 4 = 133 et il reste 2. Vérification : 133 × 4 + 2 = 532 + 2 = 534 ✓",
+    quotient: '133',
+    calculs: [
+      { ligne: "Vérification :", style: 'normal' },
+      { ligne: "133 × 4 = 532", style: 'orange' },
+      { ligne: "532 + 2 = 534 ✓", style: 'green' },
+    ],
+    reste: true,
+    final: true
+  }
+];
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < etapes.length - 1) { etape++; render(); } }
+
+function render() {
+  const e = etapes[etape];
+  let html = `<div class="div-grid">`;
+
+  // Dividende
+  html += `<div class="dividende">534</div>`;
+
+  // Séparateur
+  html += `<div style="font-size:2.4em;font-weight:bold;padding:0 8px;">÷</div>`;
+
+  // Diviseur + quotient
+  html += `<div class="diviseur-zone">
+    <div class="diviseur">4</div>
+    <div class="quotient fade-in" style="color:${e.final?'#e67700':'#2f9e44'}">${e.quotient || '?'}</div>
+  </div>`;
+  html += `</div>`;
+
+  // Calculs
+  if (e.calculs && e.calculs.length > 0) {
+    html += `<div class="calcul-zone fade-in">`;
+    e.calculs.forEach(c => {
+      let cls = '';
+      if (c.style === 'red') cls = 'red';
+      if (c.style === 'orange') cls = 'orange';
+      if (c.style === 'green') cls = 'green';
+      html += `<div class="calc-ligne ${cls}">${c.ligne}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  // Reste
+  if (e.reste) {
+    html += `<div class="reste-box fade-in">Reste : <strong>2</strong> &nbsp;(car 2 &lt; 4)</div>`;
+  }
+
+  document.getElementById('div-box').innerHTML = html;
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

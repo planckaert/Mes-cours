@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Division décimale</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f0ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 18px; background: #7048e8; color: white; font-size: 1.4em; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 14px; }
+  .division-box { background: white; border-radius: 16px; box-shadow: 0 3px 12px #0002; padding: 20px 30px; margin: 10px auto; max-width: 440px; width: 95%; }
+  .div-header { display: flex; align-items: flex-start; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  .dividende { font-size: 2.2em; font-weight: bold; color: #333; }
+  .sep { font-size: 2.2em; font-weight: bold; padding: 0 6px; }
+  .diviseur-zone { display: flex; flex-direction: column; align-items: center; border-left: 3px solid #333; padding-left: 12px; }
+  .diviseur { font-size: 2.2em; font-weight: bold; color: #7048e8; border-bottom: 3px solid #333; padding-bottom: 4px; min-width: 36px; }
+  .quotient { font-size: 2.2em; font-weight: bold; color: #e67700; min-height: 40px; padding-top: 6px; letter-spacing: 2px; }
+  .virgule-note { font-size: 0.85em; color: #7048e8; font-style: italic; }
+  .calcul-zone { margin-top: 14px; border-top: 2px dashed #7048e8; padding-top: 12px; }
+  .calc-ligne { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 1.05em; }
+  .red { color: #e63946; font-weight: bold; }
+  .green { color: #2f9e44; font-weight: bold; }
+  .purple { color: #7048e8; font-weight: bold; }
+  .orange { color: #e67700; font-weight: bold; }
+  .resultat-box { margin-top: 14px; background: #fff3bf; border-radius: 10px; padding: 10px 16px; font-size: 1.1em; border: 2px solid #e67700; font-weight: bold; }
+  .explication { background: white; border-radius: 14px; padding: 14px 20px; margin: 10px auto; max-width: 440px; width: 95%; font-size: 1em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #7048e8; min-height: 56px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 10px; }
+  button.nav { padding: 11px 30px; border-radius: 24px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #7048e8; color: white; }
+  .etape-ind { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 4px; }
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<h1>🔢 Division décimale : 531 ÷ 4</h1>
+<div class="scene">
+  <div class="division-box" id="div-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+// 531 ÷ 4 = 132,75
+// Étapes :
+// 5÷4=1 r1 → 13÷4=3 r1 → 11÷4=2 r3 → puis décimale : 30÷4=7 r2 → 20÷4=5 r0
+
+let etape = 0;
+
+const etapes = [
+  {
+    text: "Posons 531 ÷ 4. C'est une division décimale : le reste ne sera pas nul, on ajoutera une virgule et des zéros pour continuer.",
+    quotient: '',
+    calculs: []
+  },
+  {
+    text: "5 ÷ 4 : 4 va dans 5 une fois (1 × 4 = 4). Reste : 5 − 4 = 1.",
+    quotient: '1',
+    calculs: [
+      { l: "4 va dans 5 : 1 fois", s: '' },
+      { l: "1 × 4 = 4", s: 'purple' },
+      { l: "5 − 4 = 1 (reste)", s: 'red' },
+    ]
+  },
+  {
+    text: "On abaisse le 3 → on a 13. 4 va dans 13 : 3 fois (3 × 4 = 12). Reste : 13 − 12 = 1.",
+    quotient: '13',
+    calculs: [
+      { l: "↓ Abaisse 3 → 13", s: '' },
+      { l: "4 va dans 13 : 3 fois", s: '' },
+      { l: "3 × 4 = 12", s: 'purple' },
+      { l: "13 − 12 = 1 (reste)", s: 'red' },
+    ]
+  },
+  {
+    text: "On abaisse le 1 → on a 11. 4 va dans 11 : 2 fois (2 × 4 = 8). Reste : 11 − 8 = 3.",
+    quotient: '132',
+    calculs: [
+      { l: "↓ Abaisse 1 → 11", s: '' },
+      { l: "4 va dans 11 : 2 fois", s: '' },
+      { l: "2 × 4 = 8", s: 'purple' },
+      { l: "11 − 8 = 3 (reste)", s: 'red' },
+    ]
+  },
+  {
+    text: "Il reste 3 et il n'y a plus de chiffres. Comme 3 ≠ 0, on pose une virgule au quotient et on ajoute un zéro au reste : 30.",
+    quotient: '132,',
+    calculs: [
+      { l: "Reste = 3 ≠ 0 → on continue !", s: 'purple' },
+      { l: "On écrit la virgule au quotient", s: 'orange' },
+      { l: "On ajoute un 0 au reste → 30", s: 'orange' },
+    ]
+  },
+  {
+    text: "30 ÷ 4 : 4 va dans 30 : 7 fois (7 × 4 = 28). Reste : 30 − 28 = 2.",
+    quotient: '132,7',
+    calculs: [
+      { l: "4 va dans 30 : 7 fois", s: '' },
+      { l: "7 × 4 = 28", s: 'purple' },
+      { l: "30 − 28 = 2 (reste)", s: 'red' },
+    ]
+  },
+  {
+    text: "Il reste 2. On ajoute un nouveau zéro → 20. 4 va dans 20 : 5 fois exactement (5 × 4 = 20). Reste = 0 !",
+    quotient: '132,75',
+    calculs: [
+      { l: "Reste = 2 → ajoute 0 → 20", s: 'orange' },
+      { l: "4 va dans 20 : 5 fois", s: '' },
+      { l: "5 × 4 = 20", s: 'purple' },
+      { l: "20 − 20 = 0 ✓", s: 'green' },
+    ],
+    final: true
+  },
+  {
+    text: "✅ 531 ÷ 4 = 132,75. Vérification : 132,75 × 4 = 531 ✓",
+    quotient: '132,75',
+    calculs: [
+      { l: "Vérification :", s: '' },
+      { l: "132,75 × 4 = 531 ✓", s: 'green' },
+    ],
+    final: true,
+    resultat: true
+  }
+];
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < etapes.length - 1) { etape++; render(); } }
+
+function render() {
+  const e = etapes[etape];
+  let html = '';
+
+  html += `<div class="div-header">
+    <div class="dividende">531</div>
+    <div class="sep">÷</div>
+    <div class="diviseur-zone">
+      <div class="diviseur">4</div>
+      <div class="quotient fade-in">${e.quotient || '?'}</div>
+      ${e.quotient && e.quotient.includes(',') ? '<div class="virgule-note">← virgule décimale</div>' : ''}
+    </div>
+  </div>`;
+
+  if (e.calculs && e.calculs.length > 0) {
+    html += `<div class="calcul-zone fade-in">`;
+    e.calculs.forEach(c => {
+      html += `<div class="calc-ligne ${c.s}">${c.l}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (e.resultat) {
+    html += `<div class="resultat-box fade-in">🎉 531 ÷ 4 = <span style="color:#7048e8">132,75</span></div>`;
+  }
+
+  document.getElementById('div-box').innerHTML = html;
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

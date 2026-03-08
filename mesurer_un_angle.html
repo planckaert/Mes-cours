@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesurer un angle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 18px; background: #3b5bdb; color: white; font-size: 1.4em; }
+  .tabs { display: flex; justify-content: center; gap: 10px; padding: 14px; }
+  .tab { padding: 10px 28px; border-radius: 24px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab.aigu { background: #e7f5ff; color: #1864ab; border: 2px solid #74c0fc; }
+  .tab.obtus { background: #fff3bf; color: #e67700; border: 2px solid #ffd43b; }
+  .tab.active.aigu { background: #1864ab; color: white; }
+  .tab.active.obtus { background: #e67700; color: white; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+  svg#canvas { width: 100%; max-width: 500px; height: 340px; }
+  .explication { background: white; border-radius: 14px; padding: 14px 20px; margin: 12px auto; max-width: 480px; width: 95%; font-size: 1em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #3b5bdb; min-height: 56px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 10px; }
+  button.nav { padding: 11px 30px; border-radius: 24px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #3b5bdb; color: white; }
+  .btn-next:hover { background: #2f4ac5; }
+  .etape-ind { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>📐 Mesurer un angle</h1>
+<div class="tabs">
+  <button class="tab aigu active" onclick="setMode('aigu')">Angle aigu (55°)</button>
+  <button class="tab obtus" onclick="setMode('obtus')">Angle obtus (130°)</button>
+</div>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 500 340"></svg>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 'aigu';
+let etape = 0;
+
+const configs = {
+  aigu: { angle: 55, color: '#1864ab', label: '55°' },
+  obtus: { angle: 130, color: '#e67700', label: '130°' }
+};
+
+const etapes = [
+  { text: "Voici notre angle à mesurer. Il est formé par deux demi-droites partant du sommet S." },
+  { text: "Place le centre du rapporteur exactement sur le sommet S de l'angle." },
+  { text: "Aligne le côté 0°–180° du rapporteur avec l'un des côtés de l'angle (ici le côté horizontal)." },
+  { text: "Lis la graduation là où le deuxième côté de l'angle coupe le rapporteur." },
+  { text: "✅ La mesure de l'angle est {label} !" }
+];
+
+function setMode(m) {
+  mode = m;
+  etape = 0;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab.' + m).classList.add('active');
+  render();
+}
+
+function next() { if (etape < etapes.length - 1) { etape++; render(); } }
+function prev() { if (etape > 0) { etape--; render(); } }
+
+function render() {
+  const cfg = configs[mode];
+  const svg = document.getElementById('canvas');
+  const angleRad = cfg.angle * Math.PI / 180;
+  const cx = 140, cy = 240; // sommet S
+  const R = 110; // rayon rapporteur
+
+  let html = '';
+
+  // Côté 1 : horizontal vers la droite
+  const x1 = cx + 190, y1 = cy;
+  // Côté 2 : selon l'angle
+  const x2 = cx + Math.cos(angleRad) * 180;
+  const y2 = cy - Math.sin(angleRad) * 180;
+
+  // Toujours dessiner les côtés de l'angle
+  html += `<line x1="${cx}" y1="${cy}" x2="${x1}" y2="${y1}" stroke="#333" stroke-width="2.5"/>`;
+  html += `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#333" stroke-width="2.5"/>`;
+
+  // Sommet S
+  html += `<circle cx="${cx}" cy="${cy}" r="5" fill="${cfg.color}"/>`;
+  html += `<text x="${cx - 14}" y="${cy + 20}" font-size="16" font-weight="bold" fill="${cfg.color}">S</text>`;
+
+  // Arc de l'angle (toujours visible)
+  const arcR = 38;
+  const arcX = cx + Math.cos(angleRad/2) * arcR;
+  const arcY = cy - Math.sin(angleRad/2) * arcR;
+  const arcEnd = { x: cx + Math.cos(angleRad) * arcR, y: cy - Math.sin(angleRad) * arcR };
+  html += `<path d="M ${cx+arcR} ${cy} A ${arcR} ${arcR} 0 0 0 ${arcEnd.x.toFixed(1)} ${arcEnd.y.toFixed(1)}" fill="none" stroke="${cfg.color}" stroke-width="2"/>`;
+
+  // Étape 1+ : rapporteur
+  if (etape >= 1) {
+    // Demi-cercle rapporteur
+    html += `<path d="M ${cx-R} ${cy} A ${R} ${R} 0 0 1 ${cx+R} ${cy}" fill="rgba(173,216,255,0.35)" stroke="#3b5bdb" stroke-width="2"/>`;
+    html += `<line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="#3b5bdb" stroke-width="2"/>`;
+    // Centre du rapporteur
+    html += `<circle cx="${cx}" cy="${cy}" r="4" fill="#e63946"/>`;
+    // Graduations
+    for (let a = 0; a <= 180; a += 10) {
+      const ra = a * Math.PI / 180;
+      const inner = (a % 30 === 0) ? R - 16 : R - 9;
+      const ox = cx + Math.cos(ra) * R, oy = cy - Math.sin(ra) * R;
+      const ix = cx + Math.cos(ra) * inner, iy = cy - Math.sin(ra) * inner;
+      html += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="#3b5bdb" stroke-width="${a%30===0?2:1}"/>`;
+      if (a % 30 === 0) {
+        const tx = cx + Math.cos(ra) * (R - 26), ty = cy - Math.sin(ra) * (R - 26);
+        html += `<text x="${tx.toFixed(1)}" y="${(ty+4).toFixed(1)}" font-size="11" text-anchor="middle" fill="#1864ab">${a}</text>`;
+      }
+    }
+    // Ligne de base surlignée
+    html += `<line x1="${cx}" y1="${cy}" x2="${cx+R+10}" y2="${cy}" stroke="#f59f00" stroke-width="3" stroke-dasharray="${etape>=2?'none':'6,4'}"/>`;
+  }
+
+  // Étape 3+ : flèche de lecture
+  if (etape >= 3) {
+    const ra = cfg.angle * Math.PI / 180;
+    const px = cx + Math.cos(ra) * R, py = cy - Math.sin(ra) * R;
+    html += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="7" fill="#e63946" opacity="0.85"/>`;
+    // Ligne pointillée vers le côté 2
+    html += `<line x1="${px.toFixed(1)}" y1="${py.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#e63946" stroke-width="2" stroke-dasharray="5,3"/>`;
+  }
+
+  // Étape 4 : valeur de l'angle
+  if (etape >= 4) {
+    const mx = cx + Math.cos(angleRad/2) * 65, my = cy - Math.sin(angleRad/2) * 65;
+    html += `<text x="${mx.toFixed(1)}" y="${my.toFixed(1)}" font-size="20" font-weight="bold" fill="${cfg.color}" text-anchor="middle">${cfg.label}</text>`;
+  }
+
+  svg.innerHTML = html;
+
+  const txt = etapes[etape].text.replace('{label}', cfg.label);
+  document.getElementById('explication').textContent = txt;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

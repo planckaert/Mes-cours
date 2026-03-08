@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Symétrie axiale</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f3faf3; min-height: 100vh; }
+  h1 { text-align: center; padding: 18px; background: #2f9e44; color: white; font-size: 1.4em; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+  svg#canvas { width: 100%; max-width: 520px; height: 350px; }
+  .explication { background: white; border-radius: 14px; padding: 14px 20px; margin: 12px auto; max-width: 480px; width: 95%; font-size: 1em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #2f9e44; min-height: 56px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 10px; }
+  button.nav { padding: 11px 30px; border-radius: 24px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #2f9e44; color: white; }
+  .etape-ind { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<h1>🪞 Symétrie axiale d'un quadrilatère</h1>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 520 350"></svg>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let etape = 0;
+
+// Axe de symétrie : ligne verticale x=260
+const AX = 260;
+
+// Quadrilatère original (points)
+const orig = [
+  { x: 120, y: 80, label: 'A' },
+  { x: 200, y: 60, label: 'B' },
+  { x: 220, y: 170, label: 'C' },
+  { x: 100, y: 180, label: 'D' }
+];
+
+// Symétriques
+function sym(p) { return { x: 2 * AX - p.x, y: p.y, label: p.label + "'" }; }
+const symPts = orig.map(sym);
+
+const etapes = [
+  { text: "Voici le quadrilatère ABCD et son axe de symétrie (droite en pointillés)." },
+  { text: "Pour trouver le symétrique de A, on trace la perpendiculaire à l'axe passant par A (avec l'équerre)." },
+  { text: "On mesure la distance de A à l'axe, puis on reporte la même distance de l'autre côté : on obtient A'." },
+  { text: "On fait de même pour B : perpendiculaire à l'axe, puis report de distance → B'." },
+  { text: "Même construction pour C → C' et D → D'." },
+  { text: "On relie A', B', C', D' pour obtenir le quadrilatère symétrique A'B'C'D'." },
+  { text: "✅ Le quadrilatère A'B'C'D' est le symétrique de ABCD par rapport à l'axe." }
+];
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < etapes.length - 1) { etape++; render(); } }
+
+function pointsStr(pts) { return pts.map(p => `${p.x},${p.y}`).join(' '); }
+
+function render() {
+  const svg = document.getElementById('canvas');
+  let html = '';
+
+  // Axe de symétrie
+  html += `<line x1="${AX}" y1="10" x2="${AX}" y2="340" stroke="#e63946" stroke-width="2" stroke-dasharray="10,5"/>`;
+  html += `<text x="${AX+6}" y="22" font-size="13" fill="#e63946" font-weight="bold">(axe)</text>`;
+
+  // Quadrilatère original (toujours)
+  html += `<polygon points="${pointsStr(orig)}" fill="rgba(47,158,68,0.15)" stroke="#2f9e44" stroke-width="2.5"/>`;
+  orig.forEach(p => {
+    html += `<circle cx="${p.x}" cy="${p.y}" r="5" fill="#2f9e44"/>`;
+    html += `<text x="${p.x - 16}" y="${p.y - 8}" font-size="15" font-weight="bold" fill="#2f9e44">${p.label}</text>`;
+  });
+
+  // Étape 1 : perp pour A
+  if (etape >= 1) {
+    const p = orig[0];
+    html += `<line x1="${p.x}" y1="${p.y}" x2="${AX}" y2="${p.y}" stroke="#f59f00" stroke-width="2" stroke-dasharray="6,3"/>`;
+    // Équerre SVG simple sur l'axe
+    const ex = AX, ey = p.y;
+    html += `<rect x="${ex}" y="${ey - 18}" width="18" height="18" fill="rgba(255,215,0,0.3)" stroke="#f59f00" stroke-width="1.5"/>`;
+    html += `<text x="${AX+22}" y="${ey+4}" font-size="11" fill="#f59f00">⊥</text>`;
+  }
+
+  // Étape 2 : A' apparaît
+  if (etape >= 2) {
+    const p = orig[0], sp = symPts[0];
+    html += `<line x1="${p.x}" y1="${p.y}" x2="${sp.x}" y2="${sp.y}" stroke="#f59f00" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+    html += `<circle cx="${sp.x}" cy="${sp.y}" r="5" fill="#e63946"/>`;
+    html += `<text x="${sp.x+8}" y="${sp.y-8}" font-size="15" font-weight="bold" fill="#e63946">${sp.label}</text>`;
+  }
+
+  // Étape 3 : B et B'
+  if (etape >= 3) {
+    const p = orig[1], sp = symPts[1];
+    html += `<line x1="${p.x}" y1="${p.y}" x2="${AX}" y2="${p.y}" stroke="#f59f00" stroke-width="2" stroke-dasharray="6,3"/>`;
+    html += `<line x1="${AX}" y1="${p.y}" x2="${sp.x}" y2="${sp.y}" stroke="#f59f00" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+    html += `<circle cx="${sp.x}" cy="${sp.y}" r="5" fill="#e63946"/>`;
+    html += `<text x="${sp.x+8}" y="${sp.y-8}" font-size="15" font-weight="bold" fill="#e63946">${sp.label}</text>`;
+  }
+
+  // Étape 4 : C' et D'
+  if (etape >= 4) {
+    [2, 3].forEach(i => {
+      const p = orig[i], sp = symPts[i];
+      html += `<line x1="${p.x}" y1="${p.y}" x2="${AX}" y2="${p.y}" stroke="#f59f00" stroke-width="2" stroke-dasharray="6,3"/>`;
+      html += `<line x1="${AX}" y1="${p.y}" x2="${sp.x}" y2="${sp.y}" stroke="#f59f00" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+      html += `<circle cx="${sp.x}" cy="${sp.y}" r="5" fill="#e63946"/>`;
+      html += `<text x="${sp.x+8}" y="${sp.y-8}" font-size="15" font-weight="bold" fill="#e63946">${sp.label}</text>`;
+    });
+    // Aussi rappeler A' B'
+    [0,1].forEach(i => {
+      const sp = symPts[i];
+      html += `<circle cx="${sp.x}" cy="${sp.y}" r="5" fill="#e63946"/>`;
+      html += `<text x="${sp.x+8}" y="${sp.y-8}" font-size="15" font-weight="bold" fill="#e63946">${sp.label}</text>`;
+    });
+  }
+
+  // Étape 5+ : polygone symétrique
+  if (etape >= 5) {
+    html += `<polygon points="${pointsStr(symPts)}" fill="rgba(230,57,70,0.15)" stroke="#e63946" stroke-width="2.5"/>`;
+    symPts.forEach(sp => {
+      html += `<circle cx="${sp.x}" cy="${sp.y}" r="5" fill="#e63946"/>`;
+      html += `<text x="${sp.x+8}" y="${sp.y-8}" font-size="15" font-weight="bold" fill="#e63946">${sp.label}</text>`;
+    });
+  }
+
+  svg.innerHTML = html;
+  document.getElementById('explication').textContent = etapes[etape].text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
