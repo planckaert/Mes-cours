@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lire des diagrammes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fafafa; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #7c3aed; color: white; font-size: 1.3em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 11px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 14px; border-radius: 20px; border: none; font-size: 0.83em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #5b21b6; border: 2px solid #a78bfa; }
+  .tab2 { background: #fce7f3; color: #9d174d; border: 2px solid #f9a8d4; }
+  .tab3 { background: #ecfdf5; color: #065f46; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+  .tab2.active { background: #be185d; color: white; border-color: #be185d; }
+  .tab3.active { background: #059669; color: white; border-color: #059669; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#diag { width: 100%; max-width: 480px; height: 280px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .question-box { background: white; border-radius: 12px; padding: 11px 16px; margin: 8px auto; max-width: 460px; width: 95%; font-size: 1em; font-weight: bold; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #7c3aed; min-height: 38px; }
+  .explication { background: white; border-radius: 14px; padding: 12px 18px; margin: 6px auto; max-width: 460px; width: 95%; font-size: 0.96em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; min-height: 50px; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 4px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #7c3aed; color: white; }
+</style>
+</head>
+<body>
+<h1>📊 Lire des diagrammes</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Diagramme en barres</button>
+  <button class="tab tab2" onclick="setMode(1)">Diagramme circulaire</button>
+  <button class="tab tab3" onclick="setMode(2)">Diagramme cartésien</button>
+</div>
+<div class="scene">
+  <svg id="diag" viewBox="0 0 480 280"></svg>
+  <div class="question-box" id="qbox"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+
+// ============================================================
+// MODE 0 — DIAGRAMME EN BARRES
+// Sports préférés : Football 12, Natation 8, Tennis 5, Basket 3, Autre 2
+// ============================================================
+const barData = [
+  { label: 'Football', val: 12, color: '#7c3aed' },
+  { label: 'Natation', val: 8,  color: '#a78bfa' },
+  { label: 'Tennis',   val: 5,  color: '#c4b5fd' },
+  { label: 'Basket',   val: 3,  color: '#ddd6fe' },
+  { label: 'Autre',    val: 2,  color: '#ede9fe' },
+];
+const barEtapes = [
+  { text: "Voici un diagramme en barres. L'axe horizontal liste les sports, l'axe vertical indique le nombre d'élèves. La hauteur de chaque barre donne la valeur.", q: "", hl: -1 },
+  { text: "Pour lire une valeur, on repère le haut de la barre et on lit la valeur sur l'axe vertical (axe des ordonnées). Quelle est la valeur de la barre 'Football' ?", q: "❓ Combien d'élèves préfèrent le Football ?", hl: 0 },
+  { text: "La barre Football atteint la graduation 12. Donc 12 élèves préfèrent le football. C'est la barre la plus haute : c'est le sport le plus populaire.", q: "✅ Football = 12 élèves", hl: 0, found: true },
+  { text: "Quelle barre a une hauteur de 5 ? On cherche la barre qui atteint la graduation 5 sur l'axe vertical.", q: "❓ Quel sport a 5 élèves ?", hl: 2 },
+  { text: "La barre Tennis atteint exactement 5. Donc 5 élèves préfèrent le tennis.", q: "✅ Tennis = 5 élèves", hl: 2, found: true },
+  { text: "✅ Pour comparer : Football (12) > Natation (8) > Tennis (5) > Basket (3) > Autre (2). La barre la plus haute = la plus grande valeur.", q: "✅ Football est le sport le plus choisi !", hl: -1, final: true },
+];
+
+// ============================================================
+// MODE 1 — DIAGRAMME CIRCULAIRE
+// Budget mensuel : Loyer 40%, Nourriture 25%, Transport 15%, Loisirs 12%, Autre 8%
+// ============================================================
+const pieData = [
+  { label: 'Loyer',      pct: 40, color: '#be185d' },
+  { label: 'Nourriture', pct: 25, color: '#f472b6' },
+  { label: 'Transport',  pct: 15, color: '#fda4af' },
+  { label: 'Loisirs',    pct: 12, color: '#fbbf24' },
+  { label: 'Autre',      pct: 8,  color: '#d1d5db' },
+];
+const pieEtapes = [
+  { text: "Voici un diagramme circulaire (camembert). Chaque secteur représente une part du total (100%). Plus un secteur est grand, plus sa valeur est élevée.", q: "", hl: -1 },
+  { text: "Chaque secteur est étiqueté avec sa valeur en pourcentage. Quel est le secteur le plus grand ?", q: "❓ Quelle dépense représente la plus grande part ?", hl: 0 },
+  { text: "Le secteur 'Loyer' est le plus grand avec 40% du budget. Il représente presque la moitié du cercle.", q: "✅ Loyer = 40% du budget", hl: 0, found: true },
+  { text: "Quelle part représente le Transport ? On cherche son secteur et on lit son pourcentage.", q: "❓ Quelle part du budget va au Transport ?", hl: 2 },
+  { text: "Le secteur Transport représente 15% du budget.", q: "✅ Transport = 15%", hl: 2, found: true },
+  { text: "✅ La somme de tous les secteurs = 40+25+15+12+8 = 100%. Dans un diagramme circulaire, les parts s'additionnent toujours à 100%.", q: "✅ 40+25+15+12+8 = 100% ✓", hl: -1, final: true },
+];
+
+// ============================================================
+// MODE 2 — DIAGRAMME CARTÉSIEN
+// Température moyenne par mois (jan-juin) : 4, 5, 9, 13, 17, 21
+// ============================================================
+const lineData = [
+  { label: 'Jan', val: 4  },
+  { label: 'Fév', val: 5  },
+  { label: 'Mar', val: 9  },
+  { label: 'Avr', val: 13 },
+  { label: 'Mai', val: 17 },
+  { label: 'Juin',val: 21 },
+];
+const lineEtapes = [
+  { text: "Voici un diagramme cartésien (courbe). L'axe horizontal (abscisses) indique les mois, l'axe vertical (ordonnées) indique la température en °C. Chaque point est une valeur.", q: "", hl: -1 },
+  { text: "Pour lire un point, on regarde sa position verticale sur l'axe des ordonnées. Quelle est la température en Avril ?", q: "❓ Température en Avril = ?", hl: 3 },
+  { text: "Le point d'Avril est aligné avec la graduation 13 sur l'axe vertical. La température en Avril est 13°C.", q: "✅ Avril = 13°C", hl: 3, found: true },
+  { text: "Entre quels mois la température augmente-t-elle le plus ? On regarde la portion de courbe la plus inclinée.", q: "❓ Où la courbe monte-t-elle le plus fort ?", hl: -1, showMaxSlope: true },
+  { text: "La plus forte hausse est entre Mai (17°C) et Juin (21°C) : +4°C. C'est la portion la plus pentue de la courbe.", q: "✅ Plus forte hausse : Mai→Juin (+4°C)", hl: 4, found: true },
+  { text: "✅ La courbe monte de janvier à juin : la température augmente chaque mois. Ce diagramme permet de voir l'évolution dans le temps.", q: "✅ Tendance : hausse régulière de Jan à Juin", hl: -1, final: true },
+];
+
+function setMode(m) {
+  mode = m; etape = 0;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===m));
+  const cols = ['#7c3aed','#be185d','#059669'];
+  document.querySelector('.btn-next').style.background = cols[m];
+  document.getElementById('qbox').style.borderLeftColor = cols[m];
+  render();
+}
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() {
+  const maxE = [barEtapes, pieEtapes, lineEtapes][mode].length;
+  if (etape < maxE-1) { etape++; render(); }
+}
+
+// ============================================================
+// DESSIN BARRES
+// ============================================================
+function drawBars(e) {
+  const W=480, H=280, padL=42, padB=45, padT=18, padR=14;
+  const chartW = W-padL-padR, chartH = H-padB-padT;
+  const maxVal = 14;
+  const barW = chartW / barData.length * 0.55;
+  const gap   = chartW / barData.length;
+  let h = '';
+
+  // Grille horizontale
+  for (let v=0; v<=maxVal; v+=2) {
+    const y = padT + chartH - (v/maxVal)*chartH;
+    h += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1"/>`;
+    h += `<text x="${padL-6}" y="${(y+4).toFixed(1)}" font-size="11" text-anchor="end" fill="#6b7280">${v}</text>`;
+  }
+  // Axes
+  h += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  h += `<line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  // Titre axes
+  h += `<text x="${padL-32}" y="${padT+chartH/2}" font-size="11" fill="#6b7280" transform="rotate(-90,${padL-32},${padT+chartH/2})" text-anchor="middle">Nb élèves</text>`;
+
+  // Barres
+  barData.forEach((d, i) => {
+    const x = padL + i*gap + (gap-barW)/2;
+    const bH = (d.val/maxVal)*chartH;
+    const y = padT + chartH - bH;
+    const isHL = e.hl === i;
+    const isFnd = isHL && e.found;
+    let fill = isFnd ? '#f59e0b' : isHL ? '#f97316' : d.color;
+    let stroke = isHL ? '#c2410c' : 'none';
+    h += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${bH.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="2" rx="3"/>`;
+    // Valeur sur la barre
+    if (isHL || e.final) {
+      h += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-5).toFixed(1)}" font-size="12" font-weight="bold" text-anchor="middle" fill="${isHL?'#c2410c':'#374151'}">${d.val}</text>`;
+    }
+    // Label bas
+    h += `<text x="${(x+barW/2).toFixed(1)}" y="${(padT+chartH+16).toFixed(1)}" font-size="10" text-anchor="middle" fill="#374151">${d.label}</text>`;
+    // Ligne pointillée de lecture
+    if (isHL) {
+      const topY = y;
+      h += `<line x1="${padL}" y1="${topY.toFixed(1)}" x2="${(x+barW/2).toFixed(1)}" y2="${topY.toFixed(1)}" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+      h += `<circle cx="${padL}" cy="${topY.toFixed(1)}" r="4" fill="#f97316"/>`;
+    }
+  });
+  return h;
+}
+
+// ============================================================
+// DESSIN CAMEMBERT
+// ============================================================
+function drawPie(e) {
+  const cx=170, cy=140, r=110;
+  let h = '';
+  let startAngle = -Math.PI/2;
+
+  pieData.forEach((d, i) => {
+    const angle = (d.pct/100)*2*Math.PI;
+    const endAngle = startAngle + angle;
+    const isHL = e.hl === i;
+    const isFnd = isHL && e.found;
+    const offset = isHL ? 10 : 0;
+    const midAngle = startAngle + angle/2;
+    const ocx = cx + Math.cos(midAngle)*offset;
+    const ocy = cy + Math.sin(midAngle)*offset;
+
+    const x1 = ocx + r*Math.cos(startAngle), y1 = ocy + r*Math.sin(startAngle);
+    const x2 = ocx + r*Math.cos(endAngle),   y2 = ocy + r*Math.sin(endAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    const fill = isFnd ? '#f59e0b' : isHL ? '#f97316' : d.color;
+    const stroke = isHL ? '#7c2d12' : 'white';
+    h += `<path d="M${ocx},${ocy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+
+    // Label pourcentage dans le secteur
+    const labelR = r * 0.65;
+    const lx = ocx + Math.cos(midAngle)*labelR, ly = ocy + Math.sin(midAngle)*labelR;
+    if (d.pct >= 10) {
+      h += `<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" font-size="12" font-weight="bold" text-anchor="middle" fill="white">${d.pct}%</text>`;
+    }
+    startAngle = endAngle;
+  });
+
+  // Légende à droite
+  pieData.forEach((d, i) => {
+    const ly = 60 + i*36;
+    const isHL = e.hl === i;
+    const fill = (isHL && e.found) ? '#f59e0b' : isHL ? '#f97316' : d.color;
+    h += `<rect x="305" y="${ly}" width="16" height="16" fill="${fill}" rx="3"/>`;
+    h += `<text x="327" y="${ly+13}" font-size="12" fill="${isHL?'#c2410c':'#374151'}" font-weight="${isHL?'bold':'normal'}">${d.label} — ${d.pct}%</text>`;
+  });
+
+  return h;
+}
+
+// ============================================================
+// DESSIN COURBE CARTÉSIENNE
+// ============================================================
+function drawLine(e) {
+  const W=480, H=280, padL=44, padB=42, padT=18, padR=14;
+  const chartW = W-padL-padR, chartH = H-padB-padT;
+  const maxVal = 25;
+  const n = lineData.length;
+  const xStep = chartW / (n-1);
+  let h = '';
+
+  // Grille
+  for (let v=0; v<=maxVal; v+=5) {
+    const y = padT + chartH - (v/maxVal)*chartH;
+    h += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1"/>`;
+    h += `<text x="${padL-6}" y="${(y+4).toFixed(1)}" font-size="11" text-anchor="end" fill="#6b7280">${v}</text>`;
+  }
+  // Axes
+  h += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  h += `<line x1="${padL}" y1="${padT+chartH}" x2="${W-padR}" y2="${padT+chartH}" stroke="#374151" stroke-width="2"/>`;
+  h += `<text x="${padL-36}" y="${padT+chartH/2}" font-size="11" fill="#6b7280" transform="rotate(-90,${padL-36},${padT+chartH/2})" text-anchor="middle">Temp. (°C)</text>`;
+
+  // Points et coordonnées
+  const pts = lineData.map((d, i) => ({
+    x: padL + i*xStep,
+    y: padT + chartH - (d.val/maxVal)*chartH
+  }));
+
+  // Zone sous la courbe
+  const areaPath = `M${pts[0].x},${padT+chartH} ` + pts.map(p=>`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') + ` L${pts[n-1].x},${padT+chartH} Z`;
+  h += `<path d="${areaPath}" fill="rgba(5,150,105,0.1)"/>`;
+
+  // Ligne courbe
+  const linePath = pts.map((p,i) => (i===0?`M`:`L`)+`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  h += `<path d="${linePath}" fill="none" stroke="#059669" stroke-width="2.5" stroke-linejoin="round"/>`;
+
+  // Segment surligné si maxSlope
+  if (e.showMaxSlope) {
+    const i1=4, i2=5;
+    h += `<line x1="${pts[i1].x.toFixed(1)}" y1="${pts[i1].y.toFixed(1)}" x2="${pts[i2].x.toFixed(1)}" y2="${pts[i2].y.toFixed(1)}" stroke="#f97316" stroke-width="4"/>`;
+  }
+
+  // Points
+  lineData.forEach((d, i) => {
+    const p = pts[i];
+    const isHL = e.hl === i;
+    const isFnd = isHL && e.found;
+    const fill = isFnd ? '#f59e0b' : isHL ? '#f97316' : '#059669';
+    const rr = isHL ? 7 : 5;
+    h += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${rr}" fill="${fill}" stroke="white" stroke-width="2"/>`;
+
+    // Lignes de lecture
+    if (isHL) {
+      h += `<line x1="${padL}" y1="${p.y.toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+      h += `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${padT+chartH}" stroke="#f97316" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+      h += `<circle cx="${padL}" cy="${p.y.toFixed(1)}" r="4" fill="#f97316"/>`;
+      h += `<text x="${padL-6}" y="${(p.y+4).toFixed(1)}" font-size="12" font-weight="bold" text-anchor="end" fill="#c2410c">${d.val}</text>`;
+    }
+
+    // Label mois
+    h += `<text x="${p.x.toFixed(1)}" y="${(padT+chartH+16).toFixed(1)}" font-size="11" text-anchor="middle" fill="#374151">${d.label}</text>`;
+
+    // Valeur sur point si final
+    if (e.final) {
+      h += `<text x="${(p.x+6).toFixed(1)}" y="${(p.y-8).toFixed(1)}" font-size="10" fill="#065f46" font-weight="bold">${d.val}°</text>`;
+    }
+  });
+
+  return h;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  const etapesArr = [barEtapes, pieEtapes, lineEtapes][mode];
+  const e = etapesArr[etape];
+  const cols = ['#7c3aed','#be185d','#059669'];
+  const col = cols[mode];
+
+  let svg = '';
+  if (mode===0) svg = drawBars(e);
+  else if (mode===1) svg = drawPie(e);
+  else svg = drawLine(e);
+
+  document.getElementById('diag').innerHTML = svg;
+
+  const qb = document.getElementById('qbox');
+  qb.textContent = e.q || '';
+  qb.style.display = e.q ? 'block' : 'none';
+  qb.style.borderLeftColor = col;
+
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${etapesArr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

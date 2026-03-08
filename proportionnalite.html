@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proportionnalité</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f0ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #6741d9; color: white; font-size: 1.3em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 12px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 13px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #5a21b6; border: 2px solid #a78bfa; }
+  .tab2 { background: #fce7f3; color: #9d174d; border: 2px solid #f9a8d4; }
+  .tab3 { background: #ecfdf5; color: #065f46; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #6741d9; color: white; border-color: #6741d9; }
+  .tab2.active { background: #be185d; color: white; border-color: #be185d; }
+  .tab3.active { background: #059669; color: white; border-color: #059669; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+
+  /* TABLEAU */
+  .tableau-wrap { margin: 10px auto; max-width: 480px; width: 95%; }
+  table { border-collapse: collapse; width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px #0002; }
+  th { background: #6741d9; color: white; padding: 10px 14px; font-size: 1em; }
+  td { padding: 12px 14px; text-align: center; font-size: 1.2em; font-weight: bold; border: 2px solid #e9ecef; color: #333; position: relative; min-width: 80px; }
+  td.mode1 th { background: #be185d; }
+  .cell-known { background: #f3f0ff; color: #4c1d95; }
+  .cell-unknown { background: #fff8e1; color: #92400e; font-style: italic; }
+  .cell-found { background: #d1fae5; color: #065f46; animation: popIn 0.4s ease; }
+  .cell-active { background: #fde8d8; color: #7c2d12; box-shadow: inset 0 0 0 3px #f97316; }
+  @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* FLÈCHES ET ANNOTATIONS SVG */
+  .annotation-zone { width: 100%; max-width: 480px; margin: 0 auto; }
+  svg.annot { width: 100%; overflow: visible; }
+
+  /* BOITE CALCUL */
+  .calcul-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 8px auto; max-width: 480px; width: 95%; font-size: 1em; color: #222; box-shadow: 0 2px 8px #0002; border-left: 5px solid #6741d9; min-height: 52px; line-height: 1.6; }
+  .calcul-box .op { font-size: 1.1em; font-weight: bold; }
+  .hl-purple { color: #6741d9; font-weight: bold; }
+  .hl-pink { color: #be185d; font-weight: bold; }
+  .hl-green { color: #059669; font-weight: bold; }
+  .hl-orange { color: #ea580c; font-weight: bold; }
+
+  .explication { background: white; border-radius: 14px; padding: 12px 18px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.96em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #aaa; min-height: 50px; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 4px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #6741d9; color: white; }
+  .arrow-label { font-size: 13px; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>📊 Remplir un tableau de proportionnalité</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Coefficient de proportionnalité</button>
+  <button class="tab tab2" onclick="setMode(1)">Retour à l'unité</button>
+  <button class="tab tab3" onclick="setMode(2)">Opération sur les colonnes</button>
+</div>
+<div class="scene">
+  <div class="tableau-wrap">
+    <table id="tableau">
+      <thead><tr id="thead"></tr></thead>
+      <tbody><tr id="tbody"></tr></tbody>
+    </table>
+  </div>
+  <div class="annotation-zone"><svg class="annot" id="annot" height="60" viewBox="0 0 480 60"></svg></div>
+  <div class="calcul-box" id="calcul-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0;
+let etape = 0;
+
+// Tableau commun : prix de stylos
+// quantité : 3 | 5 | ? | 12
+// prix     : 6 | ? | 16 | ?
+// coeff = 2 (prix = 2 × quantité)
+// retour à l'unité : 1 stylo = 2€
+// opération colonnes : col3 = col1 × ? → non, on va faire col4 = col1 × 4
+
+// Pour simplifier : on présente le même tableau mais avec des inconnues différentes selon la méthode
+const modes = [
+  // ===== MODE 0 : Coefficient =====
+  {
+    color: '#6741d9',
+    borderColor: '#6741d9',
+    titre: "Méthode 1 : Coefficient de proportionnalité",
+    // tableau : qté 2, 5, ?   prix 6, ?, 18
+    cols: ['', '2', '5', '?'],
+    rows: [['Quantité (stylos)', '2', '5', '9'], ['Prix (€)', '6', '?', '27']],
+    inconnues: [[false,false,true],[false,true,false]], // position des inconnues
+    etapes: [
+      {
+        text: "On a un tableau de proportionnalité. On connaît la quantité et le prix pour certaines colonnes. On cherche les valeurs manquantes.",
+        calcul: "Quantité : 2 → 5 → ?  |  Prix : 6 → ? → ?",
+        found: [], active: []
+      },
+      {
+        text: "On calcule le coefficient de proportionnalité k en divisant une valeur connue du prix par la quantité correspondante.",
+        calcul: `<span class='hl-purple'>k = Prix ÷ Quantité = 6 ÷ 2 = <strong>3</strong></span><br>Pour chaque stylo, on paie 3 €.`,
+        found: [], active: [], showCoeff: true
+      },
+      {
+        text: "On applique le coefficient pour trouver le prix de 5 stylos.",
+        calcul: `k = 3  →  Prix = <span class='hl-purple'>5 × 3 = <strong>15 €</strong></span>`,
+        found: [[1,1]], active: []
+      },
+      {
+        text: "On applique le coefficient pour trouver la quantité correspondant à 27 €.",
+        calcul: `k = 3  →  Quantité = <span class='hl-purple'>27 ÷ 3 = <strong>9</strong></span>`,
+        found: [[1,1],[0,2]], active: []
+      },
+      {
+        text: "✅ Le tableau est complet ! Prix = Quantité × 3 pour toutes les colonnes.",
+        calcul: `<span class='hl-green'>2×3=6 ✓ &nbsp;|&nbsp; 5×3=15 ✓ &nbsp;|&nbsp; 9×3=27 ✓</span>`,
+        found: [[1,1],[0,2]], active: [], final: true
+      }
+    ]
+  },
+  // ===== MODE 1 : Retour à l'unité =====
+  {
+    color: '#be185d',
+    borderColor: '#be185d',
+    titre: "Méthode 2 : Retour à l'unité",
+    cols: ['', '4', '1', '7'],
+    rows: [['Quantité (stylos)', '4', '1', '7'], ['Prix (€)', '12', '?', '?']],
+    inconnues: [[false,false,false],[false,true,true]],
+    etapes: [
+      {
+        text: "On connaît le prix pour 4 stylos. On va d'abord trouver le prix d'1 seul stylo, puis on en déduira les autres.",
+        calcul: "Quantité : 4 → 1 → 7  |  Prix : 12 → ? → ?",
+        found: [], active: []
+      },
+      {
+        text: "Retour à l'unité : on divise le prix par la quantité pour trouver le prix d'1 stylo.",
+        calcul: `<span class='hl-pink'>Prix de 1 stylo = 12 ÷ 4 = <strong>3 €</strong></span>`,
+        found: [[1,1]], active: []
+      },
+      {
+        text: "Maintenant on sait que 1 stylo coûte 3 €. On multiplie pour 7 stylos.",
+        calcul: `Prix de 1 stylo = 3 €<br><span class='hl-pink'>Prix de 7 stylos = 3 × 7 = <strong>21 €</strong></span>`,
+        found: [[1,1],[1,2]], active: []
+      },
+      {
+        text: "✅ Le tableau est complet ! On est passé par le prix d'1 unité pour tout calculer.",
+        calcul: `<span class='hl-green'>4 stylos = 12 € ✓ &nbsp;|&nbsp; 1 stylo = 3 € ✓ &nbsp;|&nbsp; 7 stylos = 21 € ✓</span>`,
+        found: [[1,1],[1,2]], active: [], final: true
+      }
+    ]
+  },
+  // ===== MODE 2 : Opérations sur les colonnes =====
+  {
+    color: '#059669',
+    borderColor: '#059669',
+    titre: "Méthode 3 : Opération sur les colonnes",
+    inconnues: [[false,false,false,false],[false,true,true,true]],
+    etapes: [
+      {
+        text: "Les colonnes sont liées par des opérations. On va appliquer les mêmes opérations à la ligne des prix. La dernière colonne (13) est obtenue en additionnant les colonnes 12 et 1.",
+        calcul: "Quantité : 3 → 12 (×4) → 1 (÷3) → 13 (col2+col3)  |  Prix : 9 → ? → ? → ?",
+        found: [], active: []
+      },
+      {
+        text: "La colonne 2 est obtenue en multipliant la colonne 1 par 4. On fait pareil pour le prix.",
+        calcul: `Quantité : 3 × 4 = 12<br><span class='hl-green'>Prix : 9 × 4 = <strong>36 €</strong></span>`,
+        found: [[1,1]], active: [], arrow: {from:0, to:1, op:'×4', color:'#059669'}
+      },
+      {
+        text: "La colonne 3 est obtenue en divisant la colonne 1 par 3. On fait pareil pour le prix.",
+        calcul: `Quantité : 3 ÷ 3 = 1<br><span class='hl-green'>Prix : 9 ÷ 3 = <strong>3 €</strong></span>`,
+        found: [[1,1],[1,2]], active: [], arrow: {from:0, to:2, op:'÷3', color:'#059669'}
+      },
+      {
+        text: "La colonne 4 (quantité 13) est la somme des colonnes 2 et 3 : 12 + 1 = 13. On additionne donc aussi les prix de ces deux colonnes.",
+        calcul: `Quantité : 12 + 1 = 13<br><span class='hl-green'>Prix : 36 + 3 = <strong>39 €</strong></span>`,
+        found: [[1,1],[1,2],[1,3]], active: [], arrowAdd: true
+      },
+      {
+        text: "✅ Le tableau est complet ! On a trouvé le prix de 13 stylos en additionnant les colonnes 12 et 1, sans recalculer depuis le début.",
+        calcul: `<span class='hl-green'>3→9€ ✓ &nbsp;|&nbsp; 12→36€ ✓ &nbsp;|&nbsp; 1→3€ ✓ &nbsp;|&nbsp; 13→39€ ✓</span>`,
+        found: [[1,1],[1,2],[1,3]], active: [], final: true
+      }
+    ]
+  }
+];
+
+// Valeurs finales des tableaux
+const finalValues = [
+  [['Quantité (stylos)','2','5','9'],['Prix (€)','6','15','27']],
+  [['Quantité (stylos)','4','1','7'],['Prix (€)','12','3','21']],
+  [['Quantité (stylos)','3','12','1','13'],['Prix (€)','9','36','3','39']]
+];
+
+function setMode(m) {
+  mode = m;
+  etape = 0;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===m));
+  const col = modes[m].color;
+  document.querySelector('.btn-next').style.background = col;
+  document.getElementById('calcul-box').style.borderLeftColor = col;
+  document.querySelector('thead').style.background = col;
+  render();
+}
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { const m = modes[mode]; if (etape < m.etapes.length-1) { etape++; render(); } }
+
+function render() {
+  const m = modes[mode];
+  const e = m.etapes[etape];
+  const col = m.color;
+  const fv = finalValues[mode];
+  const nbCols = fv[0].length; // label + données
+
+  // En-tête dynamique
+  const theadRow = document.getElementById('thead');
+  const headers = ['', 'Colonne 1', 'Colonne 2', 'Colonne 3'];
+  if (nbCols === 5) headers.push('Colonne 4');
+  theadRow.innerHTML = headers.slice(0, nbCols).map(h => `<th style="background:${col}">${h}</th>`).join('');
+
+  // Corps du tableau
+  let tbody_html = '';
+  for (let r = 0; r < 2; r++) {
+    tbody_html += '<tr>';
+    for (let c = 0; c < nbCols; c++) {
+      const isInconnue = m.inconnues[r] && c > 0 && m.inconnues[r][c-1];
+      const isFound = e.found && e.found.some(f => f[0]===r && f[1]===(c-1));
+      const isActive = e.active && e.active.some(a => a[0]===r && a[1]===(c-1));
+      let cls = '', val = '';
+      if (c === 0) {
+        cls = 'cell-known';
+        val = fv[r][0];
+      } else {
+        if (isFound || e.final) {
+          cls = 'cell-found';
+          val = fv[r][c];
+        } else if (isInconnue) {
+          cls = 'cell-unknown';
+          val = '?';
+        } else {
+          cls = 'cell-known';
+          val = fv[r][c];
+        }
+        if (isActive) cls += ' cell-active';
+      }
+      tbody_html += `<td class="${cls}">${val}</td>`;
+    }
+    tbody_html += '</tr>';
+  }
+  document.querySelector('#tableau tbody').innerHTML = tbody_html;
+
+  // Annotation SVG (flèches)
+  const svg = document.getElementById('annot');
+  // Positions X des colonnes de données selon nbCols
+  const positions = nbCols === 5 ? [70, 170, 270, 370] : [80, 200, 380];
+  let svgHtml = '';
+  if (e.showCoeff) {
+    svgHtml += arrow(positions[0], 30, positions[1], 30, '×3', col);
+    svgHtml += arrow(positions[0], 30, positions[2], 30, '×3', col, true);
+  }
+  if (e.arrow) {
+    const x1 = positions[e.arrow.from], x2 = positions[e.arrow.to];
+    svgHtml += arrow(x1, 30, x2, 30, e.arrow.op, e.arrow.color);
+  }
+  if (e.arrowAdd) {
+    // Flèche courbe de col2+col3 → col4
+    const x1 = positions[1], x2 = positions[2], x3 = positions[3];
+    svgHtml += arrowAdd(x1, x2, x3, 30, '+', col);
+  }
+  svg.innerHTML = svgHtml;
+
+  document.getElementById('calcul-box').innerHTML = `<div class="op">${e.calcul}</div>`;
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${m.etapes.length}`;
+}
+
+function arrow(x1, y1, x2, y2, label, color, dashed=false) {
+  const mx = (x1+x2)/2, my = y1 - 18;
+  const dash = dashed ? 'stroke-dasharray="6,3"' : '';
+  return `
+    <defs><marker id="arr${x2}" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="${color}"/>
+    </marker></defs>
+    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.5" ${dash} marker-end="url(#arr${x2})"/>
+    <rect x="${mx-18}" y="${my-13}" width="36" height="18" rx="8" fill="${color}"/>
+    <text x="${mx}" y="${my+1}" text-anchor="middle" font-size="12" font-weight="bold" fill="white">${label}</text>
+  `;
+}
+
+function arrowAdd(x1, x2, xTarget, y, label, color) {
+  return `
+    <defs>
+      <marker id="addArr1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="${color}"/>
+      </marker>
+      <marker id="addArr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="${color}"/>
+      </marker>
+    </defs>
+    <path d="M${x1},${y} Q${x1},${y-28} ${xTarget},${y}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#addArr1)"/>
+    <path d="M${x2},${y} Q${x2},${y-28} ${xTarget},${y}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#addArr2)"/>
+    <rect x="${xTarget-40}" y="${y-46}" width="80" height="18" rx="8" fill="${color}"/>
+    <text x="${xTarget}" y="${y-33}" text-anchor="middle" font-size="11" font-weight="bold" fill="white">col2 + col3</text>
+  `;
+}
+
+render();
+</script>
+</body>
+</html>

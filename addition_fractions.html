@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Addition de fractions</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fff8f0; min-height: 100vh; }
+  h1 { text-align: center; padding: 16px; background: #c2410c; color: white; font-size: 1.3em; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 12px; }
+
+  /* FRACTION VISUELLE */
+  .fractions-visuelles { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 10px 0; }
+  .frac-bloc { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .frac-label { font-size: 0.85em; color: #555; font-weight: bold; }
+  svg.pizza { width: 90px; height: 90px; }
+
+  .plus-sign { font-size: 2em; font-weight: bold; color: #c2410c; padding: 0 4px; align-self: center; }
+  .egal-sign { font-size: 2em; font-weight: bold; color: #059669; padding: 0 4px; align-self: center; }
+
+  /* FRACTION ÉCRITE */
+  .calcul-ecrit { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 14px 0; flex-wrap: wrap; }
+  .frac { display: inline-flex; flex-direction: column; align-items: center; font-size: 1.6em; font-weight: bold; }
+  .frac .num { padding: 2px 10px; }
+  .frac .bar { width: 100%; height: 3px; background: #333; margin: 2px 0; }
+  .frac .den { padding: 2px 10px; }
+  .frac.highlight .num { color: #c2410c; }
+  .frac.result .num { color: #059669; }
+  .frac.result .den { color: #059669; }
+  .frac.simplified { animation: popIn 0.4s ease; }
+  @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .op-sign { font-size: 1.8em; font-weight: bold; color: #555; align-self: center; }
+  .op-sign.result { color: #059669; }
+
+  /* RÈGLE */
+  .regle-box { background: #fef3c7; border: 2px solid #f59f00; border-radius: 12px; padding: 12px 18px; margin: 8px auto; max-width: 460px; width: 95%; font-size: 1em; color: #78350f; text-align: center; font-weight: bold; }
+  .regle-box span { color: #c2410c; }
+
+  .explication { background: white; border-radius: 14px; padding: 12px 18px; margin: 8px auto; max-width: 460px; width: 95%; font-size: 0.97em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #c2410c; min-height: 50px; }
+
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 4px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #c2410c; color: white; }
+
+  .note-simplif { background: #ecfdf5; border: 2px solid #6ee7b7; border-radius: 10px; padding: 10px 16px; margin: 6px auto; max-width: 460px; width: 95%; font-size: 0.95em; color: #065f46; text-align: center; font-weight: bold; animation: popIn 0.4s ease; }
+</style>
+</head>
+<body>
+<h1>➕ Addition de fractions de même dénominateur</h1>
+<div class="scene">
+  <div id="visuels"></div>
+  <div class="calcul-ecrit" id="calcul-ecrit"></div>
+  <div id="regle-box-wrap"></div>
+  <div class="explication" id="explication"></div>
+  <div id="note-simplif"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+// Exemple : 2/8 + 3/8 = 5/8 (pas simplifiable)
+// Et on montre aussi la simplification : 2/8 + 2/8 = 4/8 = 1/2
+// On fait les deux en un seul exemple : 3/8 + 2/8 = 5/8 (pas simplifiable) → garder simple
+// On fait un exemple avec simplification pour aller plus loin : 2/6 + 4/6 = 6/6 = 1
+
+// Exemple principal : 2/8 + 3/8 = 5/8
+const NUM1 = 2, NUM2 = 3, DEN = 8;
+const RESULT_NUM = NUM1 + NUM2; // 5
+const RESULT_DEN = DEN; // 8
+
+// GCD pour simplification
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+const g = gcd(RESULT_NUM, RESULT_DEN);
+const SIMP_NUM = RESULT_NUM / g;
+const SIMP_DEN = RESULT_DEN / g;
+const canSimplify = g > 1;
+
+// Couleurs des parts
+const COL1 = '#c2410c';  // orange-rouge pour les parts de la 1re fraction
+const COL2 = '#2563eb';  // bleu pour les parts de la 2e fraction
+const COL_RESULT = '#059669'; // vert pour le résultat
+
+const etapes = [
+  {
+    text: `On veut calculer ${NUM1}/${DEN} + ${NUM2}/${DEN}. Les deux fractions ont le même dénominateur : ${DEN}. Regardons d'abord ce que représentent ces fractions sur des disques.`,
+    showPizza1: true, showPizza2: true, showPizzaResult: false,
+    showFrac1: true, showFrac2: false, showResult: false,
+    showRegle: false
+  },
+  {
+    text: `Les deux fractions ont le même dénominateur ${DEN} : chaque disque est divisé en ${DEN} parts égales. La première fraction colorie ${NUM1} parts, la deuxième colorie ${NUM2} parts.`,
+    showPizza1: true, showPizza2: true, showPizzaResult: false,
+    showFrac1: true, showFrac2: true, showResult: false,
+    showRegle: false
+  },
+  {
+    text: `Pour additionner deux fractions de même dénominateur, on additionne uniquement les numérateurs et on garde le même dénominateur.`,
+    showPizza1: true, showPizza2: true, showPizzaResult: false,
+    showFrac1: true, showFrac2: true, showResult: false,
+    showRegle: true
+  },
+  {
+    text: `On additionne les numérateurs : ${NUM1} + ${NUM2} = ${RESULT_NUM}. Le dénominateur reste ${DEN}. Le résultat est ${RESULT_NUM}/${DEN}.`,
+    showPizza1: true, showPizza2: true, showPizzaResult: true,
+    showFrac1: true, showFrac2: true, showResult: true,
+    showRegle: true
+  },
+  canSimplify ? {
+    text: `On vérifie si la fraction ${RESULT_NUM}/${RESULT_DEN} peut être simplifiée. ${RESULT_NUM} et ${RESULT_DEN} sont tous les deux divisibles par ${g}. On simplifie !`,
+    showPizza1: false, showPizza2: false, showPizzaResult: true,
+    showFrac1: false, showFrac2: false, showResult: true,
+    showRegle: false, showSimplif: true
+  } : {
+    text: `✅ La fraction ${RESULT_NUM}/${RESULT_DEN} ne peut pas être simplifiée (${RESULT_NUM} et ${RESULT_DEN} n'ont pas de diviseur commun autre que 1). C'est le résultat final !`,
+    showPizza1: false, showPizza2: false, showPizzaResult: true,
+    showFrac1: false, showFrac2: false, showResult: true,
+    showRegle: false, final: true
+  }
+];
+
+// Ajouter étape finale si simplification
+if (canSimplify) {
+  etapes.push({
+    text: `✅ La fraction simplifiée est ${SIMP_NUM}/${SIMP_DEN}. On a bien : ${NUM1}/${DEN} + ${NUM2}/${DEN} = ${RESULT_NUM}/${RESULT_DEN} = ${SIMP_NUM}/${SIMP_DEN}.`,
+    showPizza1: false, showPizza2: false, showPizzaResult: true,
+    showFrac1: false, showFrac2: false, showResult: true,
+    showRegle: false, showSimplif: true, final: true
+  });
+}
+
+let etape = 0;
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < etapes.length - 1) { etape++; render(); } }
+
+// Dessine un disque en SVG divisé en N parts, dont 'filled' parts coloriées
+function pizzaSVG(n, filled, color, startPart = 0) {
+  const cx = 45, cy = 45, r = 38;
+  let html = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f3f4f6" stroke="#ddd" stroke-width="1.5"/>`;
+  for (let i = 0; i < n; i++) {
+    const a1 = (i / n) * 2 * Math.PI - Math.PI / 2;
+    const a2 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2;
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const fill = (i >= startPart && i < startPart + filled) ? color : 'none';
+    html += `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 0,1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${fill}" stroke="#bbb" stroke-width="1.2" opacity="0.85"/>`;
+  }
+  return html;
+}
+
+function fracHTML(num, den, cls='') {
+  return `<div class="frac ${cls}"><div class="num">${num}</div><div class="bar"></div><div class="den">${den}</div></div>`;
+}
+
+function render() {
+  const e = etapes[etape];
+
+  // Visuels pizzas
+  let vizHtml = '<div class="fractions-visuelles">';
+  if (e.showPizza1) {
+    vizHtml += `<div class="frac-bloc"><div class="frac-label" style="color:${COL1}">${NUM1}/${DEN}</div><svg class="pizza" viewBox="0 0 90 90">${pizzaSVG(DEN, NUM1, COL1)}</svg></div>`;
+  }
+  if (e.showPizza2) {
+    vizHtml += `<span class="plus-sign">+</span>`;
+    vizHtml += `<div class="frac-bloc"><div class="frac-label" style="color:${COL2}">${NUM2}/${DEN}</div><svg class="pizza" viewBox="0 0 90 90">${pizzaSVG(DEN, NUM2, COL2)}</svg></div>`;
+  }
+  if (e.showPizzaResult) {
+    vizHtml += `<span class="egal-sign">=</span>`;
+    // Pizza résultat : NUM1 parts en orange, NUM2 parts en bleu
+    vizHtml += `<div class="frac-bloc"><div class="frac-label" style="color:${COL_RESULT}">${RESULT_NUM}/${RESULT_DEN}</div><svg class="pizza" viewBox="0 0 90 90">${pizzaSVG(DEN, NUM1, COL1)}${pizzaSVG(DEN, NUM2, COL2, NUM1)}</svg></div>`;
+  }
+  vizHtml += '</div>';
+  document.getElementById('visuels').innerHTML = vizHtml;
+
+  // Pizza résultat combinée (superposer les deux couleurs)
+  // On recrée le SVG de la pizza résultat avec les deux couleurs
+  if (e.showPizzaResult) {
+    const pizzaWrap = document.querySelector('#visuels .fractions-visuelles .frac-bloc:last-child svg');
+    if (pizzaWrap) {
+      const cx = 45, cy = 45, r = 38;
+      let html = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f3f4f6" stroke="#ddd" stroke-width="1.5"/>`;
+      for (let i = 0; i < DEN; i++) {
+        const a1 = (i / DEN) * 2 * Math.PI - Math.PI / 2;
+        const a2 = ((i + 1) / DEN) * 2 * Math.PI - Math.PI / 2;
+        const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+        const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+        let fill = 'none';
+        if (i < NUM1) fill = COL1;
+        else if (i < NUM1 + NUM2) fill = COL2;
+        html += `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 0,1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${fill}" stroke="#bbb" stroke-width="1.2" opacity="0.85"/>`;
+      }
+      pizzaWrap.innerHTML = html;
+    }
+  }
+
+  // Calcul écrit
+  let calcHtml = '';
+  if (e.showFrac1) calcHtml += fracHTML(NUM1, DEN, 'highlight');
+  if (e.showFrac2) {
+    calcHtml += `<span class="op-sign">+</span>`;
+    calcHtml += fracHTML(NUM2, DEN, 'highlight');
+  }
+  if (e.showResult) {
+    calcHtml += `<span class="op-sign result">=</span>`;
+    calcHtml += fracHTML(RESULT_NUM, RESULT_DEN, 'result');
+  }
+  if (e.showSimplif && canSimplify) {
+    calcHtml += `<span class="op-sign result">=</span>`;
+    calcHtml += fracHTML(SIMP_NUM, SIMP_DEN, 'result simplified');
+  }
+  document.getElementById('calcul-ecrit').innerHTML = calcHtml;
+
+  // Règle
+  document.getElementById('regle-box-wrap').innerHTML = e.showRegle
+    ? `<div class="regle-box">📏 Même dénominateur → <span>on additionne les numérateurs</span>, le dénominateur ne change pas.</div>`
+    : '';
+
+  // Note simplification
+  document.getElementById('note-simplif').innerHTML = (e.showSimplif && canSimplify)
+    ? `<div class="note-simplif">÷${g} &nbsp;↑&nbsp; On divise numérateur et dénominateur par ${g} &nbsp;↑&nbsp; ÷${g}</div>`
+    : '';
+
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

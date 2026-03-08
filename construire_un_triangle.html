@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construire un triangle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 16px; background: #1971c2; color: white; font-size: 1.3em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 12px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 14px; border-radius: 20px; border: none; font-size: 0.85em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #e7f5ff; color: #1864ab; border: 2px solid #74c0fc; }
+  .tab2 { background: #f3fce4; color: #2f6e00; border: 2px solid #94d82d; }
+  .tab3 { background: #fff3bf; color: #864e00; border: 2px solid #ffd43b; }
+  .tab1.active { background: #1864ab; color: white; }
+  .tab2.active { background: #2f9e44; color: white; }
+  .tab3.active { background: #e67700; color: white; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#canvas { width: 100%; max-width: 500px; height: 300px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0001; }
+  .explication { background: white; border-radius: 14px; padding: 13px 18px; margin: 10px auto; max-width: 480px; width: 95%; font-size: 0.97em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #1971c2; min-height: 54px; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 4px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1971c2; color: white; }
+  .donnees { background: #e7f5ff; border-radius: 10px; padding: 8px 16px; margin: 8px auto; max-width: 480px; width: 95%; font-size: 0.93em; color: #1864ab; font-weight: bold; text-align: center; }
+</style>
+</head>
+<body>
+<h1>📐 Construire un triangle</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">3 côtés (SSS)</button>
+  <button class="tab tab2" onclick="setMode(1)">2 côtés + 1 angle (SAS)</button>
+  <button class="tab tab3" onclick="setMode(2)">1 côté + 2 angles (ASA)</button>
+</div>
+<div class="scene">
+  <div class="donnees" id="donnees"></div>
+  <svg id="canvas" viewBox="0 0 500 300"></svg>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0;
+let etape = 0;
+
+// ===== COORDONNÉES DES TRIANGLES =====
+// SSS : AB=7cm, BC=5cm, AC=6cm — échelle 36px/cm
+const S = 36;
+// A=(80,230), B=(332,230), C calculé
+const Ax=80, Ay=230, Bx=332, By=230;
+// AC=6, BC=5, AB=7 → C par intersection de cercles
+// C.x = (AB²+AC²-BC²)/(2*AB) = (49+36-25)/14 = 60/14 ≈ 4.286cm → *36 = 154.3px depuis A
+// C.y = sqrt(AC²-Cx²) = sqrt(36 - 18.37) = sqrt(17.63) ≈ 4.2cm → *36 = 151.1px
+const Ccx = Ax + (49+36-25)/(2*7)*S; // ≈ 234
+const Ccy = Ay - Math.sqrt(36*S*S - Math.pow((49+36-25)/(2*7)*S,2)); // ≈ 79
+
+// SAS : AB=8cm, angle A=50°, AC=6cm — échelle 32px/cm
+const S2=32;
+const A2x=80, A2y=230, B2x=80+8*S2, B2y=230;
+const ang50=50*Math.PI/180;
+const C2x=A2x+6*S2*Math.cos(ang50), C2y=A2y-6*S2*Math.sin(ang50);
+
+// ASA : AB=7cm, angle A=55°, angle B=65° — échelle 34px/cm
+const S3=34;
+const A3x=70, A3y=240, B3x=70+7*S3, B3y=240;
+const ang55=55*Math.PI/180, ang65=65*Math.PI/180;
+// angle C = 180-55-65=60°, C par intersection des deux demi-droites
+// droite depuis A : direction (cos55, -sin55)
+// droite depuis B : direction (-cos65, -sin65)
+// paramétrique : A + t*(cos55,-sin55) = B + s*(-cos65,-sin65)
+// t*cos55 + s*cos65 = B3x-A3x = 7*S3
+// t*sin55 = s*sin65
+// s = t*sin55/sin65 → t*cos55 + t*sin55*cos65/sin65 = 7*S3
+// t*(cos55 + sin55*cos65/sin65) = 7*S3
+const denom = Math.cos(ang55) + Math.sin(ang55)*Math.cos(ang65)/Math.sin(ang65);
+const t3 = 7*S3/denom;
+const C3x = A3x + t3*Math.cos(ang55);
+const C3y = A3y - t3*Math.sin(ang55);
+
+// ===== DONNÉES AFFICHÉES =====
+const donnees = [
+  "Données : AB = 7 cm | AC = 6 cm | BC = 5 cm",
+  "Données : AB = 8 cm | angle A = 50° | AC = 6 cm",
+  "Données : AB = 7 cm | angle A = 55° | angle B = 65°"
+];
+
+// ===== COULEURS =====
+const colors = ['#1864ab', '#2f9e44', '#e67700'];
+const borderColors = ['#1971c2', '#2f9e44', '#e67700'];
+
+// ===== ÉTAPES =====
+const modes = [
+  // SSS
+  [
+    { text: "On connaît les trois côtés : AB = 7 cm, AC = 6 cm, BC = 5 cm. On commence par tracer le côté AB = 7 cm." },
+    { text: "On place la pointe du compas en A et on trace un arc de cercle de rayon AC = 6 cm." },
+    { text: "On place la pointe du compas en B et on trace un arc de cercle de rayon BC = 5 cm." },
+    { text: "Le point C est à l'intersection des deux arcs. On le marque puis on trace les segments AC et BC." },
+    { text: "✅ Le triangle ABC est construit ! Il a bien AB = 7 cm, AC = 6 cm, BC = 5 cm." }
+  ],
+  // SAS
+  [
+    { text: "On connaît AB = 8 cm, l'angle en A = 50° et AC = 6 cm. On commence par tracer le côté AB = 8 cm." },
+    { text: "On place le rapporteur au point A (côté 0° sur AB) et on marque la graduation 50°." },
+    { text: "On trace la demi-droite depuis A dans la direction 50°." },
+    { text: "On reporte AC = 6 cm sur cette demi-droite avec le compas. On obtient le point C." },
+    { text: "On trace le segment BC pour fermer le triangle." },
+    { text: "✅ Le triangle ABC est construit ! AB = 8 cm, angle A = 50°, AC = 6 cm." }
+  ],
+  // ASA
+  [
+    { text: "On connaît AB = 7 cm, l'angle en A = 55° et l'angle en B = 65°. On commence par tracer AB = 7 cm." },
+    { text: "On place le rapporteur en A (sur AB) et on marque 55°. On trace la demi-droite depuis A." },
+    { text: "On place le rapporteur en B (côté 0° vers A, donc on lit 180°−65° = 115° ou on retourne le rapporteur) et on marque 65°. On trace la demi-droite depuis B." },
+    { text: "Le point C est à l'intersection des deux demi-droites. On le marque." },
+    { text: "✅ Le triangle ABC est construit ! AB = 7 cm, angle A = 55°, angle B = 65° (donc angle C = 60°)." }
+  ]
+];
+
+function setMode(m) {
+  mode = m;
+  etape = 0;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===m));
+  const nb = document.querySelector('.btn-next');
+  nb.style.background = ['#1971c2','#2f9e44','#e67700'][m];
+  render();
+}
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < modes[mode].length-1) { etape++; render(); } }
+
+// ===== INSTRUMENTS SVG =====
+function drawRuler(x1, y1, x2, y2, len_cm, scale) {
+  // règle horizontale simple
+  const w = len_cm * scale + 20, h = 22;
+  return `<rect x="${x1}" y="${y1}" width="${w}" height="${h}" rx="4" fill="rgba(255,235,150,0.7)" stroke="#bbb" stroke-width="1.2"/>
+    ${Array.from({length:len_cm*2+1},(_,i)=>{
+      const tx = x1+10+i*(scale/2);
+      const th = i%2===0 ? 14 : 8;
+      return `<line x1="${tx}" y1="${y1}" x2="${tx}" y2="${y1+th}" stroke="#888" stroke-width="1"/>` +
+        (i%2===0 && i>0 && i<len_cm*2 ? `<text x="${tx}" y="${y1+h-2}" font-size="8" text-anchor="middle" fill="#666">${i/2}</text>` : '');
+    }).join('')}`;
+}
+
+function drawCompass(cx, cy, r, color) {
+  // Compas : deux branches et arc
+  const arm = r * 0.7;
+  return `
+    <line x1="${cx}" y1="${cy}" x2="${cx-arm*0.4}" y2="${cy+arm}" stroke="#999" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="${cx}" y1="${cy}" x2="${cx+arm*0.4}" y2="${cy+arm}" stroke="#999" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="4" fill="#666"/>
+  `;
+}
+
+function arcSVG(cx, cy, r, a1, a2, color, dash='') {
+  // arc from angle a1 to a2 (radians, 0=right, CCW in SVG = CW math)
+  const x1 = cx + r*Math.cos(a1), y1 = cy - r*Math.sin(a1);
+  const x2 = cx + r*Math.cos(a2), y2 = cy - r*Math.sin(a2);
+  const large = (a2-a1) > Math.PI ? 1 : 0;
+  return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large} 0 ${x2.toFixed(1)},${y2.toFixed(1)}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="${dash}"/>`;
+}
+
+function rapporteurSVG(cx, cy, R, baseAngle, highlightAngle, color) {
+  // demi-cercle rapporteur centré en cx,cy, base sur baseAngle
+  let html = '';
+  // fond
+  html += `<path d="M${cx-R},${cy} A${R},${R} 0 0 1 ${cx+R},${cy}" fill="rgba(200,230,255,0.4)" stroke="#3b5bdb" stroke-width="1.5"/>`;
+  html += `<line x1="${cx-R}" y1="${cy}" x2="${cx+R}" y2="${cy}" stroke="#3b5bdb" stroke-width="1.5"/>`;
+  // graduations
+  for(let a=0;a<=180;a+=10){
+    const ra=a*Math.PI/180;
+    const inner = a%30===0 ? R-14 : R-8;
+    const ox=cx+Math.cos(ra)*R, oy=cy-Math.sin(ra)*R;
+    const ix=cx+Math.cos(ra)*inner, iy=cy-Math.sin(ra)*inner;
+    html += `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="#3b5bdb" stroke-width="${a%30===0?1.5:0.8}"/>`;
+    if(a%30===0){
+      const tx=cx+Math.cos(ra)*(R-22), ty=cy-Math.sin(ra)*(R-22);
+      html += `<text x="${tx.toFixed(1)}" y="${(ty+4).toFixed(1)}" font-size="9" text-anchor="middle" fill="#1864ab">${a}</text>`;
+    }
+  }
+  // point sur highlightAngle
+  if(highlightAngle !== null){
+    const ra=highlightAngle*Math.PI/180;
+    const px=cx+Math.cos(ra)*R, py=cy-Math.sin(ra)*R;
+    html += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${color}" opacity="0.85"/>`;
+  }
+  html += `<circle cx="${cx}" cy="${cy}" r="3" fill="#e63946"/>`;
+  return html;
+}
+
+// ===== RENDER =====
+function render() {
+  const svg = document.getElementById('canvas');
+  const col = colors[mode];
+  let html = '';
+
+  if (mode === 0) html = renderSSS();
+  else if (mode === 1) html = renderSAS();
+  else html = renderASA();
+
+  svg.innerHTML = html;
+
+  const step = modes[mode][etape];
+  document.getElementById('explication').textContent = step.text;
+  document.getElementById('donnees').textContent = donnees[mode];
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${modes[mode].length}`;
+}
+
+function compassSVG(needleX, needleY, r, arcAngleRad, color) {
+  // Compas réel : articulation EN HAUT, jambe aiguille descend sur le point, jambe crayon vers l'arc
+  const legLen = 70;
+  const halfOpen = 0.28;
+  // Articulation au-dessus et légèrement à droite de la pointe
+  const hinge_x = needleX + legLen * Math.sin(halfOpen);
+  const hinge_y = needleY - legLen * Math.cos(halfOpen);
+  // Point sur l'arc (où va la mine crayon)
+  const arcPtX = needleX + r * Math.cos(arcAngleRad);
+  const arcPtY = needleY - r * Math.sin(arcAngleRad);
+  // Direction articulation → arc, normalisée × legLen
+  const dx = arcPtX - hinge_x, dy = arcPtY - hinge_y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const pencilX = hinge_x + (dx/dist)*legLen;
+  const pencilY = hinge_y + (dy/dist)*legLen;
+  let h = '';
+  // Jambe aiguille : articulation → pointe sur A
+  h += `<line x1="${hinge_x.toFixed(1)}" y1="${hinge_y.toFixed(1)}" x2="${needleX}" y2="${needleY}" stroke="#777" stroke-width="3" stroke-linecap="round"/>`;
+  // Jambe crayon : articulation → mine
+  h += `<line x1="${hinge_x.toFixed(1)}" y1="${hinge_y.toFixed(1)}" x2="${pencilX.toFixed(1)}" y2="${pencilY.toFixed(1)}" stroke="#777" stroke-width="3" stroke-linecap="round"/>`;
+  // Articulation (vis) en haut
+  h += `<circle cx="${hinge_x.toFixed(1)}" cy="${hinge_y.toFixed(1)}" r="6" fill="#ccc" stroke="#888" stroke-width="1.5"/>`;
+  h += `<circle cx="${hinge_x.toFixed(1)}" cy="${hinge_y.toFixed(1)}" r="2.5" fill="#888"/>`;
+  // Pointe aiguille sur A (triangle pointu)
+  h += `<polygon points="${needleX},${needleY+1} ${needleX-4},${needleY-8} ${needleX+4},${needleY-8}" fill="#555"/>`;
+  // Mine crayon
+  h += `<rect x="${(pencilX-3).toFixed(1)}" y="${(pencilY-3).toFixed(1)}" width="6" height="6" fill="${color}" rx="1"/>`;
+  // Ligne pointillée du rayon
+  h += `<line x1="${needleX}" y1="${needleY}" x2="${arcPtX.toFixed(1)}" y2="${arcPtY.toFixed(1)}" stroke="${color}" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.5"/>`;
+  return h;
+}
+
+function renderSSS() {
+  let h = '';
+  const col = '#1864ab';
+  const arcCol = '#e63946';
+  const arcCol2 = '#f59f00';
+
+  // Angles exacts de C depuis A et depuis B
+  const angCA = Math.atan2(Ay - Ccy, Ccx - Ax); // ≈ 44.5° en rad
+  const angCB = Math.atan2(By - Ccy, Ccx - Bx);  // ≈ 123° en rad (depuis B)
+
+  // Segment AB (toujours visible)
+  h += `<line x1="${Ax}" y1="${Ay}" x2="${Bx}" y2="${By}" stroke="${col}" stroke-width="3"/>`;
+  h += `<circle cx="${Ax}" cy="${Ay}" r="5" fill="${col}"/>`;
+  h += `<circle cx="${Bx}" cy="${By}" r="5" fill="${col}"/>`;
+  h += `<text x="${Ax-16}" y="${Ay+20}" font-size="15" font-weight="bold" fill="${col}">A</text>`;
+  h += `<text x="${Bx+7}" y="${By+20}" font-size="15" font-weight="bold" fill="${col}">B</text>`;
+  h += `<text x="${(Ax+Bx)/2}" y="${Ay+24}" font-size="12" text-anchor="middle" fill="#888">7 cm</text>`;
+
+  // Étape 1 : compas centré en A, arc de rayon AC=6cm autour de C
+  if (etape >= 1) {
+    // Arc depuis A : on trace autour de l'angle vers C (±40°)
+    h += arcSVG(Ax, Ay, 6*S, angCA - 0.7, angCA + 0.7, arcCol, '7,4');
+    // Compas pivot en A, bras crayon orienté vers C
+    h += compassSVG(Ax, Ay, 6*S, angCA, arcCol);
+    // Label rayon
+    const lx = Ax + Math.cos(angCA + 0.85)*6*S*0.55;
+    const ly = Ay - Math.sin(angCA + 0.85)*6*S*0.55;
+    h += `<text x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" font-size="11" fill="${arcCol}" font-weight="bold">r = 6 cm</text>`;
+  }
+
+  // Étape 2 : compas centré en B, arc de rayon BC=5cm autour de C
+  if (etape >= 2) {
+    // Arc depuis B autour de l'angle vers C (±40°)
+    h += arcSVG(Bx, By, 5*S, angCB - 0.7, angCB + 0.7, arcCol2, '7,4');
+    // Compas pivot en B
+    h += compassSVG(Bx, By, 5*S, angCB, arcCol2);
+    // Label rayon
+    const lx2 = Bx + Math.cos(angCB - 0.85)*5*S*0.55;
+    const ly2 = By - Math.sin(angCB - 0.85)*5*S*0.55;
+    h += `<text x="${lx2.toFixed(0)}" y="${ly2.toFixed(0)}" font-size="11" fill="${arcCol2}" font-weight="bold">r = 5 cm</text>`;
+  }
+
+  // Étape 3 : point C et côtés AC, BC
+  if (etape >= 3) {
+    // Garder les arcs visibles
+    h += arcSVG(Ax, Ay, 6*S, angCA - 0.7, angCA + 0.7, arcCol, '7,4');
+    h += arcSVG(Bx, By, 5*S, angCB - 0.7, angCB + 0.7, arcCol2, '7,4');
+    h += `<line x1="${Ax}" y1="${Ay}" x2="${Ccx.toFixed(1)}" y2="${Ccy.toFixed(1)}" stroke="${col}" stroke-width="2.5"/>`;
+    h += `<line x1="${Bx}" y1="${By}" x2="${Ccx.toFixed(1)}" y2="${Ccy.toFixed(1)}" stroke="${col}" stroke-width="2.5"/>`;
+    h += `<circle cx="${Ccx.toFixed(1)}" cy="${Ccy.toFixed(1)}" r="6" fill="#e63946" stroke="white" stroke-width="2"/>`;
+    h += `<text x="${Ccx+8}" y="${Ccy-8}" font-size="15" font-weight="bold" fill="#e63946">C</text>`;
+    const mAC_x = (Ax+Ccx)/2-22, mAC_y = (Ay+Ccy)/2;
+    const mBC_x = (Bx+Ccx)/2+8,  mBC_y = (By+Ccy)/2;
+    h += `<text x="${mAC_x.toFixed(0)}" y="${mAC_y.toFixed(0)}" font-size="11" fill="#555">6 cm</text>`;
+    h += `<text x="${mBC_x.toFixed(0)}" y="${mBC_y.toFixed(0)}" font-size="11" fill="#555">5 cm</text>`;
+  }
+
+  // Étape 4 : triangle rempli
+  if (etape >= 4) {
+    h = `<polygon points="${Ax},${Ay} ${Bx},${By} ${Ccx.toFixed(1)},${Ccy.toFixed(1)}" fill="rgba(25,113,194,0.12)" stroke="${col}" stroke-width="2.5"/>` + h;
+    h += `<text x="206" y="272" font-size="14" font-weight="bold" fill="${col}" text-anchor="middle">✓ Triangle construit !</text>`;
+  }
+
+  return h;
+}
+
+function renderSAS() {
+  let h = '';
+  const col = '#2f9e44';
+
+  // AB toujours
+  h += `<line x1="${A2x}" y1="${A2y}" x2="${B2x}" y2="${B2y}" stroke="${col}" stroke-width="3"/>`;
+  h += `<circle cx="${A2x}" cy="${A2y}" r="5" fill="${col}"/>`;
+  h += `<circle cx="${B2x}" cy="${B2y}" r="5" fill="${col}"/>`;
+  h += `<text x="${A2x-16}" y="${A2y+18}" font-size="15" font-weight="bold" fill="${col}">A</text>`;
+  h += `<text x="${B2x+6}" y="${B2y+18}" font-size="15" font-weight="bold" fill="${col}">B</text>`;
+  h += `<text x="${(A2x+B2x)/2}" y="${A2y+22}" font-size="12" text-anchor="middle" fill="#888">8 cm</text>`;
+
+  // Étape 1 : rapporteur en A
+  if (etape >= 1) {
+    h += rapporteurSVG(A2x, A2y, 70, 0, etape >= 2 ? 50 : null, '#e63946', col);
+    h += `<text x="${A2x+10}" y="${A2y-60}" font-size="11" fill="#e63946">50°</text>`;
+  }
+
+  // Étape 2 : demi-droite direction 50°
+  if (etape >= 2) {
+    const dx = Math.cos(ang50)*200, dy = -Math.sin(ang50)*200;
+    h += `<line x1="${A2x}" y1="${A2y}" x2="${(A2x+dx).toFixed(1)}" y2="${(A2y+dy).toFixed(1)}" stroke="#f59f00" stroke-width="2" stroke-dasharray="7,4"/>`;
+  }
+
+  // Étape 3 : compas depuis A, reporter AC=6cm
+  if (etape >= 3) {
+    h += arcSVG(A2x, A2y, 6*S2, ang50-0.4, ang50+0.4, '#e63946', '');
+    h += `<circle cx="${C2x.toFixed(1)}" cy="${C2y.toFixed(1)}" r="5" fill="#e63946"/>`;
+    h += `<text x="${C2x+8}" y="${C2y-8}" font-size="15" font-weight="bold" fill="#e63946">C</text>`;
+    h += `<text x="${(A2x+C2x)/2-24}" y="${(A2y+C2y)/2}" font-size="11" fill="#888">6 cm</text>`;
+  }
+
+  // Étape 4 : segment BC
+  if (etape >= 4) {
+    h += `<line x1="${B2x}" y1="${B2y}" x2="${C2x.toFixed(1)}" y2="${C2y.toFixed(1)}" stroke="${col}" stroke-width="2.5"/>`;
+  }
+
+  // Étape 5 : finition
+  if (etape >= 5) {
+    h = `<polygon points="${A2x},${A2y} ${B2x},${B2y} ${C2x.toFixed(1)},${C2y.toFixed(1)}" fill="rgba(47,158,68,0.1)" stroke="${col}" stroke-width="2.5"/>` + h;
+    h += `<text x="250" y="278" font-size="14" font-weight="bold" fill="${col}" text-anchor="middle">✓ Triangle construit !</text>`;
+  }
+
+  return h;
+}
+
+function renderASA() {
+  let h = '';
+  const col = '#e67700';
+
+  // AB toujours
+  h += `<line x1="${A3x}" y1="${A3y}" x2="${B3x}" y2="${B3y}" stroke="${col}" stroke-width="3"/>`;
+  h += `<circle cx="${A3x}" cy="${A3y}" r="5" fill="${col}"/>`;
+  h += `<circle cx="${B3x}" cy="${B3y}" r="5" fill="${col}"/>`;
+  h += `<text x="${A3x-18}" y="${A3y+18}" font-size="15" font-weight="bold" fill="${col}">A</text>`;
+  h += `<text x="${B3x+6}" y="${B3y+18}" font-size="15" font-weight="bold" fill="${col}">B</text>`;
+  h += `<text x="${(A3x+B3x)/2}" y="${A3y+22}" font-size="12" text-anchor="middle" fill="#888">7 cm</text>`;
+
+  // Étape 1 : rapporteur en A, 55°
+  if (etape >= 1) {
+    h += rapporteurSVG(A3x, A3y, 68, 0, etape>=1?55:null, '#e63946', col);
+    // demi-droite depuis A
+    const dx=Math.cos(ang55)*220, dy=-Math.sin(ang55)*220;
+    h += `<line x1="${A3x}" y1="${A3y}" x2="${(A3x+dx).toFixed(1)}" y2="${(A3y+dy).toFixed(1)}" stroke="#e63946" stroke-width="2" stroke-dasharray="7,4"/>`;
+    h += `<text x="${A3x+16}" y="${A3y-58}" font-size="11" fill="#e63946">55°</text>`;
+  }
+
+  // Étape 2 : rapporteur en B, 65°
+  if (etape >= 2) {
+    // rapporteur en B : on affiche tourné (180°-65°=115° côté standard)
+    const R3=68;
+    // demi-cercle en B, orienté vers la gauche (0 = vers A)
+    const cx=B3x, cy=B3y;
+    h += `<path d="M${cx+R3},${cy} A${R3},${R3} 0 0 0 ${cx-R3},${cy}" fill="rgba(200,230,255,0.4)" stroke="#3b5bdb" stroke-width="1.5"/>`;
+    h += `<line x1="${cx-R3}" y1="${cy}" x2="${cx+R3}" y2="${cy}" stroke="#3b5bdb" stroke-width="1.5"/>`;
+    // graduation 65° depuis B vers la gauche = angle 180-65=115° standard
+    const ra = (180-65)*Math.PI/180;
+    const px=cx+Math.cos(ra)*R3, py=cy-Math.sin(ra)*R3;
+    h += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="#f59f00" opacity="0.9"/>`;
+    h += `<text x="${B3x-70}" y="${B3y-55}" font-size="11" fill="#f59f00">65°</text>`;
+    // demi-droite depuis B
+    const dx2=Math.cos(Math.PI-ang65)*220, dy2=-Math.sin(Math.PI-ang65)*220;
+    h += `<line x1="${B3x}" y1="${B3y}" x2="${(B3x+dx2).toFixed(1)}" y2="${(B3y+dy2).toFixed(1)}" stroke="#f59f00" stroke-width="2" stroke-dasharray="7,4"/>`;
+  }
+
+  // Étape 3+ : point C intersection
+  if (etape >= 3) {
+    h += `<circle cx="${C3x.toFixed(1)}" cy="${C3y.toFixed(1)}" r="6" fill="#e63946"/>`;
+    h += `<text x="${C3x+8}" y="${C3y-8}" font-size="15" font-weight="bold" fill="#e63946">C</text>`;
+  }
+
+  // Étape 4 : triangle complet
+  if (etape >= 4) {
+    h = `<polygon points="${A3x},${A3y} ${B3x},${B3y} ${C3x.toFixed(1)},${C3y.toFixed(1)}" fill="rgba(230,119,0,0.1)" stroke="${col}" stroke-width="2.5"/>` + h;
+    h += `<line x1="${A3x}" y1="${A3y}" x2="${C3x.toFixed(1)}" y2="${C3y.toFixed(1)}" stroke="${col}" stroke-width="2.5"/>`;
+    h += `<line x1="${B3x}" y1="${B3y}" x2="${C3x.toFixed(1)}" y2="${C3y.toFixed(1)}" stroke="${col}" stroke-width="2.5"/>`;
+    // angle C = 60°
+    h += `<text x="${C3x+10}" y="${C3y+5}" font-size="11" fill="#888">60°</text>`;
+    h += `<text x="250" y="288" font-size="14" font-weight="bold" fill="${col}" text-anchor="middle">✓ Triangle construit !</text>`;
+  }
+
+  return h;
+}
+
+render();
+</script>
+</body>
+</html>

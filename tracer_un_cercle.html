@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracer un cercle</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 16px; background: #0369a1; color: white; font-size: 1.3em; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+  svg#canvas { width: 100%; max-width: 480px; height: 340px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0001; }
+  .explication { background: white; border-radius: 14px; padding: 13px 18px; margin: 10px auto; max-width: 460px; width: 95%; font-size: 0.97em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #0369a1; min-height: 52px; }
+  .regle-box { background: #e0f2fe; border: 2px solid #38bdf8; border-radius: 12px; padding: 10px 16px; margin: 6px auto; max-width: 460px; width: 95%; font-size: 0.95em; color: #0c4a6e; font-weight: bold; text-align: center; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 4px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #0369a1; color: white; }
+</style>
+</head>
+<body>
+<h1>⭕ Tracer un cercle au compas</h1>
+<div class="scene">
+  <svg id="canvas" viewBox="0 0 480 340"></svg>
+  <div id="regle"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let etape = 0;
+
+// Centre du cercle et rayon
+const CX = 240, CY = 175, R = 100;
+
+const etapes = [
+  {
+    text: "On veut tracer un cercle de centre O et de rayon 3 cm. On commence par placer le point O sur la feuille.",
+    showO: true, showRayon: false, showCompas: false, showCercle: false, arcAngle: 0,
+    regle: ""
+  },
+  {
+    text: "On ouvre le compas à exactement 3 cm en mesurant sur la règle graduée.",
+    showO: true, showRayon: false, showCompas: true, showCercle: false, arcAngle: 0,
+    regle: "📏 Le rayon = distance entre la pointe et la mine du compas = 3 cm"
+  },
+  {
+    text: "On place la pointe du compas exactement sur le point O.",
+    showO: true, showRayon: false, showCompas: true, showCercle: false, arcAngle: 0, compasOnO: true,
+    regle: "📌 La pointe aiguille doit être EXACTEMENT sur le centre O."
+  },
+  {
+    text: "On fait tourner le compas en gardant la pointe fixée sur O. La mine trace le cercle.",
+    showO: true, showRayon: true, showCompas: true, showCercle: false, arcAngle: 200, compasOnO: true,
+    regle: ""
+  },
+  {
+    text: "On continue à faire tourner jusqu'à revenir au point de départ.",
+    showO: true, showRayon: true, showCompas: true, showCercle: false, arcAngle: 340, compasOnO: true,
+    regle: ""
+  },
+  {
+    text: "✅ Le cercle est tracé ! Tous les points du cercle sont à la même distance du centre O : cette distance s'appelle le rayon.",
+    showO: true, showRayon: true, showCompas: false, showCercle: true, arcAngle: 360,
+    regle: "⭕ Un cercle = ensemble des points à égale distance (le rayon) d'un point central (le centre)."
+  }
+];
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < etapes.length - 1) { etape++; render(); } }
+
+function compassSVG(needleX, needleY, r, angleRad) {
+  const legLen = 75;
+  const halfOpen = 0.30;
+  const hinge_x = needleX + legLen * Math.sin(halfOpen);
+  const hinge_y = needleY - legLen * Math.cos(halfOpen);
+  const arcPtX = needleX + r * Math.cos(angleRad);
+  const arcPtY = needleY - r * Math.sin(angleRad);
+  const dx = arcPtX - hinge_x, dy = arcPtY - hinge_y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const pencilX = hinge_x + (dx/dist)*legLen;
+  const pencilY = hinge_y + (dy/dist)*legLen;
+  let h = '';
+  // Jambe aiguille
+  h += `<line x1="${hinge_x.toFixed(1)}" y1="${hinge_y.toFixed(1)}" x2="${needleX}" y2="${needleY}" stroke="#666" stroke-width="3.5" stroke-linecap="round"/>`;
+  // Jambe crayon
+  h += `<line x1="${hinge_x.toFixed(1)}" y1="${hinge_y.toFixed(1)}" x2="${pencilX.toFixed(1)}" y2="${pencilY.toFixed(1)}" stroke="#666" stroke-width="3.5" stroke-linecap="round"/>`;
+  // Articulation
+  h += `<circle cx="${hinge_x.toFixed(1)}" cy="${hinge_y.toFixed(1)}" r="7" fill="#bbb" stroke="#888" stroke-width="1.5"/>`;
+  h += `<circle cx="${hinge_x.toFixed(1)}" cy="${hinge_y.toFixed(1)}" r="3" fill="#777"/>`;
+  // Pointe aiguille (triangle)
+  h += `<polygon points="${needleX},${needleY+2} ${needleX-4},${needleY-9} ${needleX+4},${needleY-9}" fill="#444"/>`;
+  // Mine crayon (bleu)
+  h += `<rect x="${(pencilX-3).toFixed(1)}" y="${(pencilY-4).toFixed(1)}" width="6" height="8" fill="#2563eb" rx="1"/>`;
+  return h;
+}
+
+function render() {
+  const e = etapes[etape];
+  const svg = document.getElementById('canvas');
+  let h = '';
+
+  // Quadrillage léger (papier)
+  for (let x = 0; x <= 480; x += 20)
+    h += `<line x1="${x}" y1="0" x2="${x}" y2="340" stroke="#e0f2fe" stroke-width="0.7"/>`;
+  for (let y = 0; y <= 340; y += 20)
+    h += `<line x1="0" y1="${y}" x2="480" y2="${y}" stroke="#e0f2fe" stroke-width="0.7"/>`;
+
+  // Arc de cercle en cours de tracé
+  if (e.arcAngle > 0 && !e.showCercle) {
+    const a = e.arcAngle * Math.PI / 180;
+    // Arc de 0 à arcAngle (depuis droite, sens trigo)
+    const startX = CX + R, startY = CY;
+    const endX = CX + R * Math.cos(-a + 0), endY = CY + R * Math.sin(-a + 0);
+    // On trace l'arc SVG
+    if (e.arcAngle < 360) {
+      const large = e.arcAngle > 180 ? 1 : 0;
+      // Départ à droite (angle 0), sens anti-horaire SVG (sweep=0)
+      const ex = CX + R * Math.cos(e.arcAngle * Math.PI / 180);
+      const ey = CY - R * Math.sin(e.arcAngle * Math.PI / 180);
+      h += `<path d="M${CX+R},${CY} A${R},${R} 0 ${large},0 ${ex.toFixed(1)},${ey.toFixed(1)}" fill="none" stroke="#0369a1" stroke-width="2.5"/>`;
+    }
+  }
+
+  // Cercle complet
+  if (e.showCercle) {
+    h += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="rgba(3,105,161,0.07)" stroke="#0369a1" stroke-width="2.5"/>`;
+  }
+
+  // Rayon (ligne du centre vers la mine)
+  if (e.showRayon) {
+    const compasAngle = e.arcAngle * Math.PI / 180;
+    const rx = CX + R * Math.cos(compasAngle);
+    const ry = CY - R * Math.sin(compasAngle);
+    h += `<line x1="${CX}" y1="${CY}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="#f59f00" stroke-width="1.8" stroke-dasharray="6,3"/>`;
+    // Label rayon
+    const mx = CX + (R/2)*Math.cos(compasAngle+0.3), my = CY - (R/2)*Math.sin(compasAngle+0.3);
+    h += `<text x="${mx.toFixed(0)}" y="${(my-6).toFixed(0)}" font-size="13" font-weight="bold" fill="#d97706" text-anchor="middle">r = 3 cm</text>`;
+  }
+
+  // Compas
+  if (e.showCompas) {
+    if (e.compasOnO) {
+      const compasAngle = e.arcAngle * Math.PI / 180;
+      h += compassSVG(CX, CY, R, compasAngle);
+    } else {
+      // ===== COMPAS POSÉ SUR LA RÈGLE : pointe sur 0, mine sur 3cm =====
+      const rulerX = 90, rulerY = 230, rulerW = 300, rulerH = 26;
+      const cmScale = rulerW / 9; // 9 cm affichés
+
+      // Corps de la règle
+      h += `<rect x="${rulerX}" y="${rulerY}" width="${rulerW}" height="${rulerH}" rx="4" fill="rgba(255,235,150,0.95)" stroke="#b45309" stroke-width="2"/>`;
+      // Ligne rouge en haut
+      h += `<line x1="${rulerX+4}" y1="${rulerY+4}" x2="${rulerX+rulerW-4}" y2="${rulerY+4}" stroke="#e63946" stroke-width="2"/>`;
+      // Graduations
+      for (let i = 0; i <= 18; i++) {
+        const tx = rulerX + i * (cmScale/2);
+        const th = i%2===0 ? 16 : 9;
+        h += `<line x1="${tx.toFixed(1)}" y1="${rulerY}" x2="${tx.toFixed(1)}" y2="${(rulerY+th).toFixed(1)}" stroke="#555" stroke-width="${i%2===0?1.5:1}"/>`;
+        if (i%2===0) h += `<text x="${tx.toFixed(1)}" y="${(rulerY+rulerH+12).toFixed(1)}" font-size="11" text-anchor="middle" fill="#555">${i/2}</text>`;
+      }
+
+      // Pointe aiguille sur le 0, mine sur le 3cm
+      const needleX = rulerX; // 0 cm
+      const pencilX = rulerX + 3 * cmScale; // 3 cm
+      const rulerTopY = rulerY;
+
+      // Articulation au-dessus, centrée entre les deux pointes
+      const hingeX = (needleX + pencilX) / 2;
+      const hingeY = rulerTopY - 85;
+
+      // Jambe aiguille : articulation → pointe sur 0
+      h += `<line x1="${hingeX.toFixed(1)}" y1="${hingeY.toFixed(1)}" x2="${needleX}" y2="${rulerTopY}" stroke="#666" stroke-width="3.5" stroke-linecap="round"/>`;
+      // Jambe crayon : articulation → mine sur 3cm
+      h += `<line x1="${hingeX.toFixed(1)}" y1="${hingeY.toFixed(1)}" x2="${pencilX.toFixed(1)}" y2="${rulerTopY}" stroke="#666" stroke-width="3.5" stroke-linecap="round"/>`;
+      // Articulation (vis)
+      h += `<circle cx="${hingeX.toFixed(1)}" cy="${hingeY.toFixed(1)}" r="8" fill="#bbb" stroke="#888" stroke-width="1.5"/>`;
+      h += `<circle cx="${hingeX.toFixed(1)}" cy="${hingeY.toFixed(1)}" r="3.5" fill="#777"/>`;
+      // Pointe aiguille sur 0 (triangle)
+      h += `<polygon points="${needleX},${rulerTopY+3} ${needleX-5},${rulerTopY-10} ${needleX+5},${rulerTopY-10}" fill="#444"/>`;
+      // Mine crayon bleue sur 3cm
+      h += `<rect x="${(pencilX-4).toFixed(1)}" y="${(rulerTopY-12).toFixed(1)}" width="8" height="14" fill="#2563eb" rx="1"/>`;
+
+      // Cercles de contact (comme dans ta capture)
+      h += `<circle cx="${needleX}" cy="${rulerTopY}" r="6" fill="none" stroke="#0369a1" stroke-width="2.5"/>`;
+      h += `<circle cx="${pencilX.toFixed(1)}" cy="${rulerTopY}" r="6" fill="none" stroke="#2563eb" stroke-width="2.5"/>`;
+
+      // Labels pointe / mine
+      h += `<text x="${needleX}" y="${(hingeY-14).toFixed(1)}" font-size="12" text-anchor="middle" fill="#0369a1" font-weight="bold">pointe</text>`;
+      h += `<text x="${pencilX.toFixed(1)}" y="${(hingeY-14).toFixed(1)}" font-size="12" text-anchor="middle" fill="#2563eb" font-weight="bold">mine</text>`;
+
+      // Accolade 3cm sous la règle
+      const bY = rulerY + rulerH + 10;
+      h += `<line x1="${needleX}" y1="${bY}" x2="${needleX}" y2="${bY+8}" stroke="#c2410c" stroke-width="2"/>`;
+      h += `<line x1="${needleX}" y1="${bY+8}" x2="${pencilX.toFixed(1)}" y2="${bY+8}" stroke="#c2410c" stroke-width="2"/>`;
+      h += `<line x1="${pencilX.toFixed(1)}" y1="${bY}" x2="${pencilX.toFixed(1)}" y2="${bY+8}" stroke="#c2410c" stroke-width="2"/>`;
+      h += `<text x="${((needleX+pencilX)/2).toFixed(1)}" y="${(bY+22).toFixed(1)}" font-size="13" font-weight="bold" fill="#c2410c" text-anchor="middle">3 cm</text>`;
+    }
+  }
+
+  // Point O
+  if (e.showO) {
+    h += `<circle cx="${CX}" cy="${CY}" r="5" fill="#0369a1" stroke="white" stroke-width="2"/>`;
+    h += `<text x="${CX+10}" y="${CY+5}" font-size="16" font-weight="bold" fill="#0369a1">O</text>`;
+  }
+
+  // Label sur le cercle final
+  if (e.showCercle) {
+    h += `<text x="${CX}" y="${CY - R - 10}" font-size="13" font-weight="bold" fill="#0369a1" text-anchor="middle">Cercle de centre O, rayon 3 cm</text>`;
+    // Marquer un point sur le cercle
+    const px = CX + R * Math.cos(-0.5), py = CY + R * Math.sin(-0.5);
+    h += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4" fill="#e63946"/>`;
+    h += `<text x="${(px+8).toFixed(0)}" y="${(py+5).toFixed(0)}" font-size="12" fill="#e63946" font-weight="bold">M</text>`;
+    h += `<line x1="${CX}" y1="${CY}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="#f59f00" stroke-width="1.8" stroke-dasharray="5,3"/>`;
+    h += `<text x="${(CX+(px-CX)*0.5-18).toFixed(0)}" y="${(CY+(py-CY)*0.5-8).toFixed(0)}" font-size="11" fill="#d97706" font-weight="bold">OM = 3 cm</text>`;
+  }
+
+  svg.innerHTML = h;
+
+  document.getElementById('regle').innerHTML = e.regle
+    ? `<div class="regle-box">${e.regle}</div>` : '';
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${etapes.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

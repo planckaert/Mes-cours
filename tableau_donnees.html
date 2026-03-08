@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tableaux de données</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 15px; background: #166534; color: white; font-size: 1.3em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 12px 8px; flex-wrap: wrap; }
+  .tab { padding: 10px 18px; border-radius: 22px; border: none; font-size: 0.9em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #86efac; }
+  .tab2 { background: #eff6ff; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab1.active { background: #166534; color: white; border-color: #166534; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 10px; }
+
+  /* TABLEAU */
+  .tableau-wrap { margin: 8px auto; max-width: 500px; width: 97%; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px #0002; }
+  th { padding: 10px 12px; font-size: 0.95em; color: white; }
+  td { padding: 10px 12px; text-align: center; font-size: 1.05em; font-weight: bold; border: 2px solid #e5e7eb; }
+
+  /* CELLULES */
+  .cell-header-row { background: #166534; color: white; font-weight: bold; }
+  .cell-header-col { background: #14532d; color: white; font-weight: bold; }
+  .cell-normal { background: #f9fafb; color: #111; }
+  .cell-highlight { background: #fef9c3; color: #713f12; box-shadow: inset 0 0 0 3px #f59f00; transition: all 0.3s; }
+  .cell-found { background: #dcfce7; color: #14532d; animation: popIn 0.4s ease; }
+  .cell-question { background: #fff7ed; color: #9a3412; font-style: italic; }
+  .cell-filled { background: #dbeafe; color: #1e3a8a; animation: popIn 0.4s ease; }
+  .cell-row-hl { background: #fce7f3 !important; }
+  .cell-col-hl { background: #e0f2fe !important; }
+  .cell-intersect { background: #fef08a !important; color: #713f12 !important; box-shadow: inset 0 0 0 3px #eab308 !important; }
+  @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* FLÈCHES */
+  .arrow-zone { width: 100%; max-width: 500px; margin: 0 auto; }
+  svg.arrows { width: 100%; overflow: visible; display: block; }
+
+  /* QUESTION */
+  .question-box { background: white; border-radius: 12px; padding: 12px 18px; margin: 8px auto; max-width: 480px; width: 95%; font-size: 1em; font-weight: bold; color: #1e3a8a; box-shadow: 0 2px 8px #0001; border-left: 5px solid #3b82f6; }
+
+  .explication { background: white; border-radius: 14px; padding: 12px 18px; margin: 8px auto; max-width: 480px; width: 95%; font-size: 0.97em; color: #222; box-shadow: 0 2px 8px #0001; border-left: 5px solid #166534; min-height: 50px; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.88em; margin-bottom: 4px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #166534; color: white; }
+
+  .legende { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 6px auto; max-width: 480px; }
+  .leg-item { display: flex; align-items: center; gap: 5px; font-size: 0.82em; font-weight: bold; }
+  .leg-color { width: 16px; height: 16px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>📋 Lire et remplir un tableau de données</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Lire un tableau simple</button>
+  <button class="tab tab2" onclick="setMode(1)">Tableau à double entrée</button>
+</div>
+<div class="scene">
+  <div class="tableau-wrap"><table id="tableau"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  <div class="arrow-zone"><svg class="arrows" id="arrows" height="0"></svg></div>
+  <div class="question-box" id="question-box" style="display:none"></div>
+  <div class="legende" id="legende"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0;
+let etape = 0;
+
+// ===== MODE 0 : TABLEAU SIMPLE =====
+// Résultats d'un sondage : sport préféré de 30 élèves
+const tableau0 = {
+  headers: ['Sport', 'Nombre d\'élèves'],
+  rows: [
+    ['Football', '12'],
+    ['Natation', '8'],
+    ['Tennis', '5'],
+    ['Basket', '3'],
+    ['Autre', '2'],
+  ],
+  total: 30
+};
+
+const etapes0 = [
+  {
+    text: "Voici un tableau de données. Il présente les résultats d'un sondage sur le sport préféré de 30 élèves. La colonne de gauche donne les sports, celle de droite le nombre d'élèves.",
+    highlight: [], question: "", showArrow: false
+  },
+  {
+    text: "Pour lire une valeur, on repère la ligne qui nous intéresse. Ici : quel est le sport préféré de 12 élèves ?",
+    highlight: [0], question: "❓ Quel sport a obtenu 12 votes ?", showArrow: true, arrowRow: 0
+  },
+  {
+    text: "On lit la ligne Football : 12 élèves ont choisi le football. C'est le sport le plus populaire.",
+    highlight: [0], found: [0], question: "✅ Football → 12 élèves", showArrow: true, arrowRow: 0
+  },
+  {
+    text: "Combien d'élèves ont choisi la natation ou le tennis ? On additionne les deux lignes.",
+    highlight: [1, 2], question: "❓ Natation + Tennis = ?", showArrow: false
+  },
+  {
+    text: "Natation : 8 élèves. Tennis : 5 élèves. Total : 8 + 5 = 13 élèves.",
+    highlight: [1, 2], found: [1, 2], question: "✅ 8 + 5 = 13 élèves", showArrow: false
+  },
+  {
+    text: "On peut aussi calculer le total : 12 + 8 + 5 + 3 + 2 = 30 élèves. Cela correspond bien aux 30 élèves interrogés !",
+    highlight: [0,1,2,3,4], question: "✅ Total : 12+8+5+3+2 = 30 élèves ✓", showArrow: false, final: true
+  }
+];
+
+// ===== MODE 1 : TABLEAU À DOUBLE ENTRÉE =====
+const tableau1 = {
+  colHeaders: ['', 'Match 1', 'Match 2', 'Match 3', 'Total'],
+  rows: [
+    { label: 'Équipe A', values: ['15', '22', '18', '?'] },
+    { label: 'Équipe B', values: ['20', '?', '25', '59'] },
+    { label: 'Total',    values: ['?',  '?',  '?',  '?'] },
+  ]
+};
+const vals1 = {
+  totalA: 55,
+  BMatch2: 14,   // 59 - 20 - 25
+  totM1: 35, totM2: 36, totM3: 43,
+  grandTotal: 114
+};
+
+const etapes1 = [
+  {
+    text: "Voici un tableau à double entrée. Les lignes représentent les équipes, les colonnes les matchs. Les cases '?' sont à compléter. Le total de l'Équipe B (59) est déjà connu.",
+    hlRow: -1, hlCol: -1, filled: [], question: ""
+  },
+  {
+    text: "Pour lire une valeur, on cherche l'intersection d'une ligne et d'une colonne. Combien de points a marqué l'Équipe A au Match 2 ?",
+    hlRow: 0, hlCol: 1, filled: [], question: "❓ Équipe A × Match 2 = ?"
+  },
+  {
+    text: "On suit la ligne Équipe A et la colonne Match 2 : leur intersection donne 22 points.",
+    hlRow: 0, hlCol: 1, filled: [], question: "✅ Équipe A au Match 2 = 22 points", showIntersect: true
+  },
+  {
+    text: "On calcule le total de l'Équipe A : 15 + 22 + 18 = 55 points.",
+    hlRow: 0, hlCol: -1, filled: [], question: "❓ Total Équipe A = 15 + 22 + 18 = ?"
+  },
+  {
+    text: "15 + 22 + 18 = 55 points. On écrit 55 dans la case Total de l'Équipe A.",
+    hlRow: 0, hlCol: -1, filled: ['totalA'], question: "✅ Total Équipe A = 55 points"
+  },
+  {
+    text: "On connaît le total de l'Équipe B (59) et ses scores au Match 1 (20) et Match 3 (25). On peut retrouver le score manquant au Match 2 !",
+    hlRow: 1, hlCol: -1, filled: ['totalA'], question: "❓ Match 2 Équipe B = 59 − 20 − 25 = ?"
+  },
+  {
+    text: "59 − 20 − 25 = 14 points. On remplit la case Match 2 de l'Équipe B.",
+    hlRow: 1, hlCol: 1, filled: ['totalA', 'BMatch2'], question: "✅ Équipe B au Match 2 = 14 points", showIntersect: true
+  },
+  {
+    text: "On calcule les totaux par colonne : Match 1 = 15+20 = 35, Match 2 = 22+14 = 36, Match 3 = 18+25 = 43.",
+    hlRow: 2, hlCol: -1, filled: ['totalA','BMatch2','totM1','totM2','totM3'], question: "✅ Totaux par match : 35 | 36 | 43"
+  },
+  {
+    text: "✅ Grand total = 55 + 59 = 114. Vérification : 35 + 36 + 43 = 114 ✓ Le tableau est complet !",
+    hlRow: 2, hlCol: 3, filled: ['totalA','BMatch2','totM1','totM2','totM3','grandTotal'], question: "✅ Grand total : 114 points ✓", final: true
+  }
+];
+
+function setMode(m) {
+  mode = m;
+  etape = 0;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===m));
+  const col = m===0 ? '#166534' : '#1d4ed8';
+  document.querySelector('.btn-next').style.background = col;
+  document.getElementById('explication').style.borderLeftColor = col;
+  render();
+}
+
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() {
+  const maxE = mode===0 ? etapes0.length : etapes1.length;
+  if (etape < maxE-1) { etape++; render(); }
+}
+
+function render() {
+  if (mode === 0) renderMode0();
+  else renderMode1();
+}
+
+// ===== RENDER MODE 0 =====
+function renderMode0() {
+  const e = etapes0[etape];
+  const t = tableau0;
+
+  // En-tête
+  document.getElementById('thead').innerHTML =
+    `<tr>${t.headers.map(h => `<th style="background:#166534;padding:10px 14px">${h}</th>`).join('')}</tr>`;
+
+  // Corps
+  let html = '';
+  t.rows.forEach((row, r) => {
+    const isHL = e.highlight && e.highlight.includes(r);
+    const isFound = e.found && e.found.includes(r);
+    html += '<tr>';
+    row.forEach((cell, c) => {
+      let cls = 'cell-normal';
+      if (isFound) cls = 'cell-found';
+      else if (isHL) cls = 'cell-highlight';
+      html += `<td class="${cls}">${cell}</td>`;
+    });
+    html += '</tr>';
+  });
+  // Ligne total
+  const allFound = e.final;
+  html += `<tr><td style="background:#166534;color:white;font-weight:bold">TOTAL</td><td class="${allFound?'cell-found':'cell-normal'}" style="${allFound?'':'color:#999'}">${allFound?'30':'...'}</td></tr>`;
+  document.getElementById('tbody').innerHTML = html;
+
+  // Flèche
+  const svg = document.getElementById('arrows');
+  if (e.showArrow && e.arrowRow !== undefined) {
+    svg.style.height = '36px';
+    svg.setAttribute('viewBox', '0 0 500 36');
+    const rowY = 16;
+    svg.innerHTML = `
+      <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#166534"/></marker></defs>
+      <line x1="20" y1="${rowY}" x2="460" y2="${rowY}" stroke="#166534" stroke-width="2.5" marker-end="url(#a1)"/>
+      <text x="240" y="${rowY-4}" font-size="12" text-anchor="middle" fill="#166534" font-weight="bold">→ on lit sur cette ligne</text>`;
+  } else {
+    svg.style.height = '0';
+    svg.innerHTML = '';
+  }
+
+  // Question
+  const qb = document.getElementById('question-box');
+  if (e.question) { qb.style.display='block'; qb.textContent = e.question; }
+  else qb.style.display = 'none';
+
+  // Légende
+  document.getElementById('legende').innerHTML = `
+    <div class="leg-item"><div class="leg-color" style="background:#fef9c3;border:2px solid #f59f00"></div> Ligne cherchée</div>
+    <div class="leg-item"><div class="leg-color" style="background:#dcfce7;border:2px solid #86efac"></div> Valeur trouvée</div>`;
+
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${etapes0.length}`;
+}
+
+// ===== RENDER MODE 1 =====
+function renderMode1() {
+  const e = etapes1[etape];
+  const t = tableau1;
+  const f = e.filled || [];
+
+  // En-tête
+  document.getElementById('thead').innerHTML =
+    `<tr>${t.colHeaders.map(h => `<th style="background:#1d4ed8;padding:10px 10px;font-size:0.9em">${h}</th>`).join('')}</tr>`;
+
+  // Corps
+  let html = '';
+  t.rows.forEach((row, r) => {
+    const isHLrow = e.hlRow === r;
+    html += '<tr>';
+    // Label
+    const lblCls = r===2 ? 'background:#1e3a8a;color:white;font-weight:bold' : 'background:#1d4ed8;color:white;font-weight:bold';
+    html += `<td style="${lblCls};padding:10px">${row.label}</td>`;
+
+    row.values.forEach((val, c) => {
+      const isHLcol = e.hlCol === c;
+      const isIntersect = e.showIntersect && isHLrow && isHLcol;
+      let cls = 'cell-normal';
+      let display = val;
+
+      if (val === '?') {
+        let filled = false;
+        if (r===0 && c===3 && f.includes('totalA'))      { filled = true; display = vals1.totalA; }
+        if (r===1 && c===1 && f.includes('BMatch2'))     { filled = true; display = vals1.BMatch2; }
+        if (r===2 && c===0 && f.includes('totM1'))       { filled = true; display = vals1.totM1; }
+        if (r===2 && c===1 && f.includes('totM2'))       { filled = true; display = vals1.totM2; }
+        if (r===2 && c===2 && f.includes('totM3'))       { filled = true; display = vals1.totM3; }
+        if (r===2 && c===3 && f.includes('grandTotal'))  { filled = true; display = vals1.grandTotal; }
+        cls = filled ? 'cell-filled' : 'cell-question';
+      }
+
+      if (isIntersect) cls = 'cell-intersect';
+      else if (isHLrow && e.hlRow >= 0 && !isIntersect && val !== '?') cls = 'cell-row-hl';
+      else if (isHLcol && e.hlCol >= 0 && !isIntersect && val !== '?') cls = 'cell-col-hl';
+
+      html += `<td class="${cls}">${display}</td>`;
+    });
+    html += '</tr>';
+  });
+  document.getElementById('tbody').innerHTML = html;
+
+  // Flèche SVG
+  const svg = document.getElementById('arrows');
+  if (e.hlRow >= 0 && e.hlCol >= 0 && e.showIntersect) {
+    svg.style.height = '30px';
+    svg.setAttribute('viewBox','0 0 500 30');
+    svg.innerHTML = `<text x="250" y="20" font-size="13" text-anchor="middle" fill="#ca8a04" font-weight="bold">↑ Intersection ligne × colonne</text>`;
+  } else {
+    svg.style.height = '0';
+    svg.innerHTML = '';
+  }
+
+  // Question
+  const qb = document.getElementById('question-box');
+  qb.style.borderLeftColor = '#1d4ed8';
+  if (e.question) { qb.style.display='block'; qb.textContent = e.question; }
+  else qb.style.display = 'none';
+
+  // Légende
+  document.getElementById('legende').innerHTML = `
+    <div class="leg-item"><div class="leg-color" style="background:#fce7f3;border:2px solid #f9a8d4"></div> Ligne</div>
+    <div class="leg-item"><div class="leg-color" style="background:#e0f2fe;border:2px solid #7dd3fc"></div> Colonne</div>
+    <div class="leg-item"><div class="leg-color" style="background:#fef08a;border:2px solid #eab308"></div> Intersection</div>
+    <div class="leg-item"><div class="leg-color" style="background:#dbeafe;border:2px solid #93c5fd"></div> Case remplie</div>`;
+
+  document.getElementById('explication').textContent = e.text;
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${etapes1.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
