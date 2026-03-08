@@ -18,7 +18,7 @@
 
     /* ── LOGIN ── */
     #login{
-      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
       padding:40px 32px;min-height:100vh;
       position:relative;overflow:hidden;
       background:linear-gradient(160deg,#2d5a4e 0%,#1e3d34 40%,#162e27 100%);
@@ -52,7 +52,7 @@
     .err{font-size:12px;color:#FF6B6B;text-align:center;margin:8px 0;min-height:20px;}
 
     /* ── APP ── */
-    #app{display:none;flex-direction:column;min-height:100vh;}
+    #app{display:none;flex-direction:column;min-height:100vh;position:fixed;top:0;left:0;right:0;bottom:0;overflow-y:auto;background:var(--bg);}
     #app.visible{display:flex;}
 
     .topbar{
@@ -345,6 +345,8 @@ async function chooseGroup(groupe) {
 
 async function loadContent(code, groupe) {
   const sheet = SHEETS[code];
+  document.getElementById("login").style.display = "none";
+  document.getElementById("groupSelect").style.display = "none";
   document.getElementById("app").classList.add("visible");
   document.getElementById("loading").classList.add("visible");
   document.getElementById("content").innerHTML = "";
