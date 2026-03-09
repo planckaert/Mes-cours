@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Construire la bissectrice</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab2.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #15803d; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dcfce7; color: #14532d; }
+  .en2 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #15803d; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Construire la bissectrice d'un angle</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Compas + règle</button>
+  <button class="tab tab2" onclick="setMode(1)">Rapporteur + règle</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#15803d','#b45309'];
+
+// ============================================================
+// GÉOMÉTRIE DE L'ANGLE
+// Sommet S, deux demi-droites SA et SB
+// Angle de 64° → bissectrice à 32°
+// ============================================================
+const S   = {x:100, y:220};
+const angA = -10  * Math.PI/180;  // demi-droite basse (SA) → presque horizontale
+const angB = -74  * Math.PI/180;  // demi-droite haute (SB) → 64° au-dessus
+const angBis = (angA + angB) / 2; // bissectrice
+
+const rayLen = 300;
+const A = {x: S.x + rayLen*Math.cos(angA), y: S.y + rayLen*Math.sin(angA)};
+const B = {x: S.x + rayLen*Math.cos(angB), y: S.y + rayLen*Math.sin(angB)};
+
+// Point sur [SA] à distance r du sommet
+const r1 = 100; // rayon 1er arc
+const P1 = {x: S.x + r1*Math.cos(angA), y: S.y + r1*Math.sin(angA)};
+const P2 = {x: S.x + r1*Math.cos(angB), y: S.y + r1*Math.sin(angB)};
+
+// 2e arc : depuis P1 et P2, même rayon r2 → intersection = point de la bissectrice
+const r2 = 90;
+// intersection des deux arcs (sur la bissectrice)
+const I  = {x: S.x + (r1+r2*0.82)*Math.cos(angBis), y: S.y + (r1+r2*0.82)*Math.sin(angBis)};
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(p1,p2,col,w=2.5,dash=''){
+  return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}"
+    x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"
+    stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function ray(from, angle, len, col, w=2.5, dash=''){
+  const to={x:from.x+len*Math.cos(angle), y:from.y+len*Math.sin(angle)};
+  return seg(from,to,col,w,dash);
+}
+function dot(p,col,r=5){
+  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+function lbl(p,t,col,dx=0,dy=0,size=13){
+  return `<text x="${(p.x+dx).toFixed(1)}" y="${(p.y+dy).toFixed(1)}" font-size="${size}"
+    font-weight="bold" text-anchor="middle" fill="${col}">${t}</text>`;
+}
+function arc(cx,cy,r,a1deg,a2deg,col,w=2,dash=''){
+  const a1=a1deg*Math.PI/180, a2=a2deg*Math.PI/180;
+  const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+  const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+  const large = Math.abs(a2deg-a1deg)>180?1:0;
+  const sweep = a2deg>a1deg?1:0;
+  return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},${sweep} ${x2.toFixed(1)},${y2.toFixed(1)}"
+    fill="none" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+// Arc centré sur un point SVG (angle en radians)
+function arcRad(cx,cy,r,a1,a2,col,w=2,dash=''){
+  const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+  const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+  const da = ((a2-a1)+2*Math.PI)%(2*Math.PI);
+  const large = da>Math.PI?1:0;
+  return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)}"
+    fill="none" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+// Compas : pointe en tipX,tipY, crayon en pencilX,pencilY
+function compas(tipX, tipY, pencilX, pencilY, col='#15803d'){
+  const legLen = 72;
+  const dx=pencilX-tipX, dy=pencilY-tipY;
+  const angCrayon = Math.atan2(dy,dx);
+  const angMetal  = angCrayon + 0.55;
+  const hx = tipX + legLen*Math.cos(angMetal);
+  const hy = tipY + legLen*Math.sin(angMetal);
+  let h='';
+  h+=`<line x1="${tipX}" y1="${tipY}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  h+=`<line x1="${pencilX.toFixed(1)}" y1="${pencilY.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  h+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="5" fill="white" stroke="${col}" stroke-width="2"/>`;
+  h+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="2.5" fill="${col}"/>`;
+  h+=`<line x1="${tipX-4}" y1="${tipY}" x2="${tipX+4}" y2="${tipY}" stroke="#374151" stroke-width="1.5"/>`;
+  h+=`<line x1="${tipX}" y1="${tipY-4}" x2="${tipX}" y2="${tipY+4}" stroke="#374151" stroke-width="1.5"/>`;
+  h+=`<circle cx="${tipX}" cy="${tipY}" r="3" fill="${col}"/>`;
+  h+=`<circle cx="${pencilX.toFixed(1)}" cy="${pencilY.toFixed(1)}" r="3.5" fill="#f97316"/>`;
+  return h;
+}
+// Rapporteur demi-cercle centré en S, aligné sur [SA]
+function rapporteur(S, angBase, col='#fcd34d'){
+  const R=90;
+  // demi-cercle de angBase à angBase-180° (la partie supérieure par rapport à [SA])
+  const a1=angBase*180/Math.PI;
+  const a2=a1-180;
+  let h='';
+  // Corps du rapporteur (demi-disque transparent)
+  const x1=S.x+R*Math.cos(angBase), y1=S.y+R*Math.sin(angBase);
+  const x2=S.x+R*Math.cos(angBase-Math.PI), y2=S.y+R*Math.sin(angBase-Math.PI);
+  h+=`<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 0,0 ${x2.toFixed(1)},${y2.toFixed(1)} Z"
+    fill="${col}" fill-opacity="0.22" stroke="${col}" stroke-width="2"/>`;
+  // Ligne de base du rapporteur
+  h+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+    stroke="${col}" stroke-width="2"/>`;
+  // Graduation tous les 10°
+  for(let deg=0; deg<=180; deg+=10){
+    const a = angBase - deg*Math.PI/180;
+    const isMain = deg%30===0;
+    const tick = isMain ? 10 : 5;
+    const xo=S.x+(R-tick)*Math.cos(a), yo=S.y+(R-tick)*Math.sin(a);
+    const xi=S.x+R*Math.cos(a), yi=S.y+R*Math.sin(a);
+    h+=`<line x1="${xo.toFixed(1)}" y1="${yo.toFixed(1)}" x2="${xi.toFixed(1)}" y2="${yi.toFixed(1)}"
+      stroke="${col}" stroke-width="${isMain?1.5:1}"/>`;
+    if(isMain && deg>0 && deg<180){
+      h+=`<text x="${(S.x+(R-18)*Math.cos(a)).toFixed(1)}" y="${(S.y+(R-18)*Math.sin(a)+3).toFixed(1)}"
+        font-size="8" text-anchor="middle" fill="${col}">${deg}</text>`;
+    }
+  }
+  // Centre du rapporteur
+  h+=dot(S, col, 3);
+  return h;
+}
+
+// BASE : les deux demi-droites de l'angle
+function base(fadeA=false, fadeB=false){
+  let h='';
+  h+=ray(S, angA, 340, fadeA?'#d1d5db':'#374151', 2.5);
+  h+=ray(S, angB, 280, fadeB?'#d1d5db':'#374151', 2.5);
+  h+=dot(S,'#374151',5);
+  h+=lbl(S,'S','#374151',-14,4);
+  return h;
+}
+// Arc d'angle (pour montrer l'angle)
+function arcAngle(col='#94a3b8', dash=''){
+  const a1=angA*180/Math.PI, a2=angB*180/Math.PI;
+  return arc(S.x,S.y,40,a1,a2,col,2,dash);
+}
+
+// ============================================================
+// MODE 0 — COMPAS + RÈGLE
+// ============================================================
+const e0=[
+  {
+    explic:"La bissectrice d'un angle est la demi-droite qui coupe cet angle en deux angles égaux. Elle part du sommet S.",
+    draw(){
+      let h=base();
+      h+=arcAngle('#94a3b8');
+      h+=lbl({x:S.x+60,y:S.y-28},'64°','#374151',0,0,12);
+      return h;
+    },
+    calc:`<div class="enonce en1">Construire la bissectrice de l'angle S.</div>
+          <div class="ligne">La bissectrice coupe l'angle en <span class="hl-g">deux angles égaux</span>.</div>
+          <div class="ligne">Méthode au compas : on place des points équidistants du sommet sur chaque côté, puis on trace deux arcs qui se coupent.</div>`
+  },
+  {
+    explic:"On trace un arc de cercle centré en S qui coupe les deux côtés de l'angle. On obtient deux points P et Q.",
+    draw(){
+      let h=base();
+      h+=arcAngle('#94a3b8');
+      // Arc centré en S
+      h+=arcRad(S.x,S.y,r1, angB-0.08, angA+0.08, '#15803d',2.5);
+      h+=compas(S.x, S.y, P1.x, P1.y, '#15803d');
+      h+=dot(P1,'#15803d',5); h+=lbl(P1,'P','#15803d',10,-6);
+      h+=dot(P2,'#15803d',5); h+=lbl(P2,'Q','#15803d',-6,-10);
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 1 : arc centré en S.</div>
+          <div class="ligne">On place la pointe du compas en <span class="hl-g">S</span>.</div>
+          <div class="ligne">On trace un arc qui coupe [SA) en <span class="hl-g">P</span> et [SB) en <span class="hl-g">Q</span>.</div>
+          <div class="ligne">SP = SQ (même rayon) : P et Q sont à égale distance de S.</div>`
+  },
+  {
+    explic:"On place la pointe en P et on trace un arc de cercle avec un rayon quelconque (mais supérieur à PQ/2).",
+    draw(){
+      let h=base();
+      h+=arcRad(S.x,S.y,r1, angB-0.08, angA+0.08, '#15803d',2);
+      h+=dot(P1,'#15803d',5); h+=lbl(P1,'P','#15803d',10,-6);
+      h+=dot(P2,'#15803d',5); h+=lbl(P2,'Q','#15803d',-6,-10);
+      // Arc centré en P1
+      h+=arcRad(P1.x,P1.y,r2, angB+0.3, angBis-0.5, '#1d4ed8',2.5);
+      h+=compas(P1.x, P1.y, P1.x+r2*Math.cos(angBis-0.1), P1.y+r2*Math.sin(angBis-0.1), '#1d4ed8');
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 2 : arc centré en P.</div>
+          <div class="ligne">On place la pointe du compas en <span class="hl-b">P</span>.</div>
+          <div class="ligne">On trace un arc du côté intérieur de l'angle.</div>`
+  },
+  {
+    explic:"Sans changer l'écartement du compas, on place la pointe en Q et on trace un deuxième arc. Les deux arcs se coupent en un point I.",
+    draw(){
+      let h=base();
+      h+=arcRad(S.x,S.y,r1, angB-0.08, angA+0.08, '#15803d',2);
+      h+=dot(P1,'#15803d',5); h+=lbl(P1,'P','#15803d',10,-6);
+      h+=dot(P2,'#15803d',5); h+=lbl(P2,'Q','#15803d',-6,-10);
+      h+=arcRad(P1.x,P1.y,r2, angB+0.3, angBis-0.5, '#1d4ed8',2);
+      h+=arcRad(P2.x,P2.y,r2, angBis+0.5, angA-0.2, '#9d174d',2.5);
+      h+=compas(P2.x, P2.y, P2.x+r2*Math.cos(angBis+0.1), P2.y+r2*Math.sin(angBis+0.1), '#9d174d');
+      h+=dot(I,'#dc2626',6); h+=lbl(I,'I','#dc2626',12,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 3 : arc centré en Q (même rayon).</div>
+          <div class="ligne">On place la pointe en <span class="hl-r">Q</span> sans changer l'écartement.</div>
+          <div class="ligne">Les deux arcs se coupent en <span class="hl-r">I</span>.</div>`
+  },
+  {
+    explic:"On relie S et I avec la règle. La demi-droite [SI) est la bissectrice : elle coupe l'angle en deux angles égaux de 32° chacun.",
+    draw(){
+      let h=base();
+      h+=arcRad(S.x,S.y,r1, angB-0.08, angA+0.08, '#94a3b8',1.5);
+      h+=arcRad(P1.x,P1.y,r2, angB+0.3, angBis-0.5, '#94a3b8',1.5);
+      h+=arcRad(P2.x,P2.y,r2, angBis+0.5, angA-0.2, '#94a3b8',1.5);
+      // Bissectrice
+      h+=ray(S, angBis, 250, '#dc2626', 2.5, '7,4');
+      // Marques d'angles égaux
+      h+=arcRad(S.x,S.y,50, angBis, angA+0.05, '#dc2626',2);
+      h+=arcRad(S.x,S.y,50, angB-0.05, angBis, '#dc2626',2);
+      h+=lbl({x:S.x+70,y:S.y-18},'32°','#dc2626',0,0,10);
+      h+=lbl({x:S.x+55,y:S.y-50},'32°','#dc2626',0,0,10);
+      h+=dot(S,'#374151',5); h+=lbl(S,'S','#374151',-14,4);
+      h+=dot(I,'#dc2626',5); h+=lbl(I,'I','#dc2626',12,0);
+      h+=lbl({x:S.x+205,y:S.y-135},'bissectrice','#dc2626',0,0,11);
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 4 : tracer la bissectrice.</div>
+          <div class="ligne">On relie <span class="hl-r">S</span> et <span class="hl-r">I</span> avec la règle.</div>
+          <div class="conclusion-ok">La demi-droite [SI) est la bissectrice de l'angle S.<br>Elle partage l'angle en deux angles de 32° chacun.</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — RAPPORTEUR + RÈGLE
+// Angle = 64°, bissectrice à 32°
+// ============================================================
+const e1=[
+  {
+    explic:"Avec le rapporteur, on mesure l'angle, on le divise par 2, puis on trace la demi-droite dans la bonne direction.",
+    draw(){
+      let h=base();
+      h+=arcAngle('#94a3b8');
+      h+=lbl({x:S.x+60,y:S.y-28},'?','#374151',0,0,14);
+      return h;
+    },
+    calc:`<div class="enonce en2">Construire la bissectrice au rapporteur.</div>
+          <div class="ligne">Méthode : mesurer l'angle, diviser par 2, reporter la mesure.</div>`
+  },
+  {
+    explic:"On place le rapporteur : son centre sur S et sa base alignée sur le côté [SA).",
+    draw(){
+      let h=base();
+      h+=rapporteur(S, angA, '#b45309');
+      h+=dot(S,'#374151',5); h+=lbl(S,'S','#374151',-14,4);
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 1 : placer le rapporteur.</div>
+          <div class="ligne">On pose le centre du rapporteur sur <span class="hl-o">S</span>.</div>
+          <div class="ligne">La base du rapporteur s'aligne sur le côté <span class="hl-o">[SA)</span> → graduation 0° sur [SA).</div>`
+  },
+  {
+    explic:"On lit la graduation où passe l'autre côté [SB) : c'est 64°. L'angle vaut 64°.",
+    draw(){
+      let h=base();
+      h+=rapporteur(S, angA, '#b45309');
+      // Marque 64° sur le rapporteur
+      const ang64 = angA - 64*Math.PI/180;
+      const rx=S.x+90*Math.cos(ang64), ry=S.y+90*Math.sin(ang64);
+      h+=`<line x1="${S.x}" y1="${S.y}" x2="${rx.toFixed(1)}" y2="${ry.toFixed(1)}" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,2"/>`;
+      h+=`<circle cx="${rx.toFixed(1)}" cy="${ry.toFixed(1)}" r="4" fill="#dc2626"/>`;
+      h+=`<text x="${(rx-8).toFixed(1)}" y="${(ry-8).toFixed(1)}" font-size="11" font-weight="bold" fill="#dc2626">64°</text>`;
+      h+=dot(S,'#374151',5); h+=lbl(S,'S','#374151',-14,4);
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 2 : lire l'angle.</div>
+          <div class="ligne">On lit la graduation sous le côté [SB) : <span class="hl-o">64°</span>.</div>`
+  },
+  {
+    explic:"On calcule la moitié de l'angle : 64 ÷ 2 = 32°. On repère la graduation 32° sur le rapporteur et on fait un point.",
+    draw(){
+      let h=base();
+      h+=rapporteur(S, angA, '#b45309');
+      // Marque 32°
+      const ang32 = angA - 32*Math.PI/180;
+      const px=S.x+90*Math.cos(ang32), py=S.y+90*Math.sin(ang32);
+      h+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="#dc2626" stroke="white" stroke-width="2"/>`;
+      h+=`<text x="${(px+10).toFixed(1)}" y="${(py-6).toFixed(1)}" font-size="11" font-weight="bold" fill="#dc2626">32° ← point I</text>`;
+      h+=dot(S,'#374151',5); h+=lbl(S,'S','#374151',-14,4);
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 3 : repérer la demi-mesure.</div>
+          <div class="ligne">64 ÷ 2 = <span class="hl-o">32°</span></div>
+          <div class="ligne">On repère la graduation <span class="hl-o">32°</span> sur le rapporteur.</div>
+          <div class="ligne">On fait un point <span class="hl-o">I</span> sur cette graduation.</div>`
+  },
+  {
+    explic:"On enlève le rapporteur et on trace la demi-droite [SI) avec la règle. C'est la bissectrice.",
+    draw(){
+      let h=base();
+      // Bissectrice
+      h+=ray(S, angBis, 250, '#dc2626', 2.5, '7,4');
+      // Marques angles égaux
+      h+=arcRad(S.x,S.y,50, angBis, angA+0.05, '#dc2626',2);
+      h+=arcRad(S.x,S.y,50, angB-0.05, angBis, '#dc2626',2);
+      h+=lbl({x:S.x+70,y:S.y-18},'32°','#dc2626',0,0,10);
+      h+=lbl({x:S.x+55,y:S.y-50},'32°','#dc2626',0,0,10);
+      h+=dot(S,'#374151',5); h+=lbl(S,'S','#374151',-14,4);
+      // Point I
+      const Ivis={x:S.x+190*Math.cos(angBis), y:S.y+190*Math.sin(angBis)};
+      h+=dot(Ivis,'#dc2626',5); h+=lbl(Ivis,'I','#dc2626',12,0);
+      h+=lbl({x:S.x+205,y:S.y-130},'bissectrice','#dc2626',0,0,11);
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 4 : tracer la bissectrice.</div>
+          <div class="ligne">On retire le rapporteur.</div>
+          <div class="ligne">On trace la demi-droite <span class="hl-r">[SI)</span> avec la règle.</div>
+          <div class="conclusion-ok">La demi-droite [SI) est la bissectrice de l'angle S.<br>Les deux angles de part et d'autre valent chacun 32°.</div>
+          <div class="attention">💡 La méthode au compas est plus précise car elle ne dépend pas de la lecture d'une graduation.</div>`
+  },
+];
+
+const ETAPES=[e0,e1];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${ETAPES[mode].length}`;
+}
+render();
+</script>
+</body>
+</html>
