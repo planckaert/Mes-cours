@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracer la médiatrice</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #0c4a6e; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 280px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Tracer la médiatrice d'un segment</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Règle + équerre</button>
+  <button class="tab tab2" onclick="setMode(1)">Compas + règle</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 280"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+
+// ============================================================
+// Points fixes : A et B
+// ============================================================
+const A = {x:100, y:160};
+const B = {x:340, y:160};
+const M = {x:(A.x+B.x)/2, y:(A.y+B.y)/2}; // milieu = 220, 160
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(x1,y1,x2,y2,col,w=2.5,dash=''){
+  return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+    stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function dot(x,y,col,r=5){
+  return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+function lbl(x,y,t,col,size=13,anchor='middle'){
+  return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" font-weight="bold" text-anchor="${anchor}" fill="${col}">${t}</text>`;
+}
+function arc(cx,cy,r,a1,a2,col,w=2,dash=''){
+  const x1=cx+r*Math.cos(a1*Math.PI/180), y1=cy+r*Math.sin(a1*Math.PI/180);
+  const x2=cx+r*Math.cos(a2*Math.PI/180), y2=cy+r*Math.sin(a2*Math.PI/180);
+  const large = Math.abs(a2-a1)>180?1:0;
+  return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)}"
+    fill="none" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+// Angle droit
+function rightAngle(cx,cy,dir,size=12){
+  // dir: 0=haut, 90=droite
+  const s=size;
+  if(dir==='up'){
+    return `<polyline points="${cx-s},${cy} ${cx-s},${cy-s} ${cx+s},${cy-s} ${cx+s},${cy}"
+      fill="none" stroke="#374151" stroke-width="1.8"/>`;
+  }
+  return `<rect x="${cx-s/2}" y="${cy-s/2}" width="${s}" height="${s}" fill="none" stroke="#374151" stroke-width="1.8"/>`;
+}
+
+// Équerre triangulaire :
+// - angle droit en M (mx, my)
+// - un côté le long de [MB) → vers la droite (leg = wLeg)
+// - un côté vertical vers le haut (hLeg)
+// - hypoténuse entre ces deux extrémités
+// Rien du côté de A (à gauche de M)
+function equerre(mx, my, wLeg, hLeg, col='#bfdbfe'){
+  // Trois sommets : M, P (à droite sur AB), Q (en haut sur médiatrice)
+  const P = {x: mx + wLeg, y: my};
+  const Q = {x: mx, y: my - hLeg};
+  const pts = `${mx},${my} ${P.x},${P.y} ${Q.x},${Q.y}`;
+  let s = `<polygon points="${pts}"
+    fill="${col}" fill-opacity="0.45" stroke="#1d4ed8" stroke-width="2" stroke-linejoin="round"/>`;
+  // Petit carré de l'angle droit en M
+  const sq = 11;
+  s += `<polyline points="${mx+sq},${my} ${mx+sq},${my-sq} ${mx},${my-sq}"
+    fill="none" stroke="#1d4ed8" stroke-width="2"/>`;
+  return s;
+}
+
+// Compas : pointe métallique en (tipX, tipY)
+// Les deux branches montent depuis la pointe
+// La branche gauche = pointe métal (fixe), la branche droite = crayon
+// pencilX, pencilY = position du crayon (sur l'arc)
+function compas(tipX, tipY, pencilX, pencilY, col='#15803d'){
+  // La pointe est en bas, les deux branches montent vers une charnière
+  const legLen = 75;
+  // Direction vers le haut-milieu depuis la pointe
+  const dx = pencilX - tipX;
+  const dy = pencilY - tipY;
+  const dist = Math.sqrt(dx*dx+dy*dy)||1;
+  // Angle de la branche crayon (de la pointe vers le crayon, remontée)
+  const angCrayon = Math.atan2(dy, dx);
+  // Branche métal : angle symétrique vers le haut
+  const angMetal = Math.atan2(dy, dx) - 0.7; // ~40° d'écart
+  // Charnière : point de jonction en haut des deux branches
+  const hx = tipX + legLen * Math.cos(angMetal - 0.35);
+  const hy = tipY + legLen * Math.sin(angMetal - 0.35);
+  // Extrémité branche métal (pointe = tipX,tipY elle-même)
+  // Extrémité branche crayon = pencilX, pencilY
+  // Longueur branche crayon depuis charnière
+  const clen = Math.sqrt((pencilX-hx)**2+(pencilY-hy)**2);
+  let h = '';
+  // Branche métal : charnière → pointe
+  h+=`<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${tipX}" y2="${tipY}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  // Branche crayon : charnière → crayon
+  h+=`<line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${pencilX.toFixed(1)}" y2="${pencilY.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  // Charnière
+  h+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="5" fill="white" stroke="${col}" stroke-width="2"/>`;
+  h+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="2.5" fill="${col}"/>`;
+  // Pointe métallique en tipX,tipY (petite croix)
+  h+=`<line x1="${tipX-4}" y1="${tipY}" x2="${tipX+4}" y2="${tipY}" stroke="#374151" stroke-width="1.5"/>`;
+  h+=`<line x1="${tipX}" y1="${tipY-4}" x2="${tipX}" y2="${tipY+4}" stroke="#374151" stroke-width="1.5"/>`;
+  h+=`<circle cx="${tipX}" cy="${tipY}" r="3" fill="${col}"/>`;
+  // Mine crayon (orange)
+  h+=`<circle cx="${pencilX.toFixed(1)}" cy="${pencilY.toFixed(1)}" r="3.5" fill="#f97316"/>`;
+  return h;
+}
+
+// Cote avec flèches
+function cote(x1,y1,x2,y2,val,col,oy=20){
+  const mx=(x1+x2)/2;
+  return seg(x1,y1-oy,x2,y2-oy,col,1.5)+
+    seg(x1,y1,x1,y1-oy,col,1,'4,2')+
+    seg(x2,y2,x2,y2-oy,col,1,'4,2')+
+    lbl(mx,y1-oy-5,val,col,11);
+}
+
+// ============================================================
+// BASE (segment AB toujours présent)
+// ============================================================
+function base(){
+  let h='';
+  h+=seg(A.x,A.y,B.x,B.y,'#374151',3);
+  h+=dot(A.x,A.y,'#374151'); h+=lbl(A.x,A.y+18,'A','#374151');
+  h+=dot(B.x,B.y,'#374151'); h+=lbl(B.x,B.y+18,'B','#374151');
+  return h;
+}
+
+// ============================================================
+// MODE 0 — RÈGLE + ÉQUERRE
+// Méthode : trouver le milieu (mesurer AB, diviser par 2), puis tracer la perpendiculaire
+// ============================================================
+const AB = B.x - A.x; // 240 px → représente "6 cm"
+
+const e0=[
+  {
+    explic:"La médiatrice d'un segment est la droite perpendiculaire à ce segment passant par son milieu. Avec la règle et l'équerre, on commence par mesurer le segment.",
+    draw(){
+      let h=base();
+      // Règle dessinée sous le segment
+      h+=`<rect x="${A.x-10}" y="${A.y+22}" width="${AB+20}" height="18" fill="#fef3c7" fill-opacity="0.8" stroke="#b45309" stroke-width="1.5" rx="3"/>`;
+      h+=lbl(M.x, A.y+35, '← 6 cm →', '#b45309', 11);
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 1 : mesurer le segment AB.</div>
+          <div class="ligne">On pose la règle le long de [AB].</div>
+          <div class="ligne">On mesure : AB = <span class="hl-b">6 cm</span>.</div>`
+  },
+  {
+    explic:"On calcule la moitié de AB : 6 ÷ 2 = 3 cm. Le milieu M se trouve à 3 cm de A (et de B).",
+    draw(){
+      let h=base();
+      // Demi-segments colorés
+      h+=seg(A.x,A.y,M.x,M.y,'#1d4ed8',3);
+      h+=seg(M.x,M.y,B.x,B.y,'#9d174d',3);
+      h+=cote(A.x,A.y,M.x,M.y,'3 cm','#1d4ed8',22);
+      h+=cote(M.x,M.y,B.x,B.y,'3 cm','#9d174d',22);
+      h+=dot(M.x,M.y,'#dc2626',6); h+=lbl(M.x,M.y+18,'M','#dc2626');
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 2 : trouver le milieu M.</div>
+          <div class="ligne">AB = 6 cm → AM = 6 ÷ 2 = <span class="hl-b">3 cm</span>.</div>
+          <div class="ligne">On place M à 3 cm de A sur le segment.</div>
+          <div class="ligne">M est le <span class="hl-r">milieu</span> de [AB].</div>`
+  },
+  {
+    explic:"On place l'équerre : l'angle droit de l'équerre se positionne exactement sur M, et le côté de l'équerre s'aligne sur le segment AB.",
+    draw(){
+      let h=base();
+      h+=dot(M.x,M.y,'#dc2626',6); h+=lbl(M.x,M.y+18,'M','#dc2626');
+      // Équerre posée sur M, angle droit exactement en M
+      h+=equerre(M.x, M.y, 70, 90, '#bfdbfe');
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 3 : placer l'équerre sur M.</div>
+          <div class="ligne">On pose l'angle droit de l'équerre en <span class="hl-b">M</span>.</div>
+          <div class="ligne">Le côté horizontal de l'équerre s'aligne sur le segment [AB].</div>
+          <div class="ligne">Le côté vertical est alors <span class="hl-b">perpendiculaire</span> à [AB].</div>`
+  },
+  {
+    explic:"On trace la droite le long du côté vertical de l'équerre, en passant par M. Cette droite est la médiatrice.",
+    draw(){
+      let h=base();
+      // Médiatrice tracée
+      h+=seg(M.x,A.y+50,M.x,A.y-120,'#dc2626',2.5,'6,3');
+      h+=equerre(M.x, M.y, 70, 90, '#bfdbfe');
+      h+=dot(M.x,M.y,'#dc2626',6); h+=lbl(M.x,M.y+18,'M','#dc2626');
+      h+=lbl(M.x+14, A.y-115, 'médiatrice', '#dc2626', 11, 'start');
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 4 : tracer la médiatrice.</div>
+          <div class="ligne">On trace la droite le long du côté vertical de l'équerre.</div>
+          <div class="ligne">Cette droite passe par <span class="hl-r">M</span> et est <span class="hl-r">perpendiculaire</span> à [AB].</div>
+          <div class="conclusion-ok">La médiatrice de [AB] est tracée ✓<br>Elle passe par M et est perpendiculaire à [AB].</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — COMPAS + RÈGLE
+// On trace deux arcs de cercle de même rayon depuis A et B → deux points d'intersection → on relie
+// ============================================================
+const r1=150; // rayon des arcs (en pixels) > AB/2 = 120
+const int1={x:M.x, y:M.y-Math.sqrt(r1*r1-(AB/2)*(AB/2))}; // point intersection haut
+const int2={x:M.x, y:M.y+Math.sqrt(r1*r1-(AB/2)*(AB/2))}; // point intersection bas
+
+const e1=[
+  {
+    explic:"Avec le compas, on trace deux arcs de cercle de même rayon : un centré en A, un centré en B. Le rayon doit être supérieur à la moitié de AB.",
+    draw(){
+      let h=base();
+      // Compas : pointe sur A, crayon sur un point de l'arc (haut)
+      h+=compas(A.x, A.y, A.x+r1*Math.cos(-40*Math.PI/180), A.y+r1*Math.sin(-40*Math.PI/180), '#15803d');
+      h+=lbl(A.x-25, A.y-60, 'r > AB/2', '#15803d', 10);
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 1 : choisir un rayon r > AB/2.</div>
+          <div class="ligne">On écarte le compas à un rayon <span class="hl-g">r</span> supérieur à la moitié de [AB].</div>
+          <div class="ligne">Ce rayon sera le <span class="hl-g">même</span> pour les deux arcs.</div>
+          <div class="attention">⚠️ Si r est trop petit (r &lt; AB/2), les arcs ne se croisent pas !</div>`
+  },
+  {
+    explic:"On trace un arc de cercle centré en A, avec le rayon choisi. L'arc doit passer au-dessus et en dessous du segment.",
+    draw(){
+      let h=base();
+      h+=arc(A.x,A.y,r1,-70,70,'#15803d',2.5);
+      h+=compas(A.x, A.y, A.x+r1*Math.cos(-55*Math.PI/180), A.y+r1*Math.sin(-55*Math.PI/180), '#15803d');
+      h+=dot(A.x,A.y,'#374151'); h+=lbl(A.x,A.y+18,'A','#374151');
+      h+=dot(B.x,B.y,'#374151'); h+=lbl(B.x,B.y+18,'B','#374151');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 2 : arc centré en A.</div>
+          <div class="ligne">On place la pointe du compas en <span class="hl-g">A</span>.</div>
+          <div class="ligne">On trace un arc qui passe des deux côtés du segment.</div>`
+  },
+  {
+    explic:"Sans changer l'écartement du compas, on trace un deuxième arc centré en B, avec le même rayon.",
+    draw(){
+      let h=base();
+      h+=arc(A.x,A.y,r1,-70,70,'#15803d',2.5);
+      h+=arc(B.x,B.y,r1,110,250,'#1d4ed8',2.5);
+      h+=dot(A.x,A.y,'#374151'); h+=lbl(A.x,A.y+18,'A','#374151');
+      h+=dot(B.x,B.y,'#374151'); h+=lbl(B.x,B.y+18,'B','#374151');
+      // Compas : pointe sur B, crayon sur un point de l'arc (haut)
+      h+=compas(B.x, B.y, B.x+r1*Math.cos(-125*Math.PI/180), B.y+r1*Math.sin(-125*Math.PI/180), '#1d4ed8');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 3 : arc centré en B (même rayon).</div>
+          <div class="ligne">On place la pointe du compas en <span class="hl-b">B</span>.</div>
+          <div class="ligne">On trace un arc avec le <span class="hl-b">même rayon</span> (ne pas changer l'écartement !).</div>
+          <div class="ligne">Les deux arcs se croisent en deux points.</div>`
+  },
+  {
+    explic:"Les deux arcs se croisent en deux points P et Q. On marque ces deux points d'intersection.",
+    draw(){
+      let h=base();
+      h+=arc(A.x,A.y,r1,-70,70,'#15803d',2);
+      h+=arc(B.x,B.y,r1,110,250,'#1d4ed8',2);
+      // Points d'intersection
+      h+=dot(int1.x,int1.y,'#dc2626',6); h+=lbl(int1.x+14,int1.y,'P','#dc2626');
+      h+=dot(int2.x,int2.y,'#dc2626',6); h+=lbl(int2.x+14,int2.y+4,'Q','#dc2626');
+      h+=dot(A.x,A.y,'#374151'); h+=lbl(A.x,A.y+18,'A','#374151');
+      h+=dot(B.x,B.y,'#374151'); h+=lbl(B.x,B.y+18,'B','#374151');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 4 : marquer les intersections P et Q.</div>
+          <div class="ligne">Les deux arcs se coupent en <span class="hl-r">P</span> (au-dessus) et <span class="hl-r">Q</span> (en dessous).</div>
+          <div class="ligne">Ces deux points sont équidistants de A et de B.</div>`
+  },
+  {
+    explic:"On relie P et Q avec la règle. La droite (PQ) est la médiatrice de [AB] : elle passe par le milieu M et est perpendiculaire au segment.",
+    draw(){
+      let h=base();
+      h+=arc(A.x,A.y,r1,-70,70,'#94a3b8',1.5);
+      h+=arc(B.x,B.y,r1,110,250,'#94a3b8',1.5);
+      // Médiatrice
+      h+=seg(M.x, int2.y+30, M.x, int1.y-20, '#dc2626',2.5);
+      // Milieu M
+      h+=dot(M.x,M.y,'#dc2626',6); h+=lbl(M.x+14,M.y,'M','#dc2626');
+      // Angle droit
+      h+=`<polyline points="${M.x-10},${M.y} ${M.x-10},${M.y-10} ${M.x},${M.y-10}"
+        fill="none" stroke="#374151" stroke-width="2"/>`;
+      h+=dot(int1.x,int1.y,'#dc2626',5); h+=lbl(int1.x+14,int1.y,'P','#dc2626');
+      h+=dot(int2.x,int2.y,'#dc2626',5); h+=lbl(int2.x+14,int2.y+4,'Q','#dc2626');
+      h+=dot(A.x,A.y,'#374151'); h+=lbl(A.x,A.y+18,'A','#374151');
+      h+=dot(B.x,B.y,'#374151'); h+=lbl(B.x,B.y+18,'B','#374151');
+      h+=lbl(M.x+14, int1.y-16, 'médiatrice', '#dc2626', 11, 'start');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 5 : relier P et Q.</div>
+          <div class="ligne">On trace la droite (PQ) avec la règle.</div>
+          <div class="conclusion-ok">La médiatrice de [AB] est tracée ✓<br>Elle passe par M (milieu de [AB]) et est perpendiculaire à [AB].</div>
+          <div class="attention">💡 Cette méthode est plus précise car elle ne nécessite pas de mesurer AB.</div>`
+  },
+];
+
+const ETAPES=[e0,e1];
+const COLS=['#1d4ed8','#15803d'];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
