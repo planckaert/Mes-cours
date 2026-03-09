@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Équation du premier degré</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 16px; border: none; font-size: 0.77em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab4 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #4c1d95; color: white; border-color: #4c1d95; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab4.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Balance visuelle */
+  .balance-box { background: white; border-radius: 14px; padding: 10px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; }
+  svg.balance { width: 100%; height: 100px; display: block; }
+
+  /* Ligne d'équation */
+  .eq-box { background: white; border-radius: 14px; padding: 14px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 10px #0002; font-family: 'Courier New', monospace; font-size: 1.15em; font-weight: bold; text-align: center; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .tk { display: inline-block; padding: 4px 10px; border-radius: 7px; font-weight: bold; }
+  .tk-x  { background: #ede9fe; color: #4c1d95; }
+  .tk-n  { background: #fef3c7; color: #b45309; }
+  .tk-op { color: #374151; padding: 0 3px; }
+  .tk-eq { color: #374151; font-size: 1.2em; padding: 0 4px; }
+  .tk-act{ background: #fce7f3; color: #9d174d; border: 2px solid #f9a8d4; }
+  .tk-res{ background: #dcfce7; color: #15803d; font-size: 1.2em; }
+  .arrow-label { font-size: 0.78em; color: #9d174d; font-family: 'Segoe UI', sans-serif; font-weight: bold; background: #fce7f3; border-radius: 6px; padding: 2px 8px; }
+
+  /* Étapes de résolution */
+  .steps-box { background: white; border-radius: 14px; padding: 10px 16px; margin: 4px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; }
+  .step-line { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f1f5f9; font-family: 'Courier New', monospace; font-size: 1em; flex-wrap: wrap; }
+  .step-line:last-child { border-bottom: none; }
+  .step-comment { font-size: 0.8em; color: #9d174d; font-family: 'Segoe UI', sans-serif; font-weight: bold; margin-left: 4px; }
+  .step-fade { color: #cbd5e1; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #4c1d95; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #3730a3; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .en3 { background: #dcfce7; color: #14532d; }
+  .en4 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-p { color: #6d28d9; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #9d174d; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1.05em; font-family: 'Courier New', monospace; }
+  .c1 { background: #ede9fe; border-color: #7c3aed; color: #3730a3; }
+  .c2 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c3 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c4 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .verif { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #15803d; font-size: 0.91em; font-family: 'Courier New', monospace; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #4c1d95; color: white; }
+</style>
+</head>
+<body>
+<h1>⚖️ Résoudre une équation du 1er degré</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Principe de la balance</button>
+  <button class="tab tab2" onclick="setMode(1)">Équation simple</button>
+  <button class="tab tab3" onclick="setMode(2)">x des deux côtés</button>
+  <button class="tab tab4" onclick="setMode(3)">Avec développement</button>
+</div>
+<div class="scene">
+  <div class="balance-box" id="balance-box"></div>
+  <div class="eq-box" id="eq-box"></div>
+  <div class="steps-box" id="steps-box" style="display:none"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#4c1d95','#1d4ed8','#15803d','#b45309'];
+
+function tk(t,c){ return `<span class="tk ${c}">${t}</span>`; }
+function op(s){ return `<span class="tk-op">${s}</span>`; }
+
+// ============================================================
+// BALANCE SVG
+// ============================================================
+function balance(leftTxt, rightTxt, tilt=0, col='#4c1d95'){
+  const cx=240, cy=30, armW=160;
+  const leftX=cx-armW, rightX=cx+armW;
+  const ly = cy + tilt, ry = cy - tilt;
+  return `<svg class="balance" viewBox="0 0 480 100">
+    <!-- Pied -->
+    <line x1="${cx}" y1="${cy}" x2="${cx}" y2="85" stroke="#94a3b8" stroke-width="3"/>
+    <ellipse cx="${cx}" cy="88" rx="30" ry="6" fill="#e2e8f0"/>
+    <!-- Bras -->
+    <line x1="${leftX}" y1="${ly}" x2="${rightX}" y2="${ry}" stroke="#374151" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Plateaux -->
+    <line x1="${leftX}" y1="${ly}" x2="${leftX}" y2="${ly+20}" stroke="#374151" stroke-width="2"/>
+    <line x1="${rightX}" y1="${ry}" x2="${rightX}" y2="${ry+20}" stroke="#374151" stroke-width="2"/>
+    <ellipse cx="${leftX}" cy="${ly+22}" rx="36" ry="7" fill="${col}" fill-opacity="0.2" stroke="${col}" stroke-width="1.5"/>
+    <ellipse cx="${rightX}" cy="${ry+22}" rx="36" ry="7" fill="${col}" fill-opacity="0.2" stroke="${col}" stroke-width="1.5"/>
+    <!-- Textes -->
+    <text x="${leftX}" y="${ly+14}" font-size="13" font-weight="bold" text-anchor="middle" fill="${col}">${leftTxt}</text>
+    <text x="${rightX}" y="${ry+14}" font-size="13" font-weight="bold" text-anchor="middle" fill="${col}">${rightTxt}</text>
+    <!-- Point pivot -->
+    <circle cx="${cx}" cy="${cy}" r="5" fill="${col}"/>
+  </svg>`;
+}
+
+// ============================================================
+// LIGNES D'ÉTAPES
+// ============================================================
+function stepLines(lines){
+  // lines = [{eq, comment, active, fade}]
+  let h='';
+  lines.forEach(l=>{
+    const cls = l.active ? '' : l.fade ? 'step-fade' : '';
+    h+=`<div class="step-line ${cls}">
+      <span style="${l.active?'color:#4c1d95;font-weight:bold':'color:#374151'}">${l.eq}</span>
+      ${l.comment ? `<span class="step-comment">← ${l.comment}</span>` : ''}
+    </div>`;
+  });
+  return h;
+}
+
+// ============================================================
+// MODE 0 — PRINCIPE DE LA BALANCE
+// ============================================================
+const e0=[
+  {
+    explic:"Une équation, c'est comme une balance en équilibre. Les deux côtés sont égaux. Pour garder l'équilibre, toute opération faite d'un côté doit être faite de l'autre.",
+    bal(){ return balance('3x + 2','14',0); },
+    eq(){ return tk('3x','tk-x') + op('+') + tk('2','tk-n') + `<span class="tk-eq">=</span>` + tk('14','tk-n'); },
+    steps(){ return ''; },
+    calc:`<div class="enonce en1">Résoudre une équation = trouver la valeur de x.</div>
+          <div class="ligne">L'équation est comme une balance : les deux côtés sont égaux.</div>
+          <div class="ligne">But : isoler <span class="hl-p">x</span> tout seul d'un côté.</div>
+          <div class="ligne">Règle : toute opération faite d'un côté doit être faite de l'autre côté.</div>`
+  },
+  {
+    explic:"On soustrait 2 des deux côtés pour faire disparaître le +2 à gauche. La balance reste en équilibre.",
+    bal(){ return balance('3x + 2 − 2','14 − 2',0); },
+    eq(){ return tk('3x','tk-x') + op('+') + tk('2','tk-n') + op('−') + tk('2','tk-act') + `<span class="tk-eq">=</span>` + tk('14','tk-n') + op('−') + tk('2','tk-act'); },
+    steps(){ return ''; },
+    calc:`<div class="enonce en1">On soustrait 2 des deux côtés.</div>
+          <div class="ligne">Gauche : 3x + 2 − <span class="hl-r">2</span> = 3x</div>
+          <div class="ligne">Droite : 14 − <span class="hl-r">2</span> = 12</div>
+          <div class="ligne">→ 3x = 12</div>`
+  },
+  {
+    explic:"Il reste 3x = 12. On divise les deux côtés par 3 pour isoler x.",
+    bal(){ return balance('3x ÷ 3','12 ÷ 3',0); },
+    eq(){ return tk('3x','tk-x') + op('÷') + tk('3','tk-act') + `<span class="tk-eq">=</span>` + tk('12','tk-n') + op('÷') + tk('3','tk-act'); },
+    steps(){ return ''; },
+    calc:`<div class="enonce en1">On divise les deux côtés par 3.</div>
+          <div class="ligne">Gauche : 3x ÷ <span class="hl-r">3</span> = x</div>
+          <div class="ligne">Droite : 12 ÷ <span class="hl-r">3</span> = 4</div>
+          <div class="conclusion c1">x = 4</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — ÉQUATION SIMPLE
+// 5x − 3 = 2x + 9   →   x = 4
+// ============================================================
+const e1=[
+  {
+    explic:"On veut résoudre 5x − 3 = 2x + 9. Méthode : on regroupe les termes en x d'un côté et les nombres de l'autre.",
+    bal(){ return balance('5x − 3','2x + 9',0,'#1d4ed8'); },
+    eq(){ return tk('5x','tk-x') + op('−') + tk('3','tk-n') + `<span class="tk-eq">=</span>` + tk('2x','tk-x') + op('+') + tk('9','tk-n'); },
+    steps(){ return ''; },
+    calc:`<div class="enonce en2">Résoudre : 5x − 3 = 2x + 9</div>
+          <div class="ligne">On va :</div>
+          <div class="ligne">1. Mettre tous les <span class="hl-b">x</span> à gauche</div>
+          <div class="ligne">2. Mettre tous les <span class="hl-b">nombres</span> à droite</div>`
+  },
+  {
+    explic:"On soustrait 2x des deux côtés pour mettre tous les x à gauche.",
+    bal(){ return balance('5x − 2x − 3','9',0,'#1d4ed8'); },
+    eq(){ return tk('5x','tk-x') + op('−') + tk('2x','tk-act') + op('−') + tk('3','tk-n') + `<span class="tk-eq">=</span>` + tk('9','tk-n'); },
+    steps(){ return stepLines([
+      {eq:'5x − 3 = 2x + 9', comment:'', fade:true},
+      {eq:'5x − 2x − 3 = 9', comment:'on soustrait 2x des deux côtés', active:true},
+    ]); },
+    calc:`<div class="enonce en2">On soustrait 2x des deux côtés.</div>
+          <div class="ligne">5x − <span class="hl-r">2x</span> − 3 = 2x − <span class="hl-r">2x</span> + 9</div>
+          <div class="ligne">→ <span class="hl-b">3x</span> − 3 = 9</div>`
+  },
+  {
+    explic:"On additionne 3 des deux côtés pour faire disparaître le −3 à gauche.",
+    bal(){ return balance('3x','12',0,'#1d4ed8'); },
+    eq(){ return tk('3x','tk-x') + op('−') + tk('3','tk-n') + op('+') + tk('3','tk-act') + `<span class="tk-eq">=</span>` + tk('9','tk-n') + op('+') + tk('3','tk-act'); },
+    steps(){ return stepLines([
+      {eq:'5x − 3 = 2x + 9', fade:true},
+      {eq:'3x − 3 = 9', fade:true},
+      {eq:'3x = 12', comment:'on ajoute 3 des deux côtés', active:true},
+    ]); },
+    calc:`<div class="enonce en2">On ajoute 3 des deux côtés.</div>
+          <div class="ligne">3x − 3 + <span class="hl-r">3</span> = 9 + <span class="hl-r">3</span></div>
+          <div class="ligne">→ 3x = 12</div>`
+  },
+  {
+    explic:"On divise les deux côtés par 3. On trouve x = 4, puis on vérifie.",
+    bal(){ return balance('x','4',0,'#1d4ed8'); },
+    eq(){ return tk('x','tk-x') + `<span class="tk-eq">=</span>` + tk('4','tk-res'); },
+    steps(){ return stepLines([
+      {eq:'5x − 3 = 2x + 9', fade:true},
+      {eq:'3x − 3 = 9', fade:true},
+      {eq:'3x = 12', fade:true},
+      {eq:'x = 4', comment:'on divise par 3', active:true},
+    ]); },
+    calc:`<div class="enonce en2">On divise par 3.</div>
+          <div class="ligne">3x ÷ 3 = 12 ÷ 3</div>
+          <div class="conclusion c2">x = 4</div>
+          <div class="verif">Vérification : 5×4 − 3 = 17 et 2×4 + 9 = 17 ✓</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — x DES DEUX CÔTÉS avec fraction
+// x/3 + 1 = 5   →   x = 12
+// ============================================================
+const e2=[
+  {
+    explic:"On résout x/3 + 1 = 5. Quand x est divisé par un nombre, on multiplie des deux côtés pour l'éliminer.",
+    bal(){ return balance('x/3 + 1','5',0,'#15803d'); },
+    eq(){ return tk('x/3','tk-x') + op('+') + tk('1','tk-n') + `<span class="tk-eq">=</span>` + tk('5','tk-n'); },
+    steps(){ return ''; },
+    calc:`<div class="enonce en3">Résoudre : x/3 + 1 = 5</div>
+          <div class="ligne">x est divisé par 3. On va d'abord isoler x/3 puis multiplier par 3.</div>`
+  },
+  {
+    explic:"On soustrait 1 des deux côtés pour isoler x/3.",
+    bal(){ return balance('x/3','4',0,'#15803d'); },
+    eq(){ return tk('x/3','tk-x') + op('+') + tk('1','tk-n') + op('−') + tk('1','tk-act') + `<span class="tk-eq">=</span>` + tk('5','tk-n') + op('−') + tk('1','tk-act'); },
+    steps(){ return stepLines([
+      {eq:'x/3 + 1 = 5', fade:true},
+      {eq:'x/3 = 4', comment:'on soustrait 1', active:true},
+    ]); },
+    calc:`<div class="enonce en3">On soustrait 1 des deux côtés.</div>
+          <div class="ligne">x/3 + 1 − 1 = 5 − 1</div>
+          <div class="ligne">→ x/3 = 4</div>`
+  },
+  {
+    explic:"On multiplie les deux côtés par 3 pour éliminer la division.",
+    bal(){ return balance('x','12',0,'#15803d'); },
+    eq(){ return tk('x/3','tk-x') + op('×') + tk('3','tk-act') + `<span class="tk-eq">=</span>` + tk('4','tk-n') + op('×') + tk('3','tk-act'); },
+    steps(){ return stepLines([
+      {eq:'x/3 + 1 = 5', fade:true},
+      {eq:'x/3 = 4', fade:true},
+      {eq:'x = 12', comment:'on multiplie par 3', active:true},
+    ]); },
+    calc:`<div class="enonce en3">On multiplie les deux côtés par 3.</div>
+          <div class="ligne">x/3 × 3 = 4 × 3</div>
+          <div class="conclusion c3">x = 12</div>
+          <div class="verif">Vérification : 12/3 + 1 = 4 + 1 = 5 ✓</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — AVEC DÉVELOPPEMENT
+// 3(x + 2) − 4 = 2(x + 5)   →   x = 8
+// ============================================================
+const e3=[
+  {
+    explic:"Quand l'équation contient des parenthèses, on commence par les développer, puis on résout.",
+    bal(){ return balance('3(x+2)−4','2(x+5)',0,'#b45309'); },
+    eq(){ return tk('3(x+2)','tk-x') + op('−') + tk('4','tk-n') + `<span class="tk-eq">=</span>` + tk('2(x+5)','tk-x'); },
+    steps(){ return ''; },
+    calc:`<div class="enonce en4">Résoudre : 3(x + 2) − 4 = 2(x + 5)</div>
+          <div class="ligne">Il y a des parenthèses → on développe d'abord.</div>`
+  },
+  {
+    explic:"On développe les deux membres : 3(x+2) = 3x+6 et 2(x+5) = 2x+10.",
+    bal(){ return balance('3x + 6 − 4','2x + 10',0,'#b45309'); },
+    eq(){ return tk('3x','tk-x') + op('+') + tk('6','tk-n') + op('−') + tk('4','tk-n') + `<span class="tk-eq">=</span>` + tk('2x','tk-x') + op('+') + tk('10','tk-n'); },
+    steps(){ return stepLines([
+      {eq:'3(x+2) − 4 = 2(x+5)', fade:true},
+      {eq:'3x + 6 − 4 = 2x + 10', comment:'on développe', active:true},
+    ]); },
+    calc:`<div class="enonce en4">On développe les parenthèses.</div>
+          <div class="ligne">3×(x+2) = <span class="hl-o">3x + 6</span></div>
+          <div class="ligne">2×(x+5) = <span class="hl-o">2x + 10</span></div>
+          <div class="ligne">→ 3x + 6 − 4 = 2x + 10</div>`
+  },
+  {
+    explic:"On réduit le membre gauche : 6 − 4 = 2.",
+    bal(){ return balance('3x + 2','2x + 10',0,'#b45309'); },
+    eq(){ return tk('3x','tk-x') + op('+') + tk('2','tk-n') + `<span class="tk-eq">=</span>` + tk('2x','tk-x') + op('+') + tk('10','tk-n'); },
+    steps(){ return stepLines([
+      {eq:'3(x+2) − 4 = 2(x+5)', fade:true},
+      {eq:'3x + 6 − 4 = 2x + 10', fade:true},
+      {eq:'3x + 2 = 2x + 10', comment:'on réduit 6−4=2', active:true},
+    ]); },
+    calc:`<div class="enonce en4">On réduit le membre gauche.</div>
+          <div class="ligne">6 − 4 = <span class="hl-o">2</span></div>
+          <div class="ligne">→ 3x + 2 = 2x + 10</div>`
+  },
+  {
+    explic:"On soustrait 2x des deux côtés, puis 2 des deux côtés.",
+    bal(){ return balance('x','8',0,'#b45309'); },
+    eq(){ return tk('x','tk-x') + `<span class="tk-eq">=</span>` + tk('8','tk-res'); },
+    steps(){ return stepLines([
+      {eq:'3x + 2 = 2x + 10', fade:true},
+      {eq:'x + 2 = 10', comment:'on soustrait 2x', fade:true},
+      {eq:'x = 8', comment:'on soustrait 2', active:true},
+    ]); },
+    calc:`<div class="enonce en4">On isole x.</div>
+          <div class="ligne">3x + 2 − <span class="hl-r">2x</span> = 2x + 10 − <span class="hl-r">2x</span> → x + 2 = 10</div>
+          <div class="ligne">x + 2 − <span class="hl-r">2</span> = 10 − <span class="hl-r">2</span> → x = 8</div>
+          <div class="conclusion c4">x = 8</div>
+          <div class="verif">Vérification : 3(8+2)−4 = 26 et 2(8+5) = 26 ✓</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('balance-box').innerHTML=e.bal();
+  document.getElementById('eq-box').innerHTML=e.eq();
+  const s=e.steps();
+  const sw=document.getElementById('steps-box');
+  if(s){ sw.style.display='block'; sw.innerHTML=s; }
+  else sw.style.display='none';
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

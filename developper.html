@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Développer une expression</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #14532d; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 16px; border: none; font-size: 0.77em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab4 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab4.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Zone expression */
+  .expr-box { background: white; border-radius: 14px; padding: 16px 14px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 10px #0002; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; min-height: 76px; font-family: 'Courier New', monospace; font-size: 1.2em; font-weight: bold; }
+
+  /* Schéma flèches SVG */
+  .arrow-box { background: white; border-radius: 14px; padding: 8px 12px; margin: 4px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; display: none; }
+  svg.arrows { width: 100%; overflow: visible; }
+
+  /* Tokens colorés */
+  .tk { padding: 4px 10px; border-radius: 7px; font-weight: bold; display: inline-block; }
+  .tk-f  { background: #15803d; color: white; }           /* facteur externe */
+  .tk-a  { background: #dcfce7; color: #14532d; }         /* terme 1 */
+  .tk-b  { background: #dbeafe; color: #1d4ed8; }         /* terme 2 */
+  .tk-c  { background: #fef3c7; color: #b45309; }         /* terme 3 */
+  .tk-r1 { background: #bbf7d0; color: #14532d; }         /* résultat terme 1 */
+  .tk-r2 { background: #bfdbfe; color: #1d4ed8; }         /* résultat terme 2 */
+  .tk-r3 { background: #fde68a; color: #b45309; }         /* résultat terme 3 */
+  .tk-op { color: #374151; padding: 0 3px; }
+  .tk-par{ color: #374151; font-size: 1.3em; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #15803d; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dcfce7; color: #14532d; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .en3 { background: #fef3c7; color: #78350f; }
+  .en4 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #9d174d; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1em; font-family: 'Courier New', monospace; }
+  .c1 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c2 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c3 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .c4 { background: #fce7f3; border-color: #ec4899; color: #831843; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #15803d; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Développer une expression</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">k(a + b)</button>
+  <button class="tab tab2" onclick="setMode(1)">k(a + b + c)</button>
+  <button class="tab tab3" onclick="setMode(2)">(a + b)(c + d)</button>
+  <button class="tab tab4" onclick="setMode(3)">Réduire après développer</button>
+</div>
+<div class="scene">
+  <div class="expr-box" id="expr-box"></div>
+  <div class="arrow-box" id="arrow-box"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#15803d','#1d4ed8','#b45309','#9d174d'];
+
+function tk(t,c){ return `<span class="tk ${c}">${t}</span>`; }
+function op(s){ return `<span class="tk-op">${s}</span>`; }
+function par(s){ return `<span class="tk-par">${s}</span>`; }
+
+// Flèches de distribution SVG
+function arrows(from, targets, color, labels, W=420){
+  // from = x position du facteur
+  // targets = [x1, x2, ...] positions des termes dans la parenthèse
+  const fy = 18, ty = 58;
+  let h = `<svg class="arrows" viewBox="0 0 ${W} 70" style="height:70px">`;
+  targets.forEach((tx, i) => {
+    h += `<path d="M${from},${fy} Q${(from+tx)/2},${(fy+ty)/2-10} ${tx},${ty}"
+      fill="none" stroke="${color}" stroke-width="2.2" stroke-dasharray="5,3"
+      marker-end="url(#arr)"/>`;
+    if(labels && labels[i]){
+      h += `<text x="${tx}" y="${ty+14}" font-size="11" text-anchor="middle" fill="${color}" font-weight="bold">${labels[i]}</text>`;
+    }
+  });
+  h += `<defs><marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="${color}"/>
+  </marker></defs>`;
+  h += '</svg>';
+  return h;
+}
+
+// ============================================================
+// MODE 0 — k(a + b)
+// 3(2x + 5) = 6x + 15
+// ============================================================
+const e0 = [
+  {
+    explic: "Développer, c'est supprimer les parenthèses en multipliant. Le facteur devant la parenthèse multiplie chaque terme à l'intérieur.",
+    expr(){ return tk('3','tk-f') + par('(') + tk('2x','tk-a') + op('+') + tk('5','tk-b') + par(')'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en1">Développer : 3(2x + 5)</div>
+          <div class="ligne">Le facteur <span class="hl-g">3</span> est devant la parenthèse.</div>
+          <div class="ligne">Il va multiplier <span class="hl-g">chaque terme</span> à l'intérieur : le 2x et le 5.</div>`
+  },
+  {
+    explic: "On distribue le 3 : d'abord sur 2x, puis sur 5. Les flèches montrent quelle multiplication on fait.",
+    expr(){ return tk('3','tk-f') + par('(') + tk('2x','tk-a') + op('+') + tk('5','tk-b') + par(')'); },
+    arrows(){ return arrows(18, [90, 150], '#15803d', ['3×2x','3×5'], 220); },
+    calc:`<div class="enonce en1">On distribue le 3 sur chaque terme.</div>
+          <div class="ligne"><span class="hl-g">3</span> × 2x = <span class="hl-g">6x</span></div>
+          <div class="ligne"><span class="hl-g">3</span> × 5 = <span class="hl-g">15</span></div>`
+  },
+  {
+    explic: "On écrit les deux produits en les reliant par le signe +. Le développement est terminé.",
+    expr(){ return tk('3','tk-f') + par('(') + tk('2x','tk-a') + op('+') + tk('5','tk-b') + par(')')
+      + op('=') + tk('6x','tk-r1') + op('+') + tk('15','tk-r2'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en1">3(2x + 5)</div>
+          <div class="ligne">= 3 × 2x + 3 × 5</div>
+          <div class="ligne">= <span class="hl-g">6x</span> + <span class="hl-g">15</span></div>
+          <div class="conclusion c1">3(2x + 5) = 6x + 15</div>`
+  },
+  {
+    explic: "Attention au signe : si le facteur est négatif, les signes à l'intérieur changent.",
+    expr(){ return op('−') + tk('2','tk-f') + par('(') + tk('x','tk-a') + op('−') + tk('4','tk-b') + par(')')
+      + op('=') + tk('−2x','tk-r1') + op('+') + tk('8','tk-r2'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en1">Exemple avec signe négatif : −2(x − 4)</div>
+          <div class="ligne">−2 × x = <span class="hl-g">−2x</span></div>
+          <div class="ligne">−2 × (−4) = <span class="hl-g">+8</span></div>
+          <div class="conclusion c1">−2(x − 4) = −2x + 8</div>
+          <div class="attention">⚠️ (−) × (−) = (+) : moins × moins = plus !</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — k(a + b + c)
+// 4(3x² − 2x + 1) = 12x² − 8x + 4
+// ============================================================
+const e1 = [
+  {
+    explic: "Quand il y a trois termes dans la parenthèse, on distribue le facteur sur chacun des trois termes.",
+    expr(){ return tk('4','tk-f') + par('(') + tk('3x²','tk-a') + op('−') + tk('2x','tk-b') + op('+') + tk('1','tk-c') + par(')'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en2">Développer : 4(3x² − 2x + 1)</div>
+          <div class="ligne">Le facteur <span class="hl-b">4</span> multiplie les <span class="hl-b">trois termes</span> : 3x², −2x et 1.</div>`
+  },
+  {
+    explic: "On multiplie 4 par chaque terme, en respectant le signe de chaque terme.",
+    expr(){ return tk('4','tk-f') + par('(') + tk('3x²','tk-a') + op('−') + tk('2x','tk-b') + op('+') + tk('1','tk-c') + par(')'); },
+    arrows(){ return arrows(18, [80, 152, 210], '#1d4ed8', ['4×3x²','4×(−2x)','4×1'], 300); },
+    calc:`<div class="enonce en2">On distribue le 4 sur chaque terme.</div>
+          <div class="ligne"><span class="hl-b">4</span> × 3x² = <span class="hl-b">12x²</span></div>
+          <div class="ligne"><span class="hl-b">4</span> × (−2x) = <span class="hl-b">−8x</span></div>
+          <div class="ligne"><span class="hl-b">4</span> × 1 = <span class="hl-b">4</span></div>`
+  },
+  {
+    explic: "On écrit les trois résultats avec leurs signes. Le développement est terminé.",
+    expr(){ return tk('4','tk-f') + par('(') + tk('3x²','tk-a') + op('−') + tk('2x','tk-b') + op('+') + tk('1','tk-c') + par(')')
+      + op('=') + tk('12x²','tk-r1') + op('−') + tk('8x','tk-r2') + op('+') + tk('4','tk-r3'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en2">4(3x² − 2x + 1)</div>
+          <div class="ligne">= 4×3x² + 4×(−2x) + 4×1</div>
+          <div class="ligne">= <span class="hl-b">12x²</span> − <span class="hl-b">8x</span> + <span class="hl-b">4</span></div>
+          <div class="conclusion c2">4(3x² − 2x + 1) = 12x² − 8x + 4</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — (a + b)(c + d)
+// (x + 3)(2x − 1) = 2x² − x + 6x − 3 = 2x² + 5x − 3
+// ============================================================
+const e2 = [
+  {
+    explic: "Quand on développe un produit de deux parenthèses, chaque terme de la première parenthèse multiplie chaque terme de la deuxième.",
+    expr(){ return par('(') + tk('x','tk-a') + op('+') + tk('3','tk-b') + par(')') + par('(') + tk('2x','tk-c') + op('−') + tk('1','tk-c') + par(')'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en3">Développer : (x + 3)(2x − 1)</div>
+          <div class="ligne">Il y a <span class="hl-o">2 termes × 2 termes</span> = 4 produits à calculer.</div>
+          <div class="ligne">Méthode : chaque terme de la 1ère parenthèse multiplie chaque terme de la 2ème.</div>`
+  },
+  {
+    explic: "Premier terme x multiplie chaque terme de la 2ème parenthèse : x × 2x = 2x² et x × (−1) = −x.",
+    expr(){ return par('(') + tk('x','tk-a') + op('+') + tk('3','tk-b') + par(')') + par('(') + tk('2x','tk-c') + op('−') + tk('1','tk-c') + par(')')
+      + op('→') + tk('2x²','tk-r1') + op('−') + tk('x','tk-r1') + op('+') + tk('…','tk-r2'); },
+    arrows(){ return arrows(30, [200, 258], '#b45309', ['x×2x','x×(−1)'], 320); },
+    calc:`<div class="enonce en3">Le terme x multiplie les deux termes de la 2ème parenthèse.</div>
+          <div class="ligne"><span class="hl-o">x</span> × 2x = <span class="hl-o">2x²</span></div>
+          <div class="ligne"><span class="hl-o">x</span> × (−1) = <span class="hl-o">−x</span></div>`
+  },
+  {
+    explic: "Deuxième terme 3 multiplie chaque terme de la 2ème parenthèse : 3 × 2x = 6x et 3 × (−1) = −3.",
+    expr(){ return par('(') + tk('x','tk-a') + op('+') + tk('3','tk-b') + par(')') + par('(') + tk('2x','tk-c') + op('−') + tk('1','tk-c') + par(')')
+      + op('→') + tk('2x²','tk-r1') + op('−') + tk('x','tk-r1') + op('+') + tk('6x','tk-r2') + op('−') + tk('3','tk-r2'); },
+    arrows(){ return arrows(66, [200, 258], '#1d4ed8', ['3×2x','3×(−1)'], 320); },
+    calc:`<div class="enonce en3">Le terme 3 multiplie les deux termes de la 2ème parenthèse.</div>
+          <div class="ligne"><span class="hl-b">3</span> × 2x = <span class="hl-b">6x</span></div>
+          <div class="ligne"><span class="hl-b">3</span> × (−1) = <span class="hl-b">−3</span></div>`
+  },
+  {
+    explic: "On a les 4 produits. On les additionne, puis on réduit en regroupant les termes semblables (−x + 6x = 5x).",
+    expr(){ return par('(') + tk('x','tk-a') + op('+') + tk('3','tk-b') + par(')') + par('(') + tk('2x','tk-c') + op('−') + tk('1','tk-c') + par(')')
+      + op('=') + tk('2x² + 5x − 3','tk-r1'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en3">On additionne les 4 produits puis on réduit.</div>
+          <div class="ligne">2x² − x + 6x − 3</div>
+          <div class="ligne">= 2x² + (<span class="hl-o">−x + 6x</span>) − 3</div>
+          <div class="ligne">= 2x² + <span class="hl-o">5x</span> − 3</div>
+          <div class="conclusion c3">(x + 3)(2x − 1) = 2x² + 5x − 3</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — DÉVELOPPER PUIS RÉDUIRE
+// 2(x + 4) + 3(x − 1) = 5x + 5
+// ============================================================
+const e3 = [
+  {
+    explic: "Quand une expression contient plusieurs développements, on développe chaque partie, puis on réduit en regroupant les termes semblables.",
+    expr(){ return tk('2','tk-f') + par('(') + tk('x','tk-a') + op('+') + tk('4','tk-b') + par(')') + op('+') + tk('3','tk-f') + par('(') + tk('x','tk-a') + op('−') + tk('1','tk-b') + par(')'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en4">Développer et réduire : 2(x + 4) + 3(x − 1)</div>
+          <div class="ligne">On développe d'abord chaque parenthèse séparément.</div>`
+  },
+  {
+    explic: "On développe 2(x + 4) : 2 × x = 2x et 2 × 4 = 8.",
+    expr(){ return tk('2x','tk-r1') + op('+') + tk('8','tk-r1') + op('+') + tk('3','tk-f') + par('(') + tk('x','tk-a') + op('−') + tk('1','tk-b') + par(')'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en4">Développement de 2(x + 4)</div>
+          <div class="ligne"><span class="hl-r">2</span> × x = <span class="hl-r">2x</span></div>
+          <div class="ligne"><span class="hl-r">2</span> × 4 = <span class="hl-r">8</span></div>
+          <div class="ligne">→ <span class="hl-r">2x + 8</span> + 3(x − 1)</div>`
+  },
+  {
+    explic: "On développe 3(x − 1) : 3 × x = 3x et 3 × (−1) = −3.",
+    expr(){ return tk('2x','tk-r1') + op('+') + tk('8','tk-r1') + op('+') + tk('3x','tk-r2') + op('−') + tk('3','tk-r2'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en4">Développement de 3(x − 1)</div>
+          <div class="ligne"><span class="hl-b">3</span> × x = <span class="hl-b">3x</span></div>
+          <div class="ligne"><span class="hl-b">3</span> × (−1) = <span class="hl-b">−3</span></div>
+          <div class="ligne">→ 2x + 8 + <span class="hl-b">3x − 3</span></div>`
+  },
+  {
+    explic: "On regroupe les termes semblables : les termes avec x d'un côté, les nombres de l'autre.",
+    expr(){ return tk('2x','tk-r1') + op('+') + tk('3x','tk-r2') + op('+') + tk('8','tk-r1') + op('−') + tk('3','tk-r2') + op('=') + tk('5x + 5','tk-f'); },
+    arrows(){ return ''; },
+    calc:`<div class="enonce en4">On réduit en regroupant les termes semblables.</div>
+          <div class="ligne">Termes en x : <span class="hl-r">2x</span> + <span class="hl-b">3x</span> = <span class="hl-g">5x</span></div>
+          <div class="ligne">Nombres : <span class="hl-r">8</span> − <span class="hl-b">3</span> = <span class="hl-g">5</span></div>
+          <div class="conclusion c4">2(x + 4) + 3(x − 1) = 5x + 5</div>
+          <div class="attention">💡 On ne peut additionner que les termes semblables : 2x et 3x s'additionnent, mais 5x et 5 ne s'additionnent pas (l'un a un x, l'autre non).</div>`
+  },
+];
+
+const ETAPES = [e0, e1, e2, e3];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr = ETAPES[mode];
+  const e = arr[etape];
+  document.getElementById('expr-box').innerHTML = e.expr();
+  const ab = document.getElementById('arrow-box');
+  const a = e.arrows();
+  if(a){ ab.style.display='block'; ab.innerHTML=a; }
+  else ab.style.display='none';
+  document.getElementById('calc-box').innerHTML = e.calc;
+  document.getElementById('explication').textContent = e.explic;
+  document.getElementById('etape-ind').textContent = `Étape ${etape+1} / ${ETAPES[mode].length}`;
+}
+
+render();
+</script>
+</body>
+</html>
