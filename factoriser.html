@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factoriser</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f5f3ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 16px; border: none; font-size: 0.77em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab4 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #4c1d95; color: white; border-color: #4c1d95; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab4.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Zone expression */
+  .expr-box { background: white; border-radius: 14px; padding: 16px 14px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 10px #0002; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; min-height: 72px; font-family: 'Courier New', monospace; font-size: 1.25em; }
+  .tok { padding: 5px 10px; border-radius: 8px; font-weight: bold; display: inline-flex; align-items: center; }
+  .tok-f { background: #4c1d95; color: white; font-size: 1.1em; }
+  .tok-a { background: #ede9fe; color: #4c1d95; }
+  .tok-b { background: #dbeafe; color: #1d4ed8; }
+  .tok-c { background: #dcfce7; color: #15803d; }
+  .tok-d { background: #fef3c7; color: #b45309; }
+  .tok-op { color: #374151; font-size: 1.1em; padding: 0 4px; }
+  .tok-par { color: #374151; font-size: 1.3em; font-weight: bold; padding: 0 2px; }
+  .tok-arrow { font-size: 1.4em; color: #9333ea; }
+
+  /* Schéma flèches */
+  .schema { background: white; border-radius: 14px; padding: 10px 14px; margin: 4px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; }
+  svg.sch { width: 100%; height: 80px; overflow: visible; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #4c1d95; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #3730a3; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .en3 { background: #dcfce7; color: #14532d; }
+  .en4 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-p { color: #6d28d9; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1em; font-family: 'Courier New', monospace; }
+  .c1 { background: #ede9fe; border-color: #7c3aed; color: #3730a3; }
+  .c2 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c3 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .c4 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #4c1d95; color: white; }
+</style>
+</head>
+<body>
+<h1>🔢 Factoriser une expression</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Qu'est-ce que factoriser ?</button>
+  <button class="tab tab2" onclick="setMode(1)">Facteur commun (nombres)</button>
+  <button class="tab tab3" onclick="setMode(2)">Facteur commun (lettres)</button>
+  <button class="tab tab4" onclick="setMode(3)">Facteur commun (expression)</button>
+</div>
+<div class="scene">
+  <div class="expr-box" id="expr-box"></div>
+  <div class="schema" id="schema" style="display:none"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#4c1d95','#1d4ed8','#15803d','#b45309'];
+
+function tok(txt,cls){ return `<span class="tok ${cls}">${txt}</span>`; }
+function op(s){ return `<span class="tok-op">${s}</span>`; }
+function par(s){ return `<span class="tok-par">${s}</span>`; }
+
+// Schéma avec flèches SVG montrant la mise en facteur
+function schema(facteur, terme1, terme2, col){
+  return `<svg class="sch" viewBox="0 0 420 80">
+    <!-- Expression développée -->
+    <text x="10" y="22" font-size="13" fill="#374151" font-family="Courier New">${facteur} × ${terme1}  +  ${facteur} × ${terme2}</text>
+    <!-- Accolades -->
+    <path d="M18,28 Q18,45 35,45 Q18,45 18,62" fill="none" stroke="${col}" stroke-width="2"/>
+    <path d="M${10+facteur.length*8+terme1.length*8+30},28 Q${10+facteur.length*8+terme1.length*8+30},45 ${10+facteur.length*8+terme1.length*8+15},45 Q${10+facteur.length*8+terme1.length*8+30},45 ${10+facteur.length*8+terme1.length*8+30},62" fill="none" stroke="${col}" stroke-width="2"/>
+    <!-- Flèche vers résultat -->
+    <text x="200" y="50" font-size="18" fill="${col}" text-anchor="middle">↓</text>
+    <!-- Résultat factorisé -->
+    <text x="200" y="72" font-size="13" fill="${col}" font-family="Courier New" font-weight="bold" text-anchor="middle">${facteur} × ( ${terme1}  +  ${terme2} )</text>
+  </svg>`;
+}
+
+// ============================================================
+// MODE 0 — QU'EST-CE QUE FACTORISER ?
+// ============================================================
+const e0=[
+  {
+    explic:"Factoriser, c'est transformer une somme (addition ou soustraction) en produit (multiplication). C'est l'opération inverse de développer.",
+    expr(){ return `
+      <div style="text-align:center;width:100%">
+        <div style="font-size:0.8em;color:#6b7280;margin-bottom:6px">DÉVELOPPER</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+          ${tok('3','tok-f')} ${op('×')} ${par('(')} ${tok('x','tok-a')} ${op('+')} ${tok('5','tok-b')} ${par(')')}
+          <span style="font-size:1.5em;color:#9333ea">⟶</span>
+          ${tok('3x','tok-a')} ${op('+')} ${tok('15','tok-b')}
+        </div>
+        <div style="font-size:0.8em;color:#9333ea;margin:8px 0">← FACTORISER →</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+          ${tok('3x','tok-a')} ${op('+')} ${tok('15','tok-b')}
+          <span style="font-size:1.5em;color:#9333ea">⟶</span>
+          ${tok('3','tok-f')} ${op('×')} ${par('(')} ${tok('x','tok-a')} ${op('+')} ${tok('5','tok-b')} ${par(')')}
+        </div>
+      </div>`;
+    },
+    schema(){ return ''; },
+    calc:`<div class="enonce en1">Factoriser = transformer une somme en produit.</div>
+          <div class="ligne"><span class="hl-p">Développer</span> : on distribue → on passe d'un produit à une somme.</div>
+          <div class="ligne"><span class="hl-p">Factoriser</span> : on fait le chemin inverse → on passe d'une somme à un produit.</div>
+          <div class="attention">Pour factoriser, on cherche un <strong>facteur commun</strong> : un nombre ou une lettre qui apparaît dans chaque terme.</div>`
+  },
+  {
+    explic:"Le facteur commun est le nombre ou la lettre qui se retrouve dans chaque terme. On le met devant une parenthèse.",
+    expr(){ return `
+      <div style="text-align:center;width:100%">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:1.1em">
+          ${tok('6','tok-a')} ${op('+')} ${tok('10','tok-b')}
+          <span style="font-size:1.3em;color:#9333ea">=</span>
+          ${tok('2','tok-f')} ${op('×')} ${tok('3','tok-a')} ${op('+')} ${tok('2','tok-f')} ${op('×')} ${tok('5','tok-b')}
+          <span style="font-size:1.3em;color:#9333ea">=</span>
+          ${tok('2','tok-f')} ${par('(')} ${tok('3','tok-a')} ${op('+')} ${tok('5','tok-b')} ${par(')')}
+        </div>
+      </div>`;
+    },
+    schema(){ return ''; },
+    calc:`<div class="enonce en1">Exemple : factoriser 6 + 10</div>
+          <div class="ligne">6 = <span class="hl-p">2</span> × 3 &nbsp; et &nbsp; 10 = <span class="hl-p">2</span> × 5</div>
+          <div class="ligne">Le facteur commun est <span class="hl-p">2</span>.</div>
+          <div class="ligne">6 + 10 = <span class="hl-p">2</span> × 3 + <span class="hl-p">2</span> × 5 = <span class="hl-p">2</span>(3 + 5)</div>
+          <div class="ligne">Vérification : 2 × (3 + 5) = 2 × 8 = 16 = 6 + 10 ✓</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — FACTEUR COMMUN NOMBRES
+// 12x + 18 = 6(2x + 3)
+// ============================================================
+const e1=[
+  {
+    explic:"On cherche à factoriser 12x + 18. On commence par chercher le plus grand diviseur commun de 12 et 18.",
+    expr(){ return tok('12x','tok-a') + op('+') + tok('18','tok-b'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en2">Factoriser : 12x + 18</div>
+          <div class="ligne">On cherche le plus grand nombre qui divise à la fois <span class="hl-b">12</span> et <span class="hl-b">18</span>.</div>
+          <div class="ligne">Diviseurs de 12 : 1, 2, 3, 4, <span class="hl-b">6</span>, 12</div>
+          <div class="ligne">Diviseurs de 18 : 1, 2, 3, <span class="hl-b">6</span>, 9, 18</div>
+          <div class="ligne">Le plus grand diviseur commun est <span class="hl-b">6</span>.</div>`
+  },
+  {
+    explic:"On réécrit chaque terme en faisant apparaître le facteur commun 6.",
+    expr(){ return tok('6','tok-f') + op('×') + tok('2x','tok-a') + op('+') + tok('6','tok-f') + op('×') + tok('3','tok-b'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en2">On fait apparaître le 6 dans chaque terme.</div>
+          <div class="ligne">12x = <span class="hl-b">6</span> × 2x</div>
+          <div class="ligne">18 = <span class="hl-b">6</span> × 3</div>
+          <div class="ligne">Donc : 12x + 18 = <span class="hl-b">6</span> × 2x + <span class="hl-b">6</span> × 3</div>`
+  },
+  {
+    explic:"On met le facteur commun 6 devant la parenthèse. Dans la parenthèse, on écrit ce qui reste.",
+    expr(){ return tok('6','tok-f') + par('(') + tok('2x','tok-a') + op('+') + tok('3','tok-b') + par(')'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en2">On factorise par 6.</div>
+          <div class="ligne"><span class="hl-b">6</span> × 2x + <span class="hl-b">6</span> × 3 = <span class="hl-b">6</span> × (2x + 3)</div>
+          <div class="conclusion c2">12x + 18 = 6(2x + 3)</div>
+          <div class="ligne">Vérification : 6 × (2x + 3) = 12x + 18 ✓</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — FACTEUR COMMUN LETTRE
+// 5x² + 3x = x(5x + 3)
+// ============================================================
+const e2=[
+  {
+    explic:"On cherche à factoriser 5x² + 3x. On regarde ce qui est commun aux deux termes : ici c'est x.",
+    expr(){ return tok('5x²','tok-a') + op('+') + tok('3x','tok-b'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en3">Factoriser : 5x² + 3x</div>
+          <div class="ligne">On examine chaque terme :</div>
+          <div class="ligne">5x² = 5 × <span class="hl-g">x</span> × x</div>
+          <div class="ligne">3x = 3 × <span class="hl-g">x</span></div>
+          <div class="ligne">Le facteur commun est <span class="hl-g">x</span> (présent dans les deux termes).</div>`
+  },
+  {
+    explic:"On réécrit chaque terme en faisant apparaître x.",
+    expr(){ return tok('x','tok-f') + op('×') + tok('5x','tok-a') + op('+') + tok('x','tok-f') + op('×') + tok('3','tok-b'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en3">On fait apparaître x dans chaque terme.</div>
+          <div class="ligne">5x² = <span class="hl-g">x</span> × 5x</div>
+          <div class="ligne">3x = <span class="hl-g">x</span> × 3</div>
+          <div class="ligne">Donc : 5x² + 3x = <span class="hl-g">x</span> × 5x + <span class="hl-g">x</span> × 3</div>`
+  },
+  {
+    explic:"On met x devant la parenthèse. Dans la parenthèse, on écrit ce qui reste pour chaque terme.",
+    expr(){ return tok('x','tok-f') + par('(') + tok('5x','tok-a') + op('+') + tok('3','tok-b') + par(')'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en3">On factorise par x.</div>
+          <div class="ligne"><span class="hl-g">x</span> × 5x + <span class="hl-g">x</span> × 3 = <span class="hl-g">x</span>(5x + 3)</div>
+          <div class="conclusion c3">5x² + 3x = x(5x + 3)</div>
+          <div class="ligne">Vérification : x(5x + 3) = 5x² + 3x ✓</div>
+          <div class="attention">⚠️ Si les deux termes avaient aussi un facteur numérique commun, il faudrait le mettre aussi : 10x² + 6x = 2x(5x + 3)</div>`
+  },
+];
+
+// ============================================================
+// MODE 3 — FACTEUR COMMUN EXPRESSION
+// 3(x+2) + 5x(x+2) = (x+2)(3 + 5x)
+// ============================================================
+const e3=[
+  {
+    explic:"Parfois le facteur commun est toute une expression entre parenthèses. On cherche à factoriser 3(x+2) + 5x(x+2).",
+    expr(){ return tok('3','tok-a') + par('(') + tok('x+2','tok-c') + par(')') + op('+') + tok('5x','tok-b') + par('(') + tok('x+2','tok-c') + par(')'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en4">Factoriser : 3(x+2) + 5x(x+2)</div>
+          <div class="ligne">On regarde les deux termes :</div>
+          <div class="ligne">Premier terme : <span class="hl-o">3</span> × <span class="hl-g">(x+2)</span></div>
+          <div class="ligne">Deuxième terme : <span class="hl-o">5x</span> × <span class="hl-g">(x+2)</span></div>
+          <div class="ligne">Le facteur commun est <span class="hl-g">(x+2)</span>.</div>`
+  },
+  {
+    explic:"On met (x+2) devant la parenthèse. Dans la parenthèse, on écrit ce qui reste dans chaque terme : 3 et 5x.",
+    expr(){ return par('(') + tok('x+2','tok-c') + par(')') + par('(') + tok('3','tok-a') + op('+') + tok('5x','tok-b') + par(')'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en4">On factorise par (x+2).</div>
+          <div class="ligne">3(x+2) + 5x(x+2) = <span class="hl-g">(x+2)</span> × <span class="hl-o">3</span> + <span class="hl-g">(x+2)</span> × <span class="hl-o">5x</span></div>
+          <div class="ligne">= <span class="hl-g">(x+2)</span> × (<span class="hl-o">3</span> + <span class="hl-o">5x</span>)</div>
+          <div class="conclusion c4">3(x+2) + 5x(x+2) = (x+2)(3 + 5x)</div>`
+  },
+  {
+    explic:"Vérification : on redéveloppe (x+2)(3+5x) pour retrouver l'expression de départ.",
+    expr(){ return par('(') + tok('x+2','tok-c') + par(')') + par('(') + tok('3','tok-a') + op('+') + tok('5x','tok-b') + par(')'); },
+    schema(){ return ''; },
+    calc:`<div class="enonce en4">Vérification en développant</div>
+          <div class="ligne">(x+2)(3+5x) = x×3 + x×5x + 2×3 + 2×5x</div>
+          <div class="ligne">= 3x + 5x² + 6 + 10x</div>
+          <div class="ligne">= 5x² + 13x + 6</div>
+          <div class="ligne">Et en développant directement :</div>
+          <div class="ligne">3(x+2) = 3x + 6 &nbsp;|&nbsp; 5x(x+2) = 5x² + 10x</div>
+          <div class="ligne">Somme = 5x² + 13x + 6 ✓</div>
+          <div class="attention">💡 <strong>Méthode :</strong> On cherche ce qui se répète dans chaque terme → c'est le facteur commun. On le sort devant, et on écrit ce qui reste dans la parenthèse.</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  document.getElementById('expr-box').innerHTML=e.expr();
+  const s=e.schema();
+  const sw=document.getElementById('schema');
+  if(s){ sw.style.display='block'; sw.innerHTML=s; }
+  else sw.style.display='none';
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>

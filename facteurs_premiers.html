@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facteurs premiers</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fff7ed; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #7c2d12; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 12px; border-radius: 16px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #15803d; color: white; border-color: #15803d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  /* Tableau de division */
+  .div-table { background: white; border-radius: 14px; padding: 14px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 10px #0002; }
+  .div-table table { border-collapse: collapse; margin: 0 auto; }
+  .div-table td { padding: 7px 18px; font-size: 1.15em; font-family: 'Courier New', monospace; font-weight: bold; text-align: center; border: none; }
+  .div-table .col-n { color: #374151; min-width: 56px; }
+  .div-table .col-bar { color: #94a3b8; font-size: 1.5em; padding: 0 4px; }
+  .div-table .col-p { min-width: 36px; }
+  .div-table tr.active .col-n { background: #fef9c3; border-radius: 8px; }
+  .div-table tr.active .col-p { color: #dc2626; }
+  .div-table tr.done .col-n { color: #9ca3af; }
+  .div-table tr.done .col-p { color: #9ca3af; }
+  .div-table tr.final .col-n { color: #15803d; font-size: 1.25em; }
+
+  /* Expression résultat */
+  .result-box { background: white; border-radius: 14px; padding: 12px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; font-family: 'Courier New', monospace; font-size: 1.1em; text-align: center; color: #374151; min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; }
+  .prime { background: #fef3c7; color: #b45309; border-radius: 6px; padding: 3px 8px; font-weight: bold; border: 2px solid #fcd34d; }
+  .prime.new { background: #dc2626; color: white; border-color: #dc2626; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #b45309; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #fef3c7; color: #78350f; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .en3 { background: #dcfce7; color: #14532d; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .conclusion { border-left: 4px solid; padding: 7px 14px; border-radius: 8px; font-weight: bold; margin-top: 6px; font-size: 1em; font-family: 'Courier New', monospace; }
+  .c1 { background: #fef3c7; border-color: #f59e0b; color: #78350f; }
+  .c2 { background: #dbeafe; border-color: #3b82f6; color: #1e3a8a; }
+  .c3 { background: #dcfce7; border-color: #22c55e; color: #14532d; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #b45309; color: white; }
+</style>
+</head>
+<body>
+<h1>🔢 Décomposer en produit de facteurs premiers</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Décomposer 60</button>
+  <button class="tab tab2" onclick="setMode(1)">Décomposer 180</button>
+  <button class="tab tab3" onclick="setMode(2)">Utiliser la décomposition</button>
+</div>
+<div class="scene">
+  <div class="div-table" id="div-table"></div>
+  <div class="result-box" id="result-box"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#b45309','#1d4ed8','#15803d'];
+
+// ============================================================
+// HELPERS
+// ============================================================
+// Construit le tableau de divisions successives
+// rows = [{n, p, state:'done'|'active'|'future'|'final'}]
+function buildTable(rows){
+  let h='<table>';
+  rows.forEach(r=>{
+    const cls = r.state || '';
+    if(r.final){
+      h+=`<tr class="final"><td class="col-n">${r.n}</td><td class="col-bar"></td><td class="col-p"></td></tr>`;
+    } else {
+      h+=`<tr class="${cls}">
+        <td class="col-n">${r.n}</td>
+        <td class="col-bar">|</td>
+        <td class="col-p">${r.p||''}</td>
+      </tr>`;
+    }
+  });
+  h+='</table>';
+  return h;
+}
+
+// Expression avec facteurs colorés
+function expr(factors, newIdx=-1){
+  if(!factors.length) return '';
+  let parts = factors.map((f,i)=>{
+    const cls = i===newIdx ? 'prime new' : 'prime';
+    return `<span class="${cls}">${f}</span>`;
+  });
+  return parts.join(' <span style="color:#374151;font-weight:bold">×</span> ');
+}
+
+// ============================================================
+// MODE 0 — DÉCOMPOSER 60
+// 60 = 2 × 2 × 3 × 5 = 2² × 3 × 5
+// ============================================================
+const e0=[
+  {
+    explic:"Un nombre premier est un nombre qui ne se divise que par 1 et par lui-même. Décomposer 60, c'est l'écrire comme un produit de nombres premiers.",
+    table: buildTable([
+      {n:60, p:'', state:'active'},
+    ]),
+    result:'<span style="color:#9ca3af">60 = ?</span>',
+    calc:`<div class="enonce en1">Décomposer 60 en produit de facteurs premiers.</div>
+          <div class="ligne">Nombres premiers : 2, 3, 5, 7, 11, 13...</div>
+          <div class="ligne">Méthode : on divise par le plus petit nombre premier possible, et on recommence jusqu'à obtenir 1.</div>
+          <div class="ligne">On essaie d'abord avec <span class="hl-r">2</span> : 60 est-il divisible par 2 ?</div>
+          <div class="ligne">60 ÷ 2 = 30 → oui ✓</div>`
+  },
+  {
+    explic:"60 ÷ 2 = 30. On continue avec 30 : est-il divisible par 2 ?",
+    table: buildTable([
+      {n:60, p:'2', state:'done'},
+      {n:30, p:'', state:'active'},
+    ]),
+    result: expr([2], 0),
+    calc:`<div class="enonce en1">60 ÷ 2 = 30</div>
+          <div class="ligne">On a trouvé le premier facteur : <span class="hl-r">2</span>.</div>
+          <div class="ligne">On continue avec le quotient : <span class="hl-o">30</span>.</div>
+          <div class="ligne">30 est-il divisible par 2 ? 30 ÷ 2 = 15 → oui ✓</div>`
+  },
+  {
+    explic:"30 ÷ 2 = 15. On continue avec 15 : est-il divisible par 2 ? 15 ÷ 2 = 7,5 → non. On essaie 3.",
+    table: buildTable([
+      {n:60, p:'2', state:'done'},
+      {n:30, p:'2', state:'done'},
+      {n:15, p:'', state:'active'},
+    ]),
+    result: expr([2,2], 1),
+    calc:`<div class="enonce en1">30 ÷ 2 = 15</div>
+          <div class="ligne">Deuxième facteur : <span class="hl-r">2</span>.</div>
+          <div class="ligne">On continue avec <span class="hl-o">15</span>.</div>
+          <div class="ligne">15 ÷ 2 = 7,5 → non, 15 n'est pas divisible par 2.</div>
+          <div class="ligne">On essaie le suivant : <span class="hl-r">3</span>. 15 ÷ 3 = 5 → oui ✓</div>`
+  },
+  {
+    explic:"15 ÷ 3 = 5. On continue avec 5 : 5 est-il divisible par 3 ? 5 ÷ 3 → non. Par 5 ? 5 ÷ 5 = 1 → oui.",
+    table: buildTable([
+      {n:60, p:'2', state:'done'},
+      {n:30, p:'2', state:'done'},
+      {n:15, p:'3', state:'done'},
+      {n:5,  p:'', state:'active'},
+    ]),
+    result: expr([2,2,3], 2),
+    calc:`<div class="enonce en1">15 ÷ 3 = 5</div>
+          <div class="ligne">Troisième facteur : <span class="hl-r">3</span>.</div>
+          <div class="ligne">On continue avec <span class="hl-o">5</span>.</div>
+          <div class="ligne">5 ÷ 3 → non. 5 ÷ <span class="hl-r">5</span> = 1 → oui ✓</div>`
+  },
+  {
+    explic:"5 ÷ 5 = 1. On s'arrête quand on arrive à 1. La décomposition est terminée.",
+    table: buildTable([
+      {n:60, p:'2', state:'done'},
+      {n:30, p:'2', state:'done'},
+      {n:15, p:'3', state:'done'},
+      {n:5,  p:'5', state:'done'},
+      {n:1,  final:true},
+    ]),
+    result: expr([2,2,3,5], 3),
+    calc:`<div class="enonce en1">5 ÷ 5 = 1 → on s'arrête.</div>
+          <div class="ligne">60 = 2 × 2 × 3 × 5</div>
+          <div class="ligne">On peut aussi regrouper les facteurs identiques avec des puissances :</div>
+          <div class="ligne">60 = <span class="hl-r">2²</span> × <span class="hl-r">3</span> × <span class="hl-r">5</span></div>
+          <div class="conclusion c1">60 = 2² × 3 × 5</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — DÉCOMPOSER 180
+// 180 = 2 × 2 × 3 × 3 × 5 = 2² × 3² × 5
+// ============================================================
+const e1=[
+  {
+    explic:"On décompose 180. On commence par 2.",
+    table: buildTable([{n:180, p:'', state:'active'}]),
+    result:'<span style="color:#9ca3af">180 = ?</span>',
+    calc:`<div class="enonce en2">Décomposer 180 en produit de facteurs premiers.</div>
+          <div class="ligne">180 ÷ <span class="hl-r">2</span> = 90 → oui ✓</div>`
+  },
+  {
+    explic:"180 ÷ 2 = 90. On continue avec 90.",
+    table: buildTable([
+      {n:180,p:'2',state:'done'},
+      {n:90, p:'', state:'active'},
+    ]),
+    result: expr([2],0),
+    calc:`<div class="enonce en2">180 ÷ 2 = 90</div>
+          <div class="ligne">90 ÷ <span class="hl-r">2</span> = 45 → oui ✓</div>`
+  },
+  {
+    explic:"90 ÷ 2 = 45. On continue avec 45. 45 n'est pas divisible par 2, on essaie 3.",
+    table: buildTable([
+      {n:180,p:'2',state:'done'},
+      {n:90, p:'2',state:'done'},
+      {n:45, p:'', state:'active'},
+    ]),
+    result: expr([2,2],1),
+    calc:`<div class="enonce en2">90 ÷ 2 = 45</div>
+          <div class="ligne">45 ÷ 2 → non (45 est impair).</div>
+          <div class="ligne">45 ÷ <span class="hl-r">3</span> = 15 → oui ✓</div>`
+  },
+  {
+    explic:"45 ÷ 3 = 15. On continue avec 15.",
+    table: buildTable([
+      {n:180,p:'2',state:'done'},
+      {n:90, p:'2',state:'done'},
+      {n:45, p:'3',state:'done'},
+      {n:15, p:'', state:'active'},
+    ]),
+    result: expr([2,2,3],2),
+    calc:`<div class="enonce en2">45 ÷ 3 = 15</div>
+          <div class="ligne">15 ÷ <span class="hl-r">3</span> = 5 → oui ✓</div>`
+  },
+  {
+    explic:"15 ÷ 3 = 5. On continue avec 5. 5 ÷ 3 → non. 5 ÷ 5 = 1 → oui.",
+    table: buildTable([
+      {n:180,p:'2',state:'done'},
+      {n:90, p:'2',state:'done'},
+      {n:45, p:'3',state:'done'},
+      {n:15, p:'3',state:'done'},
+      {n:5,  p:'', state:'active'},
+    ]),
+    result: expr([2,2,3,3],3),
+    calc:`<div class="enonce en2">15 ÷ 3 = 5</div>
+          <div class="ligne">5 ÷ 3 → non.</div>
+          <div class="ligne">5 ÷ <span class="hl-r">5</span> = 1 → oui ✓</div>`
+  },
+  {
+    explic:"5 ÷ 5 = 1. Décomposition terminée. 180 = 2² × 3² × 5.",
+    table: buildTable([
+      {n:180,p:'2',state:'done'},
+      {n:90, p:'2',state:'done'},
+      {n:45, p:'3',state:'done'},
+      {n:15, p:'3',state:'done'},
+      {n:5,  p:'5',state:'done'},
+      {n:1,  final:true},
+    ]),
+    result: expr([2,2,3,3,5],4),
+    calc:`<div class="enonce en2">180 = 2 × 2 × 3 × 3 × 5</div>
+          <div class="ligne">On regroupe les facteurs identiques :</div>
+          <div class="ligne">180 = <span class="hl-b">2²</span> × <span class="hl-b">3²</span> × <span class="hl-b">5</span></div>
+          <div class="conclusion c2">180 = 2² × 3² × 5</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — UTILISER LA DÉCOMPOSITION (PGCD de 60 et 180)
+// ============================================================
+const e2=[
+  {
+    explic:"La décomposition en facteurs premiers sert notamment à calculer le PGCD (plus grand diviseur commun) de deux nombres.",
+    table:`<div style="text-align:center;padding:8px">
+      <div style="font-size:1.1em;color:#374151;font-weight:bold">60 = 2² × 3 × 5</div>
+      <div style="font-size:1.1em;color:#374151;font-weight:bold;margin-top:6px">180 = 2² × 3² × 5</div>
+    </div>`,
+    result:'<span style="color:#9ca3af">PGCD(60, 180) = ?</span>',
+    calc:`<div class="enonce en3">Trouver le PGCD de 60 et 180.</div>
+          <div class="ligne">On utilise les décompositions :</div>
+          <div class="ligne">60 = <span class="hl-o">2²</span> × <span class="hl-g">3</span> × <span class="hl-b">5</span></div>
+          <div class="ligne">180 = <span class="hl-o">2²</span> × <span class="hl-g">3²</span> × <span class="hl-b">5</span></div>
+          <div class="ligne">Le PGCD, c'est le produit des facteurs communs, avec le plus petit exposant.</div>`
+  },
+  {
+    explic:"On prend chaque facteur premier qui apparaît dans les deux décompositions, avec le plus petit exposant.",
+    table:`<div style="padding:10px 14px">
+      <div style="font-family:Courier New;font-size:1.05em;color:#374151;margin-bottom:6px">
+        60  = <span style="color:#dc2626;font-weight:bold">2²</span> × <span style="color:#15803d;font-weight:bold">3¹</span> × <span style="color:#1d4ed8;font-weight:bold">5¹</span>
+      </div>
+      <div style="font-family:Courier New;font-size:1.05em;color:#374151;margin-bottom:10px">
+        180 = <span style="color:#dc2626;font-weight:bold">2²</span> × <span style="color:#15803d;font-weight:bold">3²</span> × <span style="color:#1d4ed8;font-weight:bold">5¹</span>
+      </div>
+      <div style="font-family:Courier New;font-size:1.05em;color:#7c2d12;border-top:2px dashed #fcd34d;padding-top:8px">
+        PGCD = <span style="color:#dc2626;font-weight:bold">2²</span> × <span style="color:#15803d;font-weight:bold">3¹</span> × <span style="color:#1d4ed8;font-weight:bold">5¹</span>
+      </div>
+    </div>`,
+    result:'<span style="color:#9ca3af">2² × 3 × 5 = ?</span>',
+    calc:`<div class="enonce en3">On prend le plus petit exposant de chaque facteur commun.</div>
+          <div class="ligne"><span class="hl-r">2</span> : min(2, 2) = <span class="hl-r">2²</span></div>
+          <div class="ligne"><span class="hl-g">3</span> : min(1, 2) = <span class="hl-g">3¹</span></div>
+          <div class="ligne"><span class="hl-b">5</span> : min(1, 1) = <span class="hl-b">5¹</span></div>
+          <div class="ligne">PGCD = 2² × 3 × 5 = 4 × 3 × 5 = <span class="hl-g">60</span></div>`
+  },
+  {
+    explic:"PGCD(60, 180) = 60. Cela signifie que 60 divise 180, et que c'est le plus grand diviseur commun.",
+    table:`<div style="padding:10px 14px">
+      <div style="font-family:Courier New;font-size:1.05em;color:#374151;margin-bottom:6px">60  = <b>2²</b> × <b>3</b> × <b>5</b></div>
+      <div style="font-family:Courier New;font-size:1.05em;color:#374151;margin-bottom:6px">180 = <b>2²</b> × <b>3²</b> × <b>5</b></div>
+    </div>`,
+    result:`<span class="prime">PGCD(60,180) = 60</span>`,
+    calc:`<div class="enonce en3">PGCD(60, 180) = 60</div>
+          <div class="ligne">Cela signifie que <span class="hl-g">60</span> est le plus grand nombre qui divise à la fois 60 et 180.</div>
+          <div class="ligne">En effet, 180 ÷ 60 = 3 → 60 divise bien 180 ✓</div>
+          <div class="conclusion c3">PGCD(60, 180) = 60</div>
+          <div class="attention">💡 La décomposition sert aussi à simplifier des fractions, à trouver le PPCM, ou à résoudre des problèmes de partage.</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const arr=ETAPES[mode];
+  const e=arr[etape];
+  const tw=document.getElementById('div-table');
+  if(typeof e.table === 'string') tw.innerHTML=e.table;
+  else tw.innerHTML=e.table;
+  document.getElementById('result-box').innerHTML=e.result;
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+
+render();
+</script>
+</body>
+</html>
