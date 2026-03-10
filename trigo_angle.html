@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trouver un angle par trigonométrie</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #14532d; color: white; font-size: 1.15em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 11px; border-radius: 16px; border: none; font-size: 0.76em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab4 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab4.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 230px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  /* Récap SOH-CAH-TOA */
+  .recap { background: white; border-radius: 12px; padding: 10px 14px; margin: 5px auto; max-width: 480px; width: 95%; box-shadow: 0 1px 6px #0002; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .recap-card { border-radius: 8px; padding: 6px 12px; font-size: 0.88em; font-weight: bold; text-align: center; flex: 1; min-width: 120px; }
+  .rc1 { background: #dcfce7; color: #14532d; }
+  .rc2 { background: #dbeafe; color: #1d4ed8; }
+  .rc3 { background: #fef3c7; color: #b45309; }
+  .rc-act { outline: 3px solid #dc2626; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #15803d; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dcfce7; color: #14532d; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .en3 { background: #fef3c7; color: #78350f; }
+  .en4 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; font-family: 'Courier New', monospace; font-size: 0.97em; }
+  .lnorm { font-family: 'Segoe UI', sans-serif; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-p { color: #9d174d; font-weight: bold; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; font-family: 'Courier New', monospace; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #15803d; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Calculer un angle par trigonométrie</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Rappel : sinus / cos / tan</button>
+  <button class="tab tab2" onclick="setMode(1)">Trouver l'angle avec sin</button>
+  <button class="tab tab3" onclick="setMode(2)">Trouver l'angle avec cos</button>
+  <button class="tab tab4" onclick="setMode(3)">Trouver l'angle avec tan</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 230"></svg>
+  <div class="recap" id="recap"></div>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#15803d','#1d4ed8','#b45309','#9d174d'];
+
+// ============================================================
+// TRIANGLE RECTANGLE DE BASE
+// C = angle droit, A = angle à chercher
+// ============================================================
+function makeTriangle(Ax,Ay, Cx,Cy, Bx,By){
+  return {A:{x:Ax,y:Ay}, C:{x:Cx,y:Cy}, B:{x:Bx,y:By}};
+}
+
+// Helpers SVG
+function dot(p,col,r=5){ return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`; }
+function lbl(p,t,col,dx=0,dy=0,size=13){ return `<text x="${p.x+dx}" y="${p.y+dy}" font-size="${size}" font-weight="bold" text-anchor="middle" fill="${col}">${t}</text>`; }
+function seg(p1,p2,col,w=2.5,dash=''){ return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`; }
+
+// Triangle rempli
+function tri(T, fillCol, strokeCol, active=''){
+  const pts=`${T.A.x},${T.A.y} ${T.B.x},${T.B.y} ${T.C.x},${T.C.y}`;
+  return `<polygon points="${pts}" fill="${fillCol}" fill-opacity="0.18" stroke="${strokeCol}" stroke-width="2.5" stroke-linejoin="round"/>`;
+}
+
+// Angle droit en C
+function rightAngle(C, B, A, size=13){
+  const vCA = {x:(A.x-C.x), y:(A.y-C.y)};
+  const vCB = {x:(B.x-C.x), y:(B.y-C.y)};
+  const lCA = Math.sqrt(vCA.x**2+vCA.y**2);
+  const lCB = Math.sqrt(vCB.x**2+vCB.y**2);
+  const uA = {x:vCA.x/lCA*size, y:vCA.y/lCA*size};
+  const uB = {x:vCB.x/lCB*size, y:vCB.y/lCB*size};
+  const P1 = {x:C.x+uA.x, y:C.y+uA.y};
+  const P2 = {x:C.x+uA.x+uB.x, y:C.y+uA.y+uB.y};
+  const P3 = {x:C.x+uB.x, y:C.y+uB.y};
+  return `<polyline points="${P1.x},${P1.y} ${P2.x},${P2.y} ${P3.x},${P3.y}" fill="none" stroke="#374151" stroke-width="1.8"/>`;
+}
+
+// Arc d'angle en A
+function angleArc(A, C, B, r, col){
+  const angAC = Math.atan2(C.y-A.y, C.x-A.x);
+  const angAB = Math.atan2(B.y-A.y, B.x-A.x);
+  const x1=A.x+r*Math.cos(angAC), y1=A.y+r*Math.sin(angAC);
+  const x2=A.x+r*Math.cos(angAB), y2=A.y+r*Math.sin(angAB);
+  // Toujours arc dans le sens de l'angle intérieur
+  return `<path d="M${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 0,0 ${x2.toFixed(1)},${y2.toFixed(1)}"
+    fill="none" stroke="${col}" stroke-width="2.5"/>`;
+}
+
+// Étiquette de côté (milieu du segment + offset perpendiculaire)
+function sideLbl(p1,p2,t,col,offset=14){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const dx=p2.x-p1.x, dy=p2.y-p1.y;
+  const len=Math.sqrt(dx*dx+dy*dy)||1;
+  const nx=-dy/len*offset, ny=dx/len*offset;
+  return `<text x="${(mx+nx).toFixed(1)}" y="${(my+ny+4).toFixed(1)}" font-size="12" font-weight="bold" text-anchor="middle" fill="${col}">${t}</text>`;
+}
+
+// Mise en évidence d'un côté (épaississage coloré)
+function sideHL(p1,p2,col,w=5){
+  return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${col}" stroke-width="${w}" stroke-linecap="round" opacity="0.55"/>`;
+}
+
+// ============================================================
+// RECAP CARTES
+// ============================================================
+function recapCards(active){
+  const cards=[
+    {label:'sin(α) = opp / hyp', cls:'rc1', key:'sin'},
+    {label:'cos(α) = adj / hyp', cls:'rc2', key:'cos'},
+    {label:'tan(α) = opp / adj', cls:'rc3', key:'tan'},
+  ];
+  return cards.map(c=>`<div class="recap-card ${c.cls} ${c.key===active?'rc-act':''}">${c.label}</div>`).join('');
+}
+
+// ============================================================
+// MODE 0 — RAPPEL : comment choisir la bonne formule
+// Triangle : hyp=10, opp=6, adj=8, angle α ≈ 37°
+// ============================================================
+const T0 = makeTriangle(80,180, 280,180, 280,60);
+// A=80,180  C=280,180  B=280,60
+// AC = adj = 200px = 8  (horizontal)  AB = hyp  BC = opp = 120px
+const e0=[
+  {
+    explic:"On connaît deux côtés d'un triangle rectangle et on veut trouver un angle. On choisit la formule selon les deux côtés connus.",
+    draw(){
+      let h=tri(T0,'#dcfce7','#15803d');
+      h+=rightAngle(T0.C,T0.B,T0.A);
+      h+=seg(T0.A,T0.B,'#374151',2.5);
+      h+=dot(T0.A,'#374151'); h+=lbl(T0.A,'A','#374151',-14,0);
+      h+=dot(T0.B,'#374151'); h+=lbl(T0.B,'B','#374151',14,0);
+      h+=dot(T0.C,'#374151'); h+=lbl(T0.C,'C','#374151',14,14);
+      h+=sideLbl(T0.A,T0.B,'hypoténuse','#374151',-14);
+      h+=sideLbl(T0.B,T0.C,'côté opp.','#374151',-18);
+      h+=sideLbl(T0.A,T0.C,'côté adj.','#374151',16);
+      h+=angleArc(T0.A,T0.C,T0.B,40,'#dc2626');
+      h+=lbl(T0.A,'α','#dc2626',44,-14);
+      return h;
+    },
+    calc:`<div class="enonce en1">Les trois côtés par rapport à l'angle α :</div>
+          <div class="ligne lnorm"><span class="hl-g">Hypoténuse</span> : côté opposé à l'angle droit (le plus long)</div>
+          <div class="ligne lnorm"><span class="hl-b">Côté opposé</span> : côté en face de l'angle α</div>
+          <div class="ligne lnorm"><span class="hl-o">Côté adjacent</span> : côté de l'angle α qui n'est pas l'hypoténuse</div>`,
+    recap: recapCards('')
+  },
+  {
+    explic:"On choisit sin si on connaît l'opposé et l'hypoténuse, cos si on connaît l'adjacent et l'hypoténuse, tan si on connaît l'opposé et l'adjacent.",
+    draw(){
+      let h=tri(T0,'#dcfce7','#15803d');
+      h+=rightAngle(T0.C,T0.B,T0.A);
+      h+=sideHL(T0.A,T0.B,'#6d28d9');
+      h+=sideHL(T0.B,T0.C,'#1d4ed8');
+      h+=sideHL(T0.A,T0.C,'#b45309');
+      h+=seg(T0.A,T0.B,'#374151',2);
+      h+=dot(T0.A,'#374151'); h+=lbl(T0.A,'A','#374151',-14,0);
+      h+=dot(T0.B,'#374151'); h+=lbl(T0.B,'B','#374151',14,0);
+      h+=dot(T0.C,'#374151'); h+=lbl(T0.C,'C','#374151',14,14);
+      h+=sideLbl(T0.A,T0.B,'hyp','#6d28d9',-14);
+      h+=sideLbl(T0.B,T0.C,'opp','#1d4ed8',-18);
+      h+=sideLbl(T0.A,T0.C,'adj','#b45309',16);
+      h+=angleArc(T0.A,T0.C,T0.B,40,'#dc2626');
+      h+=lbl(T0.A,'α','#dc2626',44,-14);
+      return h;
+    },
+    calc:`<div class="enonce en1">Comment choisir la bonne formule ?</div>
+          <div class="ligne lnorm">Je connais <span class="hl-b">opp</span> et <span class="hl-p">hyp</span> → j'utilise <span class="hl-g">sin</span></div>
+          <div class="ligne lnorm">Je connais <span class="hl-o">adj</span> et <span class="hl-p">hyp</span> → j'utilise <span class="hl-g">cos</span></div>
+          <div class="ligne lnorm">Je connais <span class="hl-b">opp</span> et <span class="hl-o">adj</span> → j'utilise <span class="hl-g">tan</span></div>
+          <div class="attention">💡 Mémo : <strong>SOH-CAH-TOA</strong> — Sin=Opp/Hyp, Cos=Adj/Hyp, Tan=Opp/Adj</div>`,
+    recap: recapCards('')
+  },
+  {
+    explic:"Pour trouver l'angle, on utilise la touche sin⁻¹ (ou arcsin), cos⁻¹ (arccos) ou tan⁻¹ (arctan) de la calculatrice.",
+    draw(){
+      let h=tri(T0,'#dcfce7','#15803d');
+      h+=rightAngle(T0.C,T0.B,T0.A);
+      h+=seg(T0.A,T0.B,'#374151',2.5);
+      h+=dot(T0.A,'#374151'); h+=lbl(T0.A,'A','#374151',-14,0);
+      h+=dot(T0.B,'#374151'); h+=lbl(T0.B,'B','#374151',14,0);
+      h+=dot(T0.C,'#374151'); h+=lbl(T0.C,'C','#374151',14,14);
+      h+=angleArc(T0.A,T0.C,T0.B,40,'#dc2626');
+      h+=lbl(T0.A,'α = ?','#dc2626',56,-14,12);
+      // Touche calculatrice
+      h+=`<rect x="300" y="60" width="150" height="90" rx="10" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>`;
+      h+=`<text x="375" y="90" font-size="11" text-anchor="middle" fill="#94a3b8">SHIFT puis :</text>`;
+      h+=`<rect x="315" y="98" width="36" height="20" rx="4" fill="#1d4ed8"/>`;
+      h+=`<text x="333" y="112" font-size="10" text-anchor="middle" fill="white" font-weight="bold">sin⁻¹</text>`;
+      h+=`<rect x="357" y="98" width="36" height="20" rx="4" fill="#15803d"/>`;
+      h+=`<text x="375" y="112" font-size="10" text-anchor="middle" fill="white" font-weight="bold">cos⁻¹</text>`;
+      h+=`<rect x="399" y="98" width="36" height="20" rx="4" fill="#b45309"/>`;
+      h+=`<text x="417" y="112" font-size="10" text-anchor="middle" fill="white" font-weight="bold">tan⁻¹</text>`;
+      h+=`<text x="375" y="140" font-size="10" text-anchor="middle" fill="#94a3b8">= arcsin / arccos / arctan</text>`;
+      return h;
+    },
+    calc:`<div class="enonce en1">La touche magique : sin⁻¹, cos⁻¹, tan⁻¹</div>
+          <div class="ligne">sin(α) = 0,6 → α = <span class="hl-g">sin⁻¹(0,6)</span> ≈ 37°</div>
+          <div class="ligne">cos(α) = 0,8 → α = <span class="hl-g">cos⁻¹(0,8)</span> ≈ 37°</div>
+          <div class="ligne">tan(α) = 0,75 → α = <span class="hl-g">tan⁻¹(0,75)</span> ≈ 37°</div>
+          <div class="attention">Sur la calculatrice : touche <strong>SHIFT</strong> (ou 2nd) puis <strong>sin</strong>, <strong>cos</strong> ou <strong>tan</strong>.</div>`,
+    recap: recapCards('')
+  },
+];
+
+// ============================================================
+// MODE 1 — TROUVER α avec SIN
+// Triangle : hyp = 10, opp = 6  → α = arcsin(6/10) ≈ 37°
+// ============================================================
+const T1 = makeTriangle(80,190, 310,190, 310,70);
+// AB = hyp, BC = opp, AC = adj
+const e1=[
+  {
+    explic:"On connaît l'hypoténuse AB = 10 et le côté opposé BC = 6. On va utiliser la formule du sinus.",
+    draw(){
+      let h=tri(T1,'#dbeafe','#1d4ed8');
+      h+=rightAngle(T1.C,T1.B,T1.A);
+      h+=sideHL(T1.A,T1.B,'#6d28d9',5);
+      h+=sideHL(T1.B,T1.C,'#1d4ed8',5);
+      h+=seg(T1.A,T1.B,'#374151',2);
+      h+=dot(T1.A,'#374151'); h+=lbl(T1.A,'A','#374151',-14,0);
+      h+=dot(T1.B,'#374151'); h+=lbl(T1.B,'B','#374151',14,0);
+      h+=dot(T1.C,'#374151'); h+=lbl(T1.C,'C','#374151',14,14);
+      h+=sideLbl(T1.A,T1.B,'hyp = 10','#6d28d9',-14);
+      h+=sideLbl(T1.B,T1.C,'opp = 6','#1d4ed8',-20);
+      h+=angleArc(T1.A,T1.C,T1.B,45,'#dc2626');
+      h+=lbl(T1.A,'α = ?','#dc2626',60,-10,12);
+      return h;
+    },
+    calc:`<div class="enonce en2">Trouver l'angle α. On connaît : opp = 6, hyp = 10.</div>
+          <div class="ligne lnorm">→ On utilise le <span class="hl-b">sinus</span> car on a l'opposé et l'hypoténuse.</div>`,
+    recap: recapCards('sin')
+  },
+  {
+    explic:"On écrit la formule sin(α) = opposé ÷ hypoténuse, puis on remplace par les valeurs.",
+    draw(){
+      let h=tri(T1,'#dbeafe','#1d4ed8');
+      h+=rightAngle(T1.C,T1.B,T1.A);
+      h+=sideHL(T1.A,T1.B,'#6d28d9',5);
+      h+=sideHL(T1.B,T1.C,'#1d4ed8',5);
+      h+=seg(T1.A,T1.B,'#374151',2);
+      h+=dot(T1.A,'#374151'); h+=dot(T1.B,'#374151'); h+=dot(T1.C,'#374151');
+      h+=lbl(T1.A,'A','#374151',-14,0); h+=lbl(T1.B,'B','#374151',14,0); h+=lbl(T1.C,'C','#374151',14,14);
+      h+=sideLbl(T1.A,T1.B,'10','#6d28d9',-14);
+      h+=sideLbl(T1.B,T1.C,'6','#1d4ed8',-20);
+      h+=angleArc(T1.A,T1.C,T1.B,45,'#dc2626');
+      h+=lbl(T1.A,'α','#dc2626',60,-10,12);
+      return h;
+    },
+    calc:`<div class="enonce en2">On écrit la formule :</div>
+          <div class="ligne">sin(α) = <span class="hl-b">opp</span> / <span class="hl-p">hyp</span></div>
+          <div class="ligne">sin(α) = <span class="hl-b">6</span> / <span class="hl-p">10</span></div>
+          <div class="ligne">sin(α) = <span class="hl-g">0,6</span></div>`,
+    recap: recapCards('sin')
+  },
+  {
+    explic:"On a sin(α) = 0,6. Pour trouver α, on utilise sin⁻¹ (arcsin) sur la calculatrice.",
+    draw(){
+      let h=tri(T1,'#dbeafe','#1d4ed8');
+      h+=rightAngle(T1.C,T1.B,T1.A);
+      h+=seg(T1.A,T1.B,'#374151',2);
+      h+=dot(T1.A,'#374151'); h+=dot(T1.B,'#374151'); h+=dot(T1.C,'#374151');
+      h+=lbl(T1.A,'A','#374151',-14,0); h+=lbl(T1.B,'B','#374151',14,0); h+=lbl(T1.C,'C','#374151',14,14);
+      h+=sideLbl(T1.A,T1.B,'10','#6d28d9',-14);
+      h+=sideLbl(T1.B,T1.C,'6','#1d4ed8',-20);
+      h+=angleArc(T1.A,T1.C,T1.B,45,'#dc2626');
+      // Calculatrice
+      h+=`<rect x="300" y="40" width="150" height="60" rx="8" fill="#1e293b" stroke="#475569"/>`;
+      h+=`<text x="375" y="65" font-size="11" text-anchor="middle" fill="#94a3b8">sin⁻¹( 0,6 ) =</text>`;
+      h+=`<text x="375" y="88" font-size="15" text-anchor="middle" fill="#22c55e" font-weight="bold">36,87°</text>`;
+      return h;
+    },
+    calc:`<div class="enonce en2">On applique sin⁻¹ (arcsin) :</div>
+          <div class="ligne">sin(α) = 0,6</div>
+          <div class="ligne">α = <span class="hl-g">sin⁻¹</span>(0,6)</div>
+          <div class="ligne">α ≈ <span class="hl-g">36,87°</span></div>
+          <div class="conclusion-ok">α ≈ 37° (arrondi au degré)</div>`,
+    recap: recapCards('sin')
+  },
+];
+
+// ============================================================
+// MODE 2 — TROUVER β avec COS
+// Triangle : hyp = 13, adj = 5  → β = arccos(5/13) ≈ 67°
+// ============================================================
+const T2 = makeTriangle(90,190, 330,190, 90,70);
+// A=angle cherché, C=angle droit en haut à gauche, B en bas à droite
+// AB = hyp, AC = opp, BC = adj
+// Redéfinir : angle β en B, angle droit en C(=A du triangle)
+// Simplifions : angle cherché β en B(330,190), angle droit en T2.A(90,190)? Non
+// Faisons: S(sommet angle)=B(bas droite), angle droit=A(bas gauche), C=haut gauche
+const T2t = makeTriangle(100,195, 340,195, 100,80);
+// angle droit en A(100,195), angle cherché β en B(340,195)
+// AB = adj = 240px ≈ 12, AC = opp = 115px, BC = hyp
+const hyp2 = Math.sqrt((T2t.B.x-T2t.C.x)**2+(T2t.B.y-T2t.C.y)**2);
+const adj2 = Math.abs(T2t.B.x-T2t.A.x);
+const e2=[
+  {
+    explic:"On connaît l'hypoténuse BC = 13 et le côté adjacent AB = 5. On utilise le cosinus.",
+    draw(){
+      let h=tri(T2t,'#fef3c7','#b45309');
+      h+=rightAngle(T2t.A,T2t.B,T2t.C);
+      h+=sideHL(T2t.B,T2t.C,'#6d28d9',5);
+      h+=sideHL(T2t.A,T2t.B,'#b45309',5);
+      h+=seg(T2t.A,T2t.B,'#374151',2); h+=seg(T2t.B,T2t.C,'#374151',2); h+=seg(T2t.A,T2t.C,'#374151',2);
+      h+=dot(T2t.A,'#374151'); h+=lbl(T2t.A,'A','#374151',-14,0);
+      h+=dot(T2t.B,'#374151'); h+=lbl(T2t.B,'B','#374151',14,0);
+      h+=dot(T2t.C,'#374151'); h+=lbl(T2t.C,'C','#374151',-14,0);
+      h+=sideLbl(T2t.B,T2t.C,'hyp = 13','#6d28d9',-14);
+      h+=sideLbl(T2t.A,T2t.B,'adj = 5','#b45309',16);
+      h+=angleArc(T2t.B,T2t.A,T2t.C,45,'#dc2626');
+      h+=lbl(T2t.B,'β = ?','#dc2626',-66,-10,12);
+      return h;
+    },
+    calc:`<div class="enonce en3">Trouver l'angle β. On connaît : adj = 5, hyp = 13.</div>
+          <div class="ligne lnorm">→ On utilise le <span class="hl-o">cosinus</span> car on a l'adjacent et l'hypoténuse.</div>`,
+    recap: recapCards('cos')
+  },
+  {
+    explic:"On écrit cos(β) = adjacent ÷ hypoténuse et on remplace par les valeurs.",
+    draw(){
+      let h=tri(T2t,'#fef3c7','#b45309');
+      h+=rightAngle(T2t.A,T2t.B,T2t.C);
+      h+=sideHL(T2t.B,T2t.C,'#6d28d9',5);
+      h+=sideHL(T2t.A,T2t.B,'#b45309',5);
+      h+=seg(T2t.A,T2t.B,'#374151',2); h+=seg(T2t.B,T2t.C,'#374151',2); h+=seg(T2t.A,T2t.C,'#374151',2);
+      h+=dot(T2t.A,'#374151'); h+=dot(T2t.B,'#374151'); h+=dot(T2t.C,'#374151');
+      h+=lbl(T2t.A,'A','#374151',-14,0); h+=lbl(T2t.B,'B','#374151',14,0); h+=lbl(T2t.C,'C','#374151',-14,0);
+      h+=sideLbl(T2t.B,T2t.C,'13','#6d28d9',-14);
+      h+=sideLbl(T2t.A,T2t.B,'5','#b45309',16);
+      h+=angleArc(T2t.B,T2t.A,T2t.C,45,'#dc2626');
+      h+=lbl(T2t.B,'β','#dc2626',-66,-10,12);
+      return h;
+    },
+    calc:`<div class="enonce en3">On écrit la formule :</div>
+          <div class="ligne">cos(β) = <span class="hl-o">adj</span> / <span class="hl-p">hyp</span></div>
+          <div class="ligne">cos(β) = <span class="hl-o">5</span> / <span class="hl-p">13</span></div>
+          <div class="ligne">cos(β) ≈ <span class="hl-g">0,385</span></div>`,
+    recap: recapCards('cos')
+  },
+  {
+    explic:"On applique cos⁻¹ (arccos) pour trouver β.",
+    draw(){
+      let h=tri(T2t,'#fef3c7','#b45309');
+      h+=rightAngle(T2t.A,T2t.B,T2t.C);
+      h+=seg(T2t.A,T2t.B,'#374151',2); h+=seg(T2t.B,T2t.C,'#374151',2); h+=seg(T2t.A,T2t.C,'#374151',2);
+      h+=dot(T2t.A,'#374151'); h+=dot(T2t.B,'#374151'); h+=dot(T2t.C,'#374151');
+      h+=lbl(T2t.A,'A','#374151',-14,0); h+=lbl(T2t.B,'B','#374151',14,0); h+=lbl(T2t.C,'C','#374151',-14,0);
+      h+=sideLbl(T2t.B,T2t.C,'13','#6d28d9',-14);
+      h+=sideLbl(T2t.A,T2t.B,'5','#b45309',16);
+      h+=angleArc(T2t.B,T2t.A,T2t.C,45,'#dc2626');
+      h+=`<rect x="270" y="50" width="155" height="60" rx="8" fill="#1e293b" stroke="#475569"/>`;
+      h+=`<text x="348" y="75" font-size="11" text-anchor="middle" fill="#94a3b8">cos⁻¹( 0,385 ) =</text>`;
+      h+=`<text x="348" y="98" font-size="15" text-anchor="middle" fill="#f59e0b" font-weight="bold">67,38°</text>`;
+      return h;
+    },
+    calc:`<div class="enonce en3">On applique cos⁻¹ (arccos) :</div>
+          <div class="ligne">cos(β) = 0,385</div>
+          <div class="ligne">β = <span class="hl-o">cos⁻¹</span>(0,385)</div>
+          <div class="ligne">β ≈ <span class="hl-o">67,38°</span></div>
+          <div class="conclusion-ok">β ≈ 67° (arrondi au degré)</div>`,
+    recap: recapCards('cos')
+  },
+];
+
+// ============================================================
+// MODE 3 — TROUVER γ avec TAN
+// Triangle : opp = 7, adj = 4  → γ = arctan(7/4) ≈ 60°
+// ============================================================
+const T3 = makeTriangle(90,195, 90,60, 350,195);
+// angle droit en A(90,195), angle cherché γ en C(350,195)
+// BC = hyp, AB = opp = 135px ≈ 7, AC = adj = 260px ≈ 4
+const e3=[
+  {
+    explic:"On connaît le côté opposé AB = 7 et le côté adjacent AC = 4. On utilise la tangente.",
+    draw(){
+      let h=tri(T3,'#fce7f3','#9d174d');
+      h+=rightAngle(T3.A,T3.C,T3.B);
+      h+=sideHL(T3.A,T3.B,'#1d4ed8',5);
+      h+=sideHL(T3.A,T3.C,'#b45309',5);
+      h+=seg(T3.A,T3.B,'#374151',2); h+=seg(T3.B,T3.C,'#374151',2); h+=seg(T3.A,T3.C,'#374151',2);
+      h+=dot(T3.A,'#374151'); h+=lbl(T3.A,'A','#374151',-14,0);
+      h+=dot(T3.B,'#374151'); h+=lbl(T3.B,'B','#374151',-14,0);
+      h+=dot(T3.C,'#374151'); h+=lbl(T3.C,'C','#374151',14,0);
+      h+=sideLbl(T3.A,T3.B,'opp = 7','#1d4ed8',-18);
+      h+=sideLbl(T3.A,T3.C,'adj = 4','#b45309',16);
+      h+=angleArc(T3.C,T3.A,T3.B,45,'#dc2626');
+      h+=lbl(T3.C,'γ = ?','#dc2626',-68,-10,12);
+      return h;
+    },
+    calc:`<div class="enonce en4">Trouver l'angle γ. On connaît : opp = 7, adj = 4.</div>
+          <div class="ligne lnorm">→ On utilise la <span class="hl-p">tangente</span> car on a l'opposé et l'adjacent.</div>`,
+    recap: recapCards('tan')
+  },
+  {
+    explic:"On écrit tan(γ) = opposé ÷ adjacent et on calcule le rapport.",
+    draw(){
+      let h=tri(T3,'#fce7f3','#9d174d');
+      h+=rightAngle(T3.A,T3.C,T3.B);
+      h+=sideHL(T3.A,T3.B,'#1d4ed8',5);
+      h+=sideHL(T3.A,T3.C,'#b45309',5);
+      h+=seg(T3.A,T3.B,'#374151',2); h+=seg(T3.B,T3.C,'#374151',2); h+=seg(T3.A,T3.C,'#374151',2);
+      h+=dot(T3.A,'#374151'); h+=dot(T3.B,'#374151'); h+=dot(T3.C,'#374151');
+      h+=lbl(T3.A,'A','#374151',-14,0); h+=lbl(T3.B,'B','#374151',-14,0); h+=lbl(T3.C,'C','#374151',14,0);
+      h+=sideLbl(T3.A,T3.B,'7','#1d4ed8',-18);
+      h+=sideLbl(T3.A,T3.C,'4','#b45309',16);
+      h+=angleArc(T3.C,T3.A,T3.B,45,'#dc2626');
+      h+=lbl(T3.C,'γ','#dc2626',-68,-10,12);
+      return h;
+    },
+    calc:`<div class="enonce en4">On écrit la formule :</div>
+          <div class="ligne">tan(γ) = <span class="hl-b">opp</span> / <span class="hl-o">adj</span></div>
+          <div class="ligne">tan(γ) = <span class="hl-b">7</span> / <span class="hl-o">4</span></div>
+          <div class="ligne">tan(γ) = <span class="hl-g">1,75</span></div>`,
+    recap: recapCards('tan')
+  },
+  {
+    explic:"On applique tan⁻¹ (arctan) pour trouver γ.",
+    draw(){
+      let h=tri(T3,'#fce7f3','#9d174d');
+      h+=rightAngle(T3.A,T3.C,T3.B);
+      h+=seg(T3.A,T3.B,'#374151',2); h+=seg(T3.B,T3.C,'#374151',2); h+=seg(T3.A,T3.C,'#374151',2);
+      h+=dot(T3.A,'#374151'); h+=dot(T3.B,'#374151'); h+=dot(T3.C,'#374151');
+      h+=lbl(T3.A,'A','#374151',-14,0); h+=lbl(T3.B,'B','#374151',-14,0); h+=lbl(T3.C,'C','#374151',14,0);
+      h+=sideLbl(T3.A,T3.B,'7','#1d4ed8',-18);
+      h+=sideLbl(T3.A,T3.C,'4','#b45309',16);
+      h+=angleArc(T3.C,T3.A,T3.B,45,'#dc2626');
+      h+=`<rect x="240" y="50" width="155" height="60" rx="8" fill="#1e293b" stroke="#475569"/>`;
+      h+=`<text x="318" y="75" font-size="11" text-anchor="middle" fill="#94a3b8">tan⁻¹( 1,75 ) =</text>`;
+      h+=`<text x="318" y="98" font-size="15" text-anchor="middle" fill="#f9a8d4" font-weight="bold">60,26°</text>`;
+      return h;
+    },
+    calc:`<div class="enonce en4">On applique tan⁻¹ (arctan) :</div>
+          <div class="ligne">tan(γ) = 1,75</div>
+          <div class="ligne">γ = <span class="hl-p">tan⁻¹</span>(1,75)</div>
+          <div class="ligne">γ ≈ <span class="hl-p">60,26°</span></div>
+          <div class="conclusion-ok">γ ≈ 60° (arrondi au degré)</div>
+          <div class="attention">💡 Vérification : les angles du triangle = 90° + 60° + 30° = 180° ✓</div>`,
+    recap: recapCards('tan')
+  },
+];
+
+const ETAPES=[e0,e1,e2,e3];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+
+function render(){
+  const e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('recap').innerHTML=e.recap||recapCards('');
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${ETAPES[mode].length}`;
+}
+render();
+</script>
+</body>
+</html>
