@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Symétrie centrale</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #7c2d12; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 13px; border-radius: 18px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #3730a3; border: 2px solid #a5b4fc; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab3 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab1.active { background: #4c1d95; color: white; border-color: #4c1d95; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 280px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #4c1d95; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #3730a3; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .en3 { background: #dbeafe; color: #1e3a8a; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-p { color: #6d28d9; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #4c1d95; color: white; }
+</style>
+</head>
+<body>
+<h1>🔄 Symétrie centrale</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Construire l'image d'un point</button>
+  <button class="tab tab2" onclick="setMode(1)">Construire l'image d'un triangle</button>
+  <button class="tab tab3" onclick="setMode(2)">Propriétés</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 280"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#4c1d95','#15803d','#1d4ed8'];
+
+// ============================================================
+// DONNÉES GÉOMÉTRIQUES
+// ============================================================
+const O  = {x:240, y:150};  // centre de symétrie
+
+// Mode 0 : un seul point A
+const A  = {x:140, y:90};
+const A2 = {x: 2*O.x - A.x, y: 2*O.y - A.y };  // image de A
+
+// Mode 1 : triangle ABC
+const T = {
+  A: {x:120, y: 80},
+  B: {x:180, y:110},
+  C: {x:130, y:140},
+};
+// Images
+const T2 = {
+  A: {x: 2*O.x - T.A.x, y: 2*O.y - T.A.y},
+  B: {x: 2*O.x - T.B.x, y: 2*O.y - T.B.y},
+  C: {x: 2*O.x - T.C.x, y: 2*O.y - T.C.y},
+};
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function dot(p, col, r=5, stroke='white'){
+  return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}"
+    fill="${col}" stroke="${stroke}" stroke-width="2"/>`;
+}
+function lbl(p, t, col, dx=0, dy=0, size=13, anchor='middle'){
+  return `<text x="${(p.x+dx).toFixed(1)}" y="${(p.y+dy).toFixed(1)}"
+    font-size="${size}" font-weight="bold" text-anchor="${anchor}" fill="${col}">${t}</text>`;
+}
+function seg(p1, p2, col, w=2, dash=''){
+  return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}"
+    x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}"
+    stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function poly(pts, fill, stroke, w=2, op=1){
+  const d = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  return `<polygon points="${d}" fill="${fill}" fill-opacity="${op}"
+    stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round"/>`;
+}
+// Centre de symétrie O (croix)
+function centreO(col='#dc2626'){
+  const s=8;
+  return `<line x1="${O.x-s}" y1="${O.y}" x2="${O.x+s}" y2="${O.y}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="${O.x}" y1="${O.y-s}" x2="${O.x}" y2="${O.y+s}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="${O.x}" cy="${O.y}" r="3.5" fill="${col}"/>`;
+}
+// Flèche de A vers A' (passant par O)
+function demiDroite(p, col='#9333ea'){
+  return seg(p, O, col, 1.5, '5,3') + seg(O, {x:2*O.x-p.x, y:2*O.y-p.y}, col, 1.5, '5,3');
+}
+// Compas : pointe en tipX,tipY, crayon en pencilX,pencilY
+function compas(tipX, tipY, pencilX, pencilY, col='#15803d'){
+  const legLen = 65;
+  const dx=pencilX-tipX, dy=pencilY-tipY;
+  const angCrayon = Math.atan2(dy,dx);
+  const angMetal  = angCrayon + 0.55;
+  const hx = tipX + legLen*Math.cos(angMetal);
+  const hy = tipY + legLen*Math.sin(angMetal);
+  let h='';
+  h+=`<line x1="${tipX}" y1="${tipY}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  h+=`<line x1="${pencilX.toFixed(1)}" y1="${pencilY.toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>`;
+  h+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="5" fill="white" stroke="${col}" stroke-width="2"/>`;
+  h+=`<circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="2.5" fill="${col}"/>`;
+  h+=`<line x1="${tipX-4}" y1="${tipY}" x2="${tipX+4}" y2="${tipY}" stroke="#374151" stroke-width="1.5"/>`;
+  h+=`<line x1="${tipX}" y1="${tipY-4}" x2="${tipX}" y2="${tipY+4}" stroke="#374151" stroke-width="1.5"/>`;
+  h+=`<circle cx="${tipX}" cy="${tipY}" r="3" fill="${col}"/>`;
+  h+=`<circle cx="${pencilX.toFixed(1)}" cy="${pencilY.toFixed(1)}" r="3.5" fill="#f97316"/>`;
+  return h;
+}
+// Marque d'égalité sur un segment (petites barres)
+function markSeg(p1, p2, n=1, col='#374151'){
+  const mx=(p1.x+p2.x)/2, my=(p1.y+p2.y)/2;
+  const ang = Math.atan2(p2.y-p1.y, p2.x-p1.x) + Math.PI/2;
+  const len=6;
+  let h='';
+  for(let i=0;i<n;i++){
+    const off=(i-(n-1)/2)*5;
+    const cx=mx+off*Math.cos(ang-Math.PI/2);
+    const cy=my+off*Math.sin(ang-Math.PI/2);
+    h+=`<line x1="${(cx+len*Math.cos(ang)).toFixed(1)}" y1="${(cy+len*Math.sin(ang)).toFixed(1)}"
+      x2="${(cx-len*Math.cos(ang)).toFixed(1)}" y2="${(cy-len*Math.sin(ang)).toFixed(1)}"
+      stroke="${col}" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  return h;
+}
+
+// ============================================================
+// MODE 0 — IMAGE D'UN POINT (méthode règle)
+// ============================================================
+const e0=[
+  {
+    explic:"La symétrique d'un point A par rapport à un centre O est le point A' tel que O est le milieu du segment [AA'].",
+    draw(){
+      let h='';
+      h+=centreO();
+      h+=lbl(O,'O','#dc2626',8,14);
+      h+=dot(A,'#4c1d95');
+      h+=lbl(A,'A','#4c1d95',-14,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Construire A', symétrique de A par rapport à O.</div>
+          <div class="ligne"><span class="hl-p">O est le milieu de [AA']</span> : O se trouve exactement entre A et A'.</div>
+          <div class="ligne">OA = OA' et A, O, A' sont alignés.</div>`
+  },
+  {
+    explic:"Méthode à la règle : on trace la droite (AO) et on la prolonge de l'autre côté de O de la même longueur.",
+    draw(){
+      let h='';
+      h+=seg(A, A2, '#9333ea', 1.5, '5,3');
+      h+=centreO();
+      h+=lbl(O,'O','#dc2626',8,14);
+      h+=dot(A,'#4c1d95');
+      h+=lbl(A,'A','#4c1d95',-14,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 1 : tracer la droite (AO).</div>
+          <div class="ligne">On pose la règle sur <span class="hl-p">A</span> et <span class="hl-p">O</span>.</div>
+          <div class="ligne">On prolonge la droite de l'autre côté de O.</div>`
+  },
+  {
+    explic:"Méthode au compas : pointe en O, on reporte la distance OA de l'autre côté.",
+    draw(){
+      let h='';
+      h+=seg(A, A2, '#9333ea', 1.5, '5,3');
+      // Arc de cercle centré en O, rayon OA
+      const rOA = Math.sqrt((A.x-O.x)**2+(A.y-O.y)**2);
+      h+=`<circle cx="${O.x}" cy="${O.y}" r="${rOA.toFixed(1)}" fill="none" stroke="#15803d" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+      h+=compas(O.x, O.y, A.x, A.y, '#15803d');
+      h+=centreO();
+      h+=lbl(O,'O','#dc2626',8,14);
+      h+=dot(A,'#4c1d95');
+      h+=lbl(A,'A','#4c1d95',-14,0);
+      return h;
+    },
+    calc:`<div class="enonce en1">Étape 2 : reporter la distance avec le compas.</div>
+          <div class="ligne">Pointe du compas en <span class="hl-g">O</span>, mine sur <span class="hl-g">A</span>.</div>
+          <div class="ligne">On trace un arc : il coupe la droite en A' (de l'autre côté de O).</div>
+          <div class="ligne">OA' = OA → O est bien le milieu de [AA'].</div>`
+  },
+  {
+    explic:"A' est trouvé : c'est l'intersection de la droite et de l'arc, de l'autre côté de O par rapport à A.",
+    draw(){
+      let h='';
+      h+=seg(A, A2, '#9333ea', 1.5, '5,3');
+      h+=centreO();
+      h+=lbl(O,'O','#dc2626',8,14);
+      h+=dot(A,'#4c1d95'); h+=lbl(A,'A','#4c1d95',-14,0);
+      h+=dot(A2,'#dc2626'); h+=lbl(A2,"A'","#dc2626",12,0);
+      h+=markSeg(A,O,1,'#9333ea');
+      h+=markSeg(O,A2,1,'#9333ea');
+      return h;
+    },
+    calc:`<div class="enonce en1">A' est le symétrique de A.</div>
+          <div class="ligne">OA = OA' (marques égales)</div>
+          <div class="ligne">A, O, A' sont alignés.</div>
+          <div class="conclusion-ok">A' est le symétrique de A par rapport à O ✓<br>O est le milieu de [AA'].</div>`
+  },
+];
+
+// ============================================================
+// MODE 1 — IMAGE D'UN TRIANGLE
+// On construit A', B', C' un par un puis on relie
+// ============================================================
+const e1=[
+  {
+    explic:"Pour construire le symétrique d'une figure, on construit le symétrique de chaque sommet, puis on relie les images.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2.5,0.5);
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      return h;
+    },
+    calc:`<div class="enonce en2">Construire l'image du triangle ABC par symétrie centrale de centre O.</div>
+          <div class="ligne">Méthode : on construit les symétriques <span class="hl-g">A'</span>, <span class="hl-g">B'</span>, <span class="hl-g">C'</span> de chaque sommet, puis on relie.</div>`
+  },
+  {
+    explic:"On construit A' : on trace la droite (AO) et on reporte OA de l'autre côté.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.3);
+      h+=seg(T.A, T2.A, '#9333ea',1.5,'5,3');
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#15803d',5); h+=lbl(T2.A,"A'","#15803d",12,4);
+      h+=markSeg(T.A,O,1,'#9333ea'); h+=markSeg(O,T2.A,1,'#9333ea');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 1 : construire A'.</div>
+          <div class="ligne">On trace (AO) et on reporte OA de l'autre côté de O.</div>
+          <div class="ligne">OA' = OA → <span class="hl-g">A'</span> est placé.</div>`
+  },
+  {
+    explic:"On construit B' de la même façon : droite (BO) prolongée, on reporte OB.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.3);
+      h+=seg(T.A, T2.A, '#9333ea',1,'5,3');
+      h+=seg(T.B, T2.B, '#9333ea',1.5,'5,3');
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#15803d',5); h+=lbl(T2.A,"A'","#15803d",12,4);
+      h+=dot(T2.B,'#15803d',5); h+=lbl(T2.B,"B'","#15803d",12,-4);
+      h+=markSeg(T.B,O,1,'#9333ea'); h+=markSeg(O,T2.B,1,'#9333ea');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 2 : construire B'.</div>
+          <div class="ligne">On trace (BO) et on reporte OB de l'autre côté de O.</div>
+          <div class="ligne">OB' = OB → <span class="hl-g">B'</span> est placé.</div>`
+  },
+  {
+    explic:"On construit C' : droite (CO) prolongée, on reporte OC.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.3);
+      h+=seg(T.A, T2.A, '#9333ea',1,'5,3');
+      h+=seg(T.B, T2.B, '#9333ea',1,'5,3');
+      h+=seg(T.C, T2.C, '#9333ea',1.5,'5,3');
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#15803d',5); h+=lbl(T2.A,"A'","#15803d",12,4);
+      h+=dot(T2.B,'#15803d',5); h+=lbl(T2.B,"B'","#15803d",12,-4);
+      h+=dot(T2.C,'#15803d',5); h+=lbl(T2.C,"C'","#15803d",12,4);
+      h+=markSeg(T.C,O,1,'#9333ea'); h+=markSeg(O,T2.C,1,'#9333ea');
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 3 : construire C'.</div>
+          <div class="ligne">On trace (CO) et on reporte OC de l'autre côté de O.</div>
+          <div class="ligne">OC' = OC → <span class="hl-g">C'</span> est placé.</div>`
+  },
+  {
+    explic:"On relie A', B', C' dans le même ordre que A, B, C. Le triangle A'B'C' est l'image du triangle ABC.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.4);
+      h+=poly([T2.A,T2.B,T2.C],'#dcfce7','#15803d',2.5,0.5);
+      // Traits de construction en grisé
+      h+=seg(T.A,T2.A,'#d1d5db',1,'4,3');
+      h+=seg(T.B,T2.B,'#d1d5db',1,'4,3');
+      h+=seg(T.C,T2.C,'#d1d5db',1,'4,3');
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#15803d'); h+=lbl(T2.A,"A'","#15803d",12,4);
+      h+=dot(T2.B,'#15803d'); h+=lbl(T2.B,"B'","#15803d",12,-4);
+      h+=dot(T2.C,'#15803d'); h+=lbl(T2.C,"C'","#15803d",14,4);
+      return h;
+    },
+    calc:`<div class="enonce en2">Étape 4 : relier A'B'C'.</div>
+          <div class="ligne">On trace les côtés [A'B'], [B'C'], [A'C'].</div>
+          <div class="conclusion-ok">Le triangle A'B'C' est l'image du triangle ABC ✓<br>Les deux triangles sont de la même taille.</div>`
+  },
+];
+
+// ============================================================
+// MODE 2 — PROPRIÉTÉS
+// ============================================================
+const e2=[
+  {
+    explic:"La symétrie centrale conserve les distances : le symétrique d'un segment a la même longueur.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.4);
+      h+=poly([T2.A,T2.B,T2.C],'#dbeafe','#1d4ed8',2,0.4);
+      h+=seg(T.A,T2.A,'#d1d5db',1,'4,3');
+      h+=seg(T.B,T2.B,'#d1d5db',1,'4,3');
+      h+=seg(T.C,T2.C,'#d1d5db',1,'4,3');
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#1d4ed8'); h+=lbl(T2.A,"A'","#1d4ed8",12,4);
+      h+=dot(T2.B,'#1d4ed8'); h+=lbl(T2.B,"B'","#1d4ed8",12,-4);
+      h+=dot(T2.C,'#1d4ed8'); h+=lbl(T2.C,"C'","#1d4ed8",14,4);
+      // Marques d'égalité sur AB et A'B'
+      h+=markSeg(T.A,T.B,1,'#4c1d95'); h+=markSeg(T2.A,T2.B,1,'#1d4ed8');
+      h+=markSeg(T.B,T.C,2,'#4c1d95'); h+=markSeg(T2.B,T2.C,2,'#1d4ed8');
+      return h;
+    },
+    calc:`<div class="enonce en3">Propriété 1 : conservation des longueurs.</div>
+          <div class="ligne">AB = A'B' &nbsp; BC = B'C' &nbsp; AC = A'C'</div>
+          <div class="ligne">Les deux figures sont de la <span class="hl-b">même taille</span> (superposables).</div>`
+  },
+  {
+    explic:"La symétrie centrale conserve les angles. Les deux figures sont isométriques.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.4);
+      h+=poly([T2.A,T2.B,T2.C],'#dbeafe','#1d4ed8',2,0.4);
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      // Arc d'angle en A et A'
+      const angAB=Math.atan2(T.B.y-T.A.y,T.B.x-T.A.x);
+      const angAC=Math.atan2(T.C.y-T.A.y,T.C.x-T.A.x);
+      h+=`<path d="M${(T.A.x+20*Math.cos(angAB)).toFixed(1)},${(T.A.y+20*Math.sin(angAB)).toFixed(1)}
+        A20,20 0 0,1 ${(T.A.x+20*Math.cos(angAC)).toFixed(1)},${(T.A.y+20*Math.sin(angAC)).toFixed(1)}"
+        fill="none" stroke="#4c1d95" stroke-width="1.5"/>`;
+      h+=`<path d="M${(T2.A.x+20*Math.cos(angAB+Math.PI)).toFixed(1)},${(T2.A.y+20*Math.sin(angAB+Math.PI)).toFixed(1)}
+        A20,20 0 0,1 ${(T2.A.x+20*Math.cos(angAC+Math.PI)).toFixed(1)},${(T2.A.y+20*Math.sin(angAC+Math.PI)).toFixed(1)}"
+        fill="none" stroke="#1d4ed8" stroke-width="1.5"/>`;
+      h+=dot(T.A,'#4c1d95'); h+=lbl(T.A,'A','#4c1d95',-12,-4);
+      h+=dot(T.B,'#4c1d95'); h+=lbl(T.B,'B','#4c1d95',12,-4);
+      h+=dot(T.C,'#4c1d95'); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#1d4ed8'); h+=lbl(T2.A,"A'","#1d4ed8",12,4);
+      h+=dot(T2.B,'#1d4ed8'); h+=lbl(T2.B,"B'","#1d4ed8",12,-4);
+      h+=dot(T2.C,'#1d4ed8'); h+=lbl(T2.C,"C'","#1d4ed8",14,4);
+      return h;
+    },
+    calc:`<div class="enonce en3">Propriété 2 : conservation des angles.</div>
+          <div class="ligne">L'angle en A = l'angle en A'.</div>
+          <div class="ligne">Les deux figures sont <span class="hl-b">isométriques</span> : même forme, même taille.</div>
+          <div class="attention">⚠️ La figure est <strong>retournée</strong> (pas superposable par glissement, seulement par rotation de 180°).</div>`
+  },
+  {
+    explic:"O est le milieu de chaque segment reliant un point à son image : OA = OA', OB = OB', OC = OC'.",
+    draw(){
+      let h='';
+      h+=poly([T.A,T.B,T.C],'#ede9fe','#4c1d95',2,0.4);
+      h+=poly([T2.A,T2.B,T2.C],'#dbeafe','#1d4ed8',2,0.4);
+      // Segments AA', BB', CC' complets
+      h+=seg(T.A,T2.A,'#9333ea',1.5,'5,3');
+      h+=seg(T.B,T2.B,'#9333ea',1.5,'5,3');
+      h+=seg(T.C,T2.C,'#9333ea',1.5,'5,3');
+      // Marques
+      h+=markSeg(T.A,O,1,'#9333ea'); h+=markSeg(O,T2.A,1,'#9333ea');
+      h+=markSeg(T.B,O,2,'#9333ea'); h+=markSeg(O,T2.B,2,'#9333ea');
+      h+=centreO(); h+=lbl(O,'O','#dc2626',10,0);
+      h+=dot(T.A,'#4c1d95'); h+=dot(T.B,'#4c1d95'); h+=dot(T.C,'#4c1d95');
+      h+=lbl(T.A,'A','#4c1d95',-12,-4); h+=lbl(T.B,'B','#4c1d95',12,-4); h+=lbl(T.C,'C','#4c1d95',-12,4);
+      h+=dot(T2.A,'#1d4ed8'); h+=dot(T2.B,'#1d4ed8'); h+=dot(T2.C,'#1d4ed8');
+      h+=lbl(T2.A,"A'","#1d4ed8",12,4); h+=lbl(T2.B,"B'","#1d4ed8",12,-4); h+=lbl(T2.C,"C'","#1d4ed8",14,4);
+      return h;
+    },
+    calc:`<div class="enonce en3">Propriété 3 : O est le milieu de [AA'], [BB'] et [CC'].</div>
+          <div class="ligne">OA = OA'&nbsp; OB = OB'&nbsp; OC = OC'</div>
+          <div class="ligne">Les segments [AA'], [BB'], [CC'] se croisent <span class="hl-b">tous en O</span>.</div>
+          <div class="conclusion-ok">Résumé :<br>• O milieu de [AA'], [BB'], [CC']<br>• Distances et angles conservés<br>• Les figures ont la même taille</div>`
+  },
+];
+
+const ETAPES=[e0,e1,e2];
+
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===m));
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+function render(){
+  const e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${ETAPES[mode].length}`;
+}
+render();
+</script>
+</body>
+</html>
