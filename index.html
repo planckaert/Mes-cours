@@ -261,6 +261,14 @@ function typeConfig(t) {
     || { icon:"📎", bg:"rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.5)", label: t };
 }
 
+function nettoyerLien(url) {
+  // Convertit les liens Google Docs/Sheets/Slides en /preview pour compatibilité iPhone
+  return url.replace(
+    /(docs\.google\.com\/(document|spreadsheets|presentation)\/d\/[^/]+)\/.*/,
+    "$1/preview"
+  );
+}
+
 // ── NAVIGATION ──────────────────────────────────────────────
 let currentCode = "";
 
@@ -377,7 +385,7 @@ function carteHTML(f, accent) {
   const cfg = typeConfig(f.type);
   const actif1 = f.actif && f.actif.trim() === "1";
   const actif2 = f.actif && f.actif.trim() === "2";
-  return `<a class="file-card" href="${f.lien}" target="_blank" rel="noopener"
+  return `<a class="file-card" href="${nettoyerLien(f.lien)}" target="_blank" rel="noopener"
     style="${(actif1||actif2) ? 'border-color:'+accent+';box-shadow:0 0 0 1px '+accent+'44;' : ''}">
     <div class="file-icon" style="background:${cfg.bg}">${cfg.icon}</div>
     <div class="file-body">
