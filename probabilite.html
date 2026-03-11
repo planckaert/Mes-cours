@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probabilités – 5ème</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #eff6ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a8a; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-p { color: #7c3aed; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; font-size: 0.95em; }
+  .fr .d { padding: 0 5px; font-size: 0.95em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>🎲 Probabilités</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Avec un dé</button>
+  <button class="tab tab2" onclick="setMode(1)">Avec une urne</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode=0, etape=0;
+const COLS=['#1d4ed8','#9d174d'];
+
+// ---- Helpers SVG ----
+function txt(x,y,t,col,size,anchor,bold){
+  size=size||13; anchor=anchor||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+size+'" text-anchor="'+anchor+'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')+'" font-family="Segoe UI,sans-serif">'+t+'</text>';
+}
+function rct(x,y,w,h,rx,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function cir(cx,cy,r,fill,stroke,sw){
+  stroke=stroke||'white'; sw=sw||2;
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function seg(x1,y1,x2,y2,col,w,dash){
+  w=w||2; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+
+// ---- Face de dé ----
+function face(x,y,s,v,fill,dotCol,opacity){
+  fill=fill||'#1d4ed8'; dotCol=dotCol||'white'; opacity=opacity===undefined?1:opacity;
+  var r=s*0.18;
+  var h='<g opacity="'+opacity+'">';
+  h+=rct(x,y,s,s,r*1.1,fill);
+  var c=s/2, off=s*0.27, dr=s*0.08;
+  var pts={1:[[c,c]],2:[[c-off,c-off],[c+off,c+off]],3:[[c-off,c-off],[c,c],[c+off,c+off]],
+    4:[[c-off,c-off],[c+off,c-off],[c-off,c+off],[c+off,c+off]],
+    5:[[c-off,c-off],[c+off,c-off],[c,c],[c-off,c+off],[c+off,c+off]],
+    6:[[c-off,c-off],[c+off,c-off],[c-off,c],[c+off,c],[c-off,c+off],[c+off,c+off]]};
+  var p=pts[v]||[];
+  for(var i=0;i<p.length;i++) h+=cir(x+p[i][0],y+p[i][1],dr,dotCol,'none',0);
+  h+='</g>';
+  return h;
+}
+
+// ---- Boule ----
+function boule(cx,cy,r,fill,label,opacity){
+  opacity=opacity===undefined?1:opacity;
+  var h='<g opacity="'+opacity+'">';
+  h+=cir(cx,cy,r,fill,'white',2);
+  h+='<circle cx="'+(cx-r*0.25)+'" cy="'+(cy-r*0.25)+'" r="'+(r*0.2)+'" fill="white" opacity="0.4"/>';
+  if(label) h+=txt(cx,cy+5,label,'white',r*0.9,'middle',true);
+  h+='</g>';
+  return h;
+}
+
+// ---- Echelle probabilités ----
+function echelle(yBase, m1, c1, m2, c2){
+  var h='<defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">';
+  h+='<stop offset="0%" stop-color="#fee2e2"/>';
+  h+='<stop offset="50%" stop-color="#dbeafe"/>';
+  h+='<stop offset="100%" stop-color="#dcfce7"/>';
+  h+='</linearGradient></defs>';
+  h+=rct(40,yBase,400,16,8,'url(#sg)','#d1d5db',1);
+  h+=seg(40,yBase-4,40,yBase+20,'#374151',1.5);
+  h+=seg(240,yBase-4,240,yBase+20,'#374151',1.5);
+  h+=seg(440,yBase-4,440,yBase+20,'#374151',1.5);
+  h+=txt(40,yBase+32,'0','#991b1b',13);
+  h+=txt(240,yBase+32,'0,5','#1e3a8a',13);
+  h+=txt(440,yBase+32,'1','#065f46',13);
+  h+=txt(40,yBase-10,'impossible','#991b1b',9);
+  h+=txt(240,yBase-10,'équiprobable','#1e3a8a',9);
+  h+=txt(440,yBase-10,'certain','#065f46',9);
+  if(m1!==null){ var mx=40+m1*400; h+='<polygon points="'+mx+','+(yBase-6)+' '+(mx-7)+','+(yBase-18)+' '+(mx+7)+','+(yBase-18)+'" fill="'+c1+'"/>'; h+=txt(mx,yBase-20,m1===0.5?'½':(m1===0?'0':m1===1?'1':m1.toFixed(2)),c1,10,'middle',true); }
+  if(m2!==null){ var mx2=40+m2*400; h+='<polygon points="'+mx2+','+(yBase-6)+' '+(mx2-7)+','+(yBase-18)+' '+(mx2+7)+','+(yBase-18)+'" fill="'+c2+'"/>'; h+=txt(mx2,yBase-20,m2.toFixed(2),c2,10,'middle',true); }
+  return h;
+}
+
+// ============================================================
+// MODE 0 — DÉ
+// ============================================================
+var DS=50, gap=10;
+var DX0=(480-6*DS-5*gap)/2;
+var DY=105;
+function dx(i){ return DX0+i*(DS+gap); }
+
+function baseDE(){
+  var h='';
+  h+=txt(240,30,'Univers Ω = { 1 ; 2 ; 3 ; 4 ; 5 ; 6 }','#1e3a8a',13,'middle',true);
+  h+=txt(240,46,'(dé non truqué — 6 issues équiprobables)','#64748b',10);
+  return h;
+}
+
+var e0=[
+  {
+    explic:"On lance un dé équilibré à 6 faces. On ne connaît pas le résultat à l'avance : c'est une expérience aléatoire. Les 6 résultats possibles forment l'univers Ω.",
+    draw:function(){
+      var h=baseDE();
+      for(var i=0;i<6;i++){
+        h+=face(dx(i),DY,DS,i+1,'#1d4ed8');
+        h+=txt(dx(i)+DS/2,DY+DS+14,''+(i+1),'#64748b',11);
+      }
+      h+=txt(240,212,'Chaque issue est équiprobable :','#374151',12,'middle');
+      // fraction P=1/6
+      h+=txt(240,235,'P(1) = P(2) = ... = P(6) =','#374151',12,'middle');
+      h+=txt(355,228,'1','#1d4ed8',14,'middle',true);
+      h+=seg(343,232,367,232,'#1d4ed8',1.5);
+      h+=txt(355,244,'6','#1d4ed8',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Expérience aléatoire : lancer un dé.</div><div class="ligne">L\'<span class="hl-b">univers</span> est l\'ensemble de toutes les issues : Ω = { 1 ; 2 ; 3 ; 4 ; 5 ; 6 }</div><div class="ligne">Chaque issue a la même probabilité : <span class="hl-b"><span class="fr"><span class="n">1</span><span class="d">6</span></span></span></div>'
+  },
+  {
+    explic:"On s'intéresse à l'événement A = « obtenir un nombre pair ». Les issues favorables sont 2, 4, 6. Les issues 1, 3, 5 ne sont pas favorables à A.",
+    draw:function(){
+      var h=baseDE();
+      for(var i=0;i<6;i++){
+        var v=i+1, pair=v%2===0;
+        h+=face(dx(i),DY,DS,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
+        if(pair) h+=rct(dx(i)-3,DY-3,DS+6,DS+6,10,'none','#15803d',2.5);
+      }
+      h+=txt(240,200,'Issues favorables à A = « nombre pair »','#15803d',12,'middle',true);
+      h+=txt(240,218,'{ 2 ; 4 ; 6 }','#15803d',15,'middle',true);
+      h+=txt(240,244,'3 issues favorables sur 6 issues au total','#64748b',11,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Événement A = « obtenir un nombre pair »</div><div class="ligne">Issues <span class="hl-g">favorables</span> à A : <span class="hl-g">2, 4, 6</span> ✓</div><div class="ligne">Issues non favorables : 1, 3, 5 ✗</div><div class="ligne"><span class="hl-g">3 issues favorables</span> sur 6 issues au total.</div>'
+  },
+  {
+    explic:"La probabilité d'un événement se calcule en divisant le nombre d'issues favorables par le nombre total d'issues (quand elles sont toutes équiprobables).",
+    draw:function(){
+      var h=baseDE();
+      for(var i=0;i<6;i++){
+        var v=i+1, pair=v%2===0;
+        h+=face(dx(i),DY,DS,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
+      }
+      // Formule dans un bandeau bleu
+      h+=rct(50,190,380,75,12,'#1e3a8a');
+      h+=txt(240,208,'P(A)  =  issues favorables','white',12,'middle',true);
+      h+=seg(183,212,297,212,'white',1.5);
+      h+=txt(240,224,'nombre total d\'issues','white',11,'middle');
+      h+=txt(318,207,'3','white',18,'middle',true);
+      h+=seg(308,212,328,212,'white',1.5);
+      h+=txt(318,225,'6','white',18,'middle',true);
+      h+=txt(345,216,'=','white',14,'middle');
+      h+=txt(370,207,'1','white',18,'middle',true);
+      h+=seg(360,212,380,212,'white',1.5);
+      h+=txt(370,225,'2','white',18,'middle',true);
+      h+=txt(400,216,'= 0,5','white',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Calcul de P(A)</div><div class="ligne">P(A) = <span class="fr hl-b"><span class="n">issues favorables</span><span class="d">nombre total</span></span> = <span class="fr hl-g"><span class="n">3</span><span class="d">6</span></span> = <span class="fr hl-g"><span class="n">1</span><span class="d">2</span></span> = <span class="hl-g">0,5</span></div><div class="ligne">La probabilité est toujours entre <span class="hl-b">0</span> et <span class="hl-b">1</span> : <span class="hl-b">0 ≤ P(A) ≤ 1</span></div>'
+  },
+  {
+    explic:"L'échelle de probabilités va de 0 (impossible) à 1 (certain). P(A) = 0,5 signifie que l'événement a une chance sur deux de se produire.",
+    draw:function(){
+      var h=baseDE();
+      for(var i=0;i<6;i++){
+        var v=i+1, pair=v%2===0;
+        h+=face(dx(i),DY-50,DS*0.65,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
+      }
+      h+=txt(240,120,'P(obtenir 7) = 0  → impossible','#991b1b',11,'middle');
+      h+=txt(240,136,'P(obtenir ≤ 6) = 1  → certain','#065f46',11,'middle');
+      h+=txt(240,152,'P(nombre pair) = ½  → équiprobable','#1d4ed8',11,'middle');
+      h+=echelle(185, 0.5, '#1d4ed8', null, null);
+      return h;
+    },
+    calc:'<div class="enonce en1">Événements remarquables</div><div class="ligne"><span class="hl-r">P = 0</span> : événement impossible (ex : obtenir 7)</div><div class="ligne"><span class="hl-g">P = 1</span> : événement certain (ex : obtenir ≤ 6)</div><div class="ligne"><span class="hl-b">P = 0,5</span> : autant de chances de se produire que non</div><div class="conclusion-ok">Somme de toutes les probabilités : 6 × <span class="fr"><span class="n">1</span><span class="d">6</span></span> = 1 ✓</div>'
+  }
+];
+
+// ============================================================
+// MODE 1 — URNE
+// 3 rouges, 2 bleues, 1 verte, 1 jaune = 7 boules
+// ============================================================
+var BOULES=[
+  {col:'#dc2626',lab:'R'},{col:'#dc2626',lab:'R'},{col:'#dc2626',lab:'R'},
+  {col:'#2563eb',lab:'B'},{col:'#2563eb',lab:'B'},
+  {col:'#15803d',lab:'V'},
+  {col:'#d97706',lab:'J'}
+];
+var BR=22;
+function bx(i){ return (480-7*(BR*2+8))/2+BR+i*(BR*2+8); }
+var BY=175;
+
+function drawUrne(){
+  var h='';
+  h+='<path d="M110 235 Q108 268 240 275 Q372 268 370 235 Q358 195 325 178 Q285 168 240 168 Q195 168 155 178 Q122 195 110 235Z" fill="#e0e7ff" stroke="#4338ca" stroke-width="2"/>';
+  h+='<ellipse cx="240" cy="168" rx="85" ry="18" fill="#c7d2fe" stroke="#4338ca" stroke-width="2"/>';
+  return h;
+}
+
+function baseURNE(hi, fadedOp){
+  fadedOp=fadedOp===undefined?0.25:fadedOp;
+  var h=drawUrne();
+  h+=txt(240,35,'Urne : 3 rouges · 2 bleues · 1 verte · 1 jaune','#374151',11,'middle',true);
+  h+=txt(240,50,'→ 7 boules au total','#64748b',10);
+  for(var i=0;i<BOULES.length;i++){
+    var op=(hi===null||hi.indexOf(i)>=0)?1:fadedOp;
+    h+=boule(bx(i),BY,BR,BOULES[i].col,BOULES[i].lab,op);
+  }
+  return h;
+}
+
+var e1=[
+  {
+    explic:"Une urne contient 7 boules de différentes couleurs. On tire une boule au hasard sans regarder. Il y a 7 issues équiprobables — chaque boule a la même probabilité d'être tirée.",
+    draw:function(){
+      var h=baseURNE(null);
+      h+=txt(240,218,'7 issues équiprobables','#374151',12,'middle',true);
+      h+=txt(240,234,'P(chaque boule) =','#374151',11,'middle');
+      h+=txt(348,227,'1','#7c3aed',14,'middle',true);
+      h+=seg(336,231,360,231,'#7c3aed',1.5);
+      h+=txt(348,243,'7','#7c3aed',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Expérience aléatoire : tirer une boule dans l\'urne.</div><div class="ligne">L\'<span class="hl-p">univers</span> contient <span class="hl-p">7 issues</span> équiprobables.</div><div class="ligne">Probabilité de chaque boule : <span class="fr hl-p"><span class="n">1</span><span class="d">7</span></span></div>'
+  },
+  {
+    explic:"Événement A = « tirer une boule rouge ». Il y a 3 boules rouges sur 7. On applique la formule : P(rouge) = 3/7.",
+    draw:function(){
+      var h=baseURNE([0,1,2]);
+      // accolade rouges
+      var xa=bx(0)-BR, xb=bx(2)+BR;
+      h+=seg(xa,BY+BR+8,xb,BY+BR+8,'#dc2626',2);
+      h+=seg(xa,BY+BR+8,xa,BY+BR+14,'#dc2626',2);
+      h+=seg(xb,BY+BR+8,xb,BY+BR+14,'#dc2626',2);
+      h+=txt((xa+xb)/2,BY+BR+26,'3 rouges','#dc2626',11,'middle',true);
+      // résultat
+      h+=rct(148,218,184,48,8,'#dc2626');
+      h+=txt(240,233,'P(rouge) =','white',12,'middle',true);
+      h+=txt(305,226,'3','white',16,'middle',true);
+      h+=seg(293,230,317,230,'white',1.5);
+      h+=txt(305,242,'7','white',16,'middle',true);
+      h+=txt(328,234,'≈ 0,43','white',12,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Événement A = « tirer une boule rouge »</div><div class="ligne">Issues favorables : <span class="hl-r">3 boules rouges</span></div><div class="ligne">P(rouge) = <span class="fr hl-r"><span class="n">3</span><span class="d">7</span></span> ≈ <span class="hl-r">0,43</span></div>'
+  },
+  {
+    explic:"On peut calculer d'autres probabilités avec la même urne. La somme de toutes les probabilités doit toujours être égale à 1.",
+    draw:function(){
+      var h=baseURNE(null);
+      h+=rct(30,218,130,58,8,'white','#dc2626',2);
+      h+=txt(95,232,'P(rouge)','#dc2626',11,'middle',true);
+      h+=txt(95,248,'3/7 ≈ 0,43','#dc2626',13,'middle',true);
+      h+=rct(175,218,130,58,8,'white','#2563eb',2);
+      h+=txt(240,232,'P(bleue)','#2563eb',11,'middle',true);
+      h+=txt(240,248,'2/7 ≈ 0,29','#2563eb',13,'middle',true);
+      h+=rct(320,218,130,58,8,'white','#15803d',2);
+      h+=txt(385,232,'P(verte)','#15803d',11,'middle',true);
+      h+=txt(385,248,'1/7 ≈ 0,14','#15803d',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Calcul de plusieurs probabilités</div><div class="ligne">P(rouge) = <span class="fr hl-r"><span class="n">3</span><span class="d">7</span></span> &nbsp; P(bleue) = <span class="fr hl-b"><span class="n">2</span><span class="d">7</span></span> &nbsp; P(verte) = P(jaune) = <span class="fr hl-g"><span class="n">1</span><span class="d">7</span></span></div><div class="conclusion-ok">Vérification : <span class="fr"><span class="n">3</span><span class="d">7</span></span> + <span class="fr"><span class="n">2</span><span class="d">7</span></span> + <span class="fr"><span class="n">1</span><span class="d">7</span></span> + <span class="fr"><span class="n">1</span><span class="d">7</span></span> = <span class="fr"><span class="n">7</span><span class="d">7</span></span> = 1 ✓</div>'
+  },
+  {
+    explic:"Sur l'échelle, on place P(rouge) ≈ 0,43 et P(bleue) ≈ 0,29. Aucun événement ici n'est impossible ni certain — tous les marqueurs sont entre 0 et 1.",
+    draw:function(){
+      var h=baseURNE(null,0.35);
+      h+=echelle(220, 3/7, '#dc2626', 2/7, '#2563eb');
+      h+=txt(40+3/7*400,260,'P(rouge)','#dc2626',9,'middle');
+      h+=txt(40+2/7*400,260,'P(bleue)','#2563eb',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Lecture sur l\'échelle de probabilités</div><div class="ligne">P(rouge) = <span class="hl-r">3/7 ≈ 0,43</span> → marqueur rouge</div><div class="ligne">P(bleue) = <span class="hl-b">2/7 ≈ 0,29</span> → marqueur bleu</div><div class="attention">💡 Plus P est proche de 1, plus l\'événement est probable. Plus P est proche de 0, plus il est rare.</div>'
+  }
+];
+
+// ============================================================
+var ETAPES=[e0,e1];
+function setMode(m){ mode=m; etape=0; document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',i===m);}); document.querySelector('.btn-next').style.background=COLS[m]; document.getElementById('calc-box').style.borderLeftColor=COLS[m]; render(); }
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+function render(){ var e=ETAPES[mode][etape]; document.getElementById('fig').innerHTML=e.draw(); document.getElementById('calc-box').innerHTML=e.calc; document.getElementById('explication').textContent=e.explic; document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length; }
+render();
+</script>
+</body>
+</html>
