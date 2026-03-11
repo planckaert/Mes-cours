@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fonction Linéaire</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #0c4a6e; color: white; font-size: 1.15em; }
+
+  .tabs { display: flex; justify-content: center; gap: 6px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 12px; border-radius: 16px; border: none; font-size: 0.77em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab3 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 260px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .en3 { background: #fef3c7; color: #78350f; }
+  .ligne { margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-p { color: #7c3aed; font-weight: bold; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  /* Fractions */
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; font-size: .95em; }
+  .fr .n { border-bottom: 2px solid currentColor; padding-bottom: 1px; line-height: 1.2; }
+  .fr .d { padding-top: 1px; line-height: 1.2; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+
+<h1>📈 Fonction Linéaire — f(x) = ax</h1>
+
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Définition</button>
+  <button class="tab tab2" onclick="setMode(1)">Tableau &amp; graphe</button>
+  <button class="tab tab3" onclick="setMode(2)">Calculer &amp; lire</button>
+</div>
+
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 260"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let mode = 0, etape = 0;
+const COLS = ['#1d4ed8', '#15803d', '#b45309'];
+
+// ── Repère SVG (viewBox 480×260) ──────────────────────────────
+// Origine O au centre, 1 unité = 35px, axe x : -5..5, axe y : -3..3
+const ox = 240, oy = 130, sc = 35;
+
+function toP(x, y) { return { x: ox + x * sc, y: oy - y * sc }; }
+
+function grille(xmin, xmax, ymin, ymax) {
+  let h = '';
+  for (let x = xmin; x <= xmax; x++) {
+    const a = toP(x, ymin), b = toP(x, ymax);
+    h += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#e5e7eb" stroke-width="1"/>`;
+    if (x !== 0) h += `<text x="${a.x}" y="${oy + 16}" font-size="10" fill="#bbb" text-anchor="middle">${x}</text>`;
+  }
+  for (let y = ymin; y <= ymax; y++) {
+    const a = toP(xmin, y), b = toP(xmax, y);
+    h += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#e5e7eb" stroke-width="1"/>`;
+    if (y !== 0) h += `<text x="${ox - 7}" y="${toP(0, y).y + 4}" font-size="10" fill="#bbb" text-anchor="end">${y}</text>`;
+  }
+  return h;
+}
+
+function axes() {
+  const col = '#94a3b8';
+  let h = '';
+  h += `<line x1="14" y1="${oy}" x2="462" y2="${oy}" stroke="${col}" stroke-width="1.8"/>`;
+  h += `<polygon points="462,${oy-5} 472,${oy} 462,${oy+5}" fill="${col}"/>`;
+  h += `<text x="468" y="${oy + 5}" font-size="13" fill="${col}" font-weight="bold">x</text>`;
+  h += `<line x1="${ox}" y1="246" x2="${ox}" y2="14" stroke="${col}" stroke-width="1.8"/>`;
+  h += `<polygon points="${ox-5},14 ${ox},4 ${ox+5},14" fill="${col}"/>`;
+  h += `<text x="${ox + 5}" y="14" font-size="13" fill="${col}" font-weight="bold">y</text>`;
+  h += `<text x="${ox + 5}" y="${oy + 14}" font-size="11" fill="${col}">O</text>`;
+  return h;
+}
+
+function droite(a, col, xmin, xmax, w = 2.5) {
+  const p1 = toP(xmin, a * xmin), p2 = toP(xmax, a * xmax);
+  return `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+}
+
+function pt(x, y, col, r = 5) {
+  const p = toP(x, y);
+  return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${col}" stroke="white" stroke-width="2"/>`;
+}
+
+function lbl(x, y, txt, col, dx = 0, dy = 0, size = 11, anchor = 'middle') {
+  const p = toP(x, y);
+  return `<text x="${p.x + dx}" y="${p.y + dy}" font-size="${size}" fill="${col}" font-weight="bold" text-anchor="${anchor}">${txt}</text>`;
+}
+
+function tiret(x1, y1, x2, y2, col, dash = '5,3') {
+  const a = toP(x1, y1), b = toP(x2, y2);
+  return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${col}" stroke-width="1.5" stroke-dasharray="${dash}"/>`;
+}
+
+// ── MODE 0 — DÉFINITION ──────────────────────────────────────
+const e0 = [
+  {
+    explic: "Une fonction linéaire est une fonction de la forme f(x) = ax. Sa représentation graphique est une droite qui passe toujours par l'origine O(0 ; 0).",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(0.7, '#1d4ed8', -4, 4);
+      h += pt(0, 0, '#dc2626', 6);
+      h += lbl(2.5, 1.75, 'f(x) = ax', '#1d4ed8', 0, -10, 13);
+      return h;
+    },
+    calc: `<div class="enonce en1">Définition</div>
+           <div class="ligne">Une <span class="hl-b">fonction linéaire</span> est de la forme :</div>
+           <div class="ligne" style="text-align:center;font-size:1.35em;font-weight:bold;color:#1d4ed8;padding:6px 0">f(x) = a × x</div>
+           <div class="ligne">où <span class="hl-b">a</span> est un nombre appelé le <span class="hl-b">coefficient</span>.</div>
+           <div class="attention">💡 La droite passe <strong>toujours par O(0 ; 0)</strong> car f(0) = a × 0 = 0.</div>`
+  },
+  {
+    explic: "Le signe de a détermine si la droite monte ou descend. Si a > 0, elle est croissante. Si a < 0, elle est décroissante.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(1.5, '#15803d', -2, 2);
+      h += droite(-1.5, '#dc2626', -2, 2);
+      h += lbl(1.6, 2.4, 'a &gt; 0', '#15803d', 0, 0, 12);
+      h += lbl(1.6, -2.4, 'a &lt; 0', '#dc2626', 0, 10, 12);
+      h += pt(0, 0, '#7c3aed', 5);
+      return h;
+    },
+    calc: `<div class="enonce en1">Signe du coefficient a</div>
+           <div class="ligne"><span class="hl-g">a &gt; 0</span> → droite <strong>croissante</strong> (monte vers la droite)</div>
+           <div class="ligne"><span class="hl-r">a &lt; 0</span> → droite <strong>décroissante</strong> (descend vers la droite)</div>
+           <div class="ligne"><span style="color:#94a3b8;font-weight:bold">a = 0</span> → f(x) = 0 (confondue avec l'axe des x)</div>
+           <div class="conclusion-ok">Les deux droites passent toutes par O ✓</div>`
+  },
+  {
+    explic: "Plus la valeur absolue de a est grande, plus la droite est inclinée (pente raide). Plus |a| est petit, plus la droite est proche de l'horizontale.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(0.5, '#93c5fd', -5, 5, 2);
+      h += droite(1,   '#3b82f6', -3, 3, 2);
+      h += droite(2.5, '#1d4ed8', -1.2, 1.2, 2.5);
+      h += lbl(3.5, 1.75, 'a = 0,5', '#93c5fd', 0, 0, 10);
+      h += lbl(2.2, 2.2,  'a = 1',   '#3b82f6', 0, 0, 10);
+      h += lbl(1.1, 2.75, 'a = 2,5', '#1d4ed8', 0, 0, 10);
+      h += pt(0, 0, '#dc2626', 5);
+      return h;
+    },
+    calc: `<div class="enonce en1">L'inclinaison dépend de |a|</div>
+           <div class="ligne"><span style="color:#93c5fd;font-weight:bold">a = 0,5</span> → pente douce</div>
+           <div class="ligne"><span style="color:#3b82f6;font-weight:bold">a = 1</span> → droite à 45°</div>
+           <div class="ligne"><span class="hl-b">a = 2,5</span> → pente raide</div>
+           <div class="attention">💡 Plus <strong>|a| est grand</strong>, plus la droite est <strong>inclinée</strong>.</div>`
+  }
+];
+
+// ── MODE 1 — TABLEAU & GRAPHE ────────────────────────────────
+const TV = [
+  { x: -2, fx: -4, lbl: 'A', col: '#60a5fa' },
+  { x: -1, fx: -2, lbl: 'B', col: '#3b82f6' },
+  { x:  0, fx:  0, lbl: 'O', col: '#dc2626' },
+  { x:  1, fx:  2, lbl: 'C', col: '#15803d' },
+  { x:  2, fx:  4, lbl: 'D', col: '#7c3aed' },
+];
+
+const e1 = [
+  {
+    explic: "Pour tracer la droite f(x) = 2x, on construit d'abord un tableau de valeurs : on choisit des valeurs de x et on calcule 2x.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(2, '#1d4ed8', -1.5, 1.5, 2);
+      h += lbl(1.2, 2.4, 'f(x) = 2x', '#1d4ed8', 12, -8, 13, 'start');
+      h += pt(0, 0, '#dc2626', 6);
+      return h;
+    },
+    calc: `<div class="enonce en2">Tableau de valeurs — f(x) = 2x</div>
+           <div class="ligne">On calcule <span class="hl-g">f(x) = 2x</span> pour chaque valeur de <span class="hl-b">x</span> :</div>
+           <table style="border-collapse:collapse;margin:8px auto;font-size:.93em">
+             <tr>
+               <th style="background:#1d4ed8;color:white;padding:6px 12px;border:2px solid #1d4ed8">x</th>
+               ${TV.map(r => `<td style="padding:6px 10px;border:2px solid #93c5fd;text-align:center;background:#eff6ff">${r.x}</td>`).join('')}
+             </tr>
+             <tr>
+               <th style="background:#15803d;color:white;padding:6px 12px;border:2px solid #15803d">f(x)</th>
+               ${TV.map(r => `<td style="padding:6px 10px;border:2px solid #6ee7b7;text-align:center;background:#f0fdf4;font-weight:bold;color:${r.x===0?'#dc2626':'#15803d'}">${r.fx}</td>`).join('')}
+             </tr>
+           </table>
+           <div class="attention">💡 f(0) = 2 × 0 = <strong>0</strong> → la droite passe par O.</div>`
+  },
+  {
+    explic: "Chaque colonne du tableau donne les coordonnées d'un point de la droite. On place ces points dans le repère.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      TV.forEach(r => {
+        h += pt(r.x, r.fx, r.col, 6);
+        const dx = r.x === 0 ? -14 : r.x < 0 ? -14 : 14;
+        const dy = r.fx <= 0 ? 16 : -8;
+        h += lbl(r.x, r.fx, r.lbl, r.col, dx, dy, 12);
+      });
+      return h;
+    },
+    calc: `<div class="enonce en2">On place les points dans le repère</div>
+           ${TV.map(r => `<div class="ligne"><span style="color:${r.col};font-weight:bold">${r.lbl}(${r.x} ; ${r.fx})</span></div>`).join('')}
+           <div class="attention">💡 O(0 ; 0) est l'origine — la droite y passe obligatoirement.</div>`
+  },
+  {
+    explic: "On relie les points à la règle : ils sont tous alignés. C'est bien une droite. En pratique, deux points suffisent pour tracer une droite.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(2, '#1d4ed8', -1.5, 1.5, 2.5);
+      TV.forEach(r => { h += pt(r.x, r.fx, r.col, 5); });
+      h += lbl(1.2, 2.4, 'f(x) = 2x', '#1d4ed8', 12, -8, 13, 'start');
+      return h;
+    },
+    calc: `<div class="enonce en2">On trace la droite à la règle</div>
+           <div class="ligne">On relie les points → ils sont <span class="hl-b">alignés</span> ✓</div>
+           <div class="ligne">La droite passe par <span class="hl-r">O(0 ; 0)</span> comme attendu.</div>
+           <div class="conclusion-ok">Représentation graphique de f(x) = 2x tracée ✓</div>
+           <div class="attention">💡 En pratique, <strong>2 points suffisent</strong> pour tracer la droite : O et C(1 ; 2).</div>`
+  }
+];
+
+// ── MODE 2 — CALCULER & LIRE ──────────────────────────────────
+const e2 = [
+  {
+    explic: "Pour calculer une image avec f(x) = 3x, on remplace x par le nombre voulu et on effectue la multiplication.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(3, '#b45309', -1, 1, 2.5);
+      h += lbl(0.7, 2.1, 'f(x) = 3x', '#b45309', 14, -8, 13, 'start');
+      // illustre f(0.5) = 1.5
+      h += tiret(0.5, 0, 0.5, 1.5, '#b45309');
+      h += tiret(0,   1.5, 0.5, 1.5, '#15803d');
+      h += pt(0.5, 1.5, '#15803d', 6);
+      h += lbl(0.5, 1.5, '(½ ; 3/2)', '#15803d', 14, -4, 10, 'start');
+      h += pt(0, 0, '#dc2626', 5);
+      return h;
+    },
+    calc: `<div class="enonce en3">Calculer des images — f(x) = 3x</div>
+           <div class="ligne">f(<span class="hl-o">2</span>) = 3 × <span class="hl-o">2</span> = <span class="hl-g">6</span></div>
+           <div class="ligne">f(<span class="hl-o">−1</span>) = 3 × (<span class="hl-o">−1</span>) = <span class="hl-r">−3</span></div>
+           <div class="ligne">f(<span class="hl-o">0</span>) = 3 × <span class="hl-o">0</span> = <span class="hl-r">0</span></div>
+           <div class="ligne">f(<span class="hl-o"><span class="fr"><span class="n">1</span><span class="d">2</span></span></span>) = 3 × <span class="hl-o"><span class="fr"><span class="n">1</span><span class="d">2</span></span></span> = <span class="hl-g"><span class="fr" style="color:#15803d"><span class="n">3</span><span class="d">2</span></span></span></div>
+           <div class="attention">💡 Pour calculer une image : on <strong>remplace x</strong> et on <strong>multiplie par a</strong>.</div>`
+  },
+  {
+    explic: "Si on connaît un point M(x ; y) de la droite autre que O, on peut retrouver a en divisant l'ordonnée par l'abscisse : a = y ÷ x.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(1.5, '#b45309', -2.1, 2.1, 2.5);
+      // M(2 ; 3) → a = 3/2 = 1.5
+      h += tiret(2, 0, 2, 3, '#b45309');
+      h += tiret(0, 3, 2, 3, '#dc2626');
+      h += pt(2, 3, '#dc2626', 7);
+      h += lbl(2, 3, 'M(2 ; 3)', '#dc2626', 14, -4, 11, 'start');
+      const px2 = toP(2, 0), py3 = toP(0, 3);
+      h += `<text x="${px2.x}" y="${oy + 22}" font-size="11" fill="#b45309" font-weight="bold" text-anchor="middle">2</text>`;
+      h += `<text x="${ox - 8}" y="${py3.y + 4}" font-size="11" fill="#dc2626" font-weight="bold" text-anchor="end">3</text>`;
+      h += pt(0, 0, '#7c3aed', 5);
+      return h;
+    },
+    calc: `<div class="enonce en3">Retrouver a depuis un point du graphe</div>
+           <div class="ligne">Le point <span class="hl-r">M(2 ; 3)</span> est sur la droite, donc f(<span class="hl-o">2</span>) = <span class="hl-r">3</span>.</div>
+           <div class="ligne" style="text-align:center;font-size:1.2em;padding:6px 0">
+             a = <span class="fr" style="color:#b45309"><span class="n">f(x)</span><span class="d">x</span></span> = <span class="fr" style="color:#b45309"><span class="n">3</span><span class="d">2</span></span> = <span class="hl-o">1,5</span>
+           </div>
+           <div class="conclusion-ok">f(x) = 1,5x ✓</div>
+           <div class="attention">💡 Cette méthode ne fonctionne que si la droite passe par O (fonction <strong>linéaire</strong>).</div>`
+  },
+  {
+    explic: "Trouver un antécédent, c'est l'opération inverse : on connaît f(x) et on cherche x. On lit le graphe depuis l'axe des y vers la droite, puis vers l'axe des x.",
+    draw() {
+      let h = grille(-5, 5, -3, 3) + axes();
+      h += droite(2, '#1d4ed8', -1.5, 1.5, 2.5);
+      // f(x) = 4 → x = 2
+      h += tiret(0, 4, 2, 4, '#15803d');
+      h += tiret(2, 0, 2, 4, '#b45309');
+      h += pt(2, 4, '#15803d', 7);
+      h += lbl(2, 4, 'C(2 ; 4)', '#15803d', 14, -4, 11, 'start');
+      // flèches annotations
+      const pa = toP(0, 4), pb = toP(2, 0);
+      h += `<text x="${ox - 8}" y="${pa.y + 4}" font-size="11" fill="#15803d" font-weight="bold" text-anchor="end">4</text>`;
+      h += `<text x="${pb.x}" y="${oy + 22}" font-size="11" fill="#b45309" font-weight="bold" text-anchor="middle">2</text>`;
+      h += lbl(1, 2.4, 'f(x) = 2x', '#1d4ed8', 10, -6, 13, 'start');
+      return h;
+    },
+    calc: `<div class="enonce en3">Trouver un antécédent — f(x) = 2x</div>
+           <div class="ligne">Quel est l'antécédent de <span class="hl-g">4</span> par f ?</div>
+           <div class="ligne">On cherche x tel que 2x = <span class="hl-g">4</span> :</div>
+           <div class="ligne" style="text-align:center;font-size:1.15em;padding:4px 0">
+             x = <span class="fr" style="color:#1d4ed8"><span class="n">4</span><span class="d">2</span></span> = <span class="hl-b">2</span>
+           </div>
+           <div class="conclusion-ok">L'antécédent de 4 est 2 ✓</div>
+           <div class="attention">💡 Sur le graphe : on part de <span class="hl-g">4</span> sur l'axe y → on trace une horizontale jusqu'à la droite → puis une verticale vers l'axe x → on lit <span class="hl-o">x = 2</span>.</div>`
+  }
+];
+
+// ── MOTEUR ────────────────────────────────────────────────────
+const ETAPES = [e0, e1, e2];
+
+function setMode(m) {
+  mode = m; etape = 0;
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === m));
+  document.querySelector('.btn-next').style.background = COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor = COLS[m];
+  render();
+}
+function prev() { if (etape > 0) { etape--; render(); } }
+function next() { if (etape < ETAPES[mode].length - 1) { etape++; render(); } }
+function render() {
+  const e = ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML = e.draw();
+  document.getElementById('calc-box').innerHTML = e.calc;
+  document.getElementById('explication').textContent = e.explic;
+  document.getElementById('etape-ind').textContent = `Étape ${etape + 1} / ${ETAPES[mode].length}`;
+}
+render();
+</script>
+</body>
+</html>
