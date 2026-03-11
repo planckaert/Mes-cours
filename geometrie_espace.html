@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Géométrie dans l'espace</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f8faff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #0f172a; color: white; font-size: 1.15em; }
+
+  /* Sélecteur de solide */
+  .solide-bar { display: flex; justify-content: center; gap: 6px; padding: 8px 6px; flex-wrap: wrap; }
+  .sbtn { padding: 8px 12px; border-radius: 14px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .s0 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .s1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .s2 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .s3 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .s0.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .s1.active { background: #15803d; color: white; border-color: #15803d; }
+  .s2.active { background: #b45309; color: white; border-color: #b45309; }
+  .s3.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  /* Sous-onglets patron / perspective */
+  .view-bar { display: flex; justify-content: center; gap: 8px; padding: 4px 6px 6px; }
+  .vbtn { padding: 7px 20px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; background: #e2e8f0; color: #475569; transition: all 0.2s; }
+  .vbtn.active { background: #0f172a; color: white; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 6px; }
+
+  svg#fig { width: 100%; max-width: 480px; height: 260px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 12px 16px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.95em; line-height: 1.9; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 5px 11px; margin-bottom: 7px; font-size: 0.9em; }
+  .en0 { background: #dbeafe; color: #1e3a8a; }
+  .en1 { background: #dcfce7; color: #14532d; }
+  .en2 { background: #fef3c7; color: #78350f; }
+  .en3 { background: #fce7f3; color: #831843; }
+  .ligne { margin: 2px 0; }
+  .hl { font-weight: bold; }
+  .c0 { color: #1d4ed8; } .c1 { color: #15803d; } .c2 { color: #b45309; } .c3 { color: #9d174d; }
+  .cr { color: #dc2626; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 5px 11px; border-radius: 7px; margin-top: 5px; color: #7c2d12; font-size: 0.89em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 6px 12px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 5px; }
+
+  .explication { background: white; border-radius: 14px; padding: 9px 15px; margin: 5px auto; max-width: 480px; width: 95%; font-size: 0.93em; color: #333; box-shadow: 0 1px 6px #0001; border-left: 4px solid #cbd5e1; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.85em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 6px; }
+  button.nav { padding: 9px 26px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e2e8f0; color: #555; }
+  .btn-next { background: #0f172a; color: white; }
+</style>
+</head>
+<body>
+<h1>🧊 Géométrie dans l'espace — 6ème</h1>
+<div class="solide-bar">
+  <button class="sbtn s0 active" onclick="setSolide(0)">🟦 Cube</button>
+  <button class="sbtn s1" onclick="setSolide(1)">📦 Pavé droit</button>
+  <button class="sbtn s2" onclick="setSolide(2)">🔺 Prisme</button>
+  <button class="sbtn s3" onclick="setSolide(3)">🔵 Cylindre</button>
+</div>
+<div class="view-bar">
+  <button class="vbtn active" onclick="setView(0)">🗺 Patron</button>
+  <button class="vbtn" onclick="setView(1)">🎨 Perspective cavalière</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 260"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+let solide=0, view=0, etape=0;
+const SCOLS=['#1d4ed8','#15803d','#b45309','#9d174d'];
+const SENONCES=['en0','en1','en2','en3'];
+
+// ============================================================
+// HELPERS SVG
+// ============================================================
+function seg(x1,y1,x2,y2,col,w=2,dash=''){
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+    stroke="${col}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`;
+}
+function rect(x,y,w,h,fill,stroke,sw=1.8,op=1){
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}"
+    fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" rx="1"/>`;
+}
+function lbl(x,y,t,col,size=12,anchor='middle'){
+  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="bold" text-anchor="${anchor}" fill="${col}">${t}</text>`;
+}
+function poly(pts,fill,stroke,sw=2,op=0.5){
+  const d=pts.map(p=>p.join(',')).join(' ');
+  return `<polygon points="${d}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+}
+function path(d,fill,stroke,sw=2,op=0.5){
+  return `<path d="${d}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+}
+// Parallelogramme en perspective cavalière (fuyante vers haut-droite)
+// dx,dy = vecteur de profondeur cavalière
+const dx=28, dy=-14;
+
+// ============================================================
+// CUBE
+// ============================================================
+const CUBE_COL='#1d4ed8';
+const cubePatron=[
+  // Etape 0 : contour global du patron (croix)
+  {
+    explic:"Un patron est la figure plane qu'on obtient en dépliant un solide. Le patron du cube est fait de 6 carrés identiques.",
+    draw(){
+      const s=56, x0=50, y0=20;
+      let h='';
+      // Fond global grisé
+      h+=rect(x0+s,y0,s,4*s,'#eff6ff','#93c5fd',1,0.6);
+      h+=rect(x0,y0+s,3*s,s,'#eff6ff','#93c5fd',1,0.6);
+      // 6 carrés numérotés
+      const faces=[
+        {x:x0+s,y:y0,n:'1'},
+        {x:x0,y:y0+s,n:'2'},
+        {x:x0+s,y:y0+s,n:'3'},
+        {x:x0+2*s,y:y0+s,n:'4'},
+        {x:x0+s,y:y0+2*s,n:'5'},
+        {x:x0+s,y:y0+3*s,n:'6'},
+      ];
+      faces.forEach(f=>{
+        h+=rect(f.x,f.y,s,s,'#dbeafe',CUBE_COL,2,0.7);
+        h+=lbl(f.x+s/2,f.y+s/2+5,f.n,CUBE_COL,14);
+      });
+      return h;
+    },
+    calc:`<div class="enonce en0">Patron du cube</div>
+          <div class="ligne">Un cube a <span class="hl c0">6 faces</span> carrées identiques.</div>
+          <div class="ligne">Son patron est formé de 6 carrés disposés en croix (ou en d'autres configurations).</div>`
+  },
+  {
+    explic:"Les faces en bleu foncé seront le haut et le bas. Les faces latérales forment la bande centrale.",
+    draw(){
+      const s=56, x0=50, y0=20;
+      let h='';
+      const faces=[
+        {x:x0+s,y:y0,n:'haut',c:'#1d4ed8',fc:'#bfdbfe'},
+        {x:x0,y:y0+s,n:'gauche',c:'#6d28d9',fc:'#ede9fe'},
+        {x:x0+s,y:y0+s,n:'devant',c:'#15803d',fc:'#dcfce7'},
+        {x:x0+2*s,y:y0+s,n:'droite',c:'#b45309',fc:'#fef3c7'},
+        {x:x0+s,y:y0+2*s,n:'bas',c:'#1d4ed8',fc:'#bfdbfe'},
+        {x:x0+s,y:y0+3*s,n:'derrière',c:'#6d28d9',fc:'#ede9fe'},
+      ];
+      faces.forEach(f=>{
+        h+=rect(f.x,f.y,s,s,f.fc,f.c,2,0.85);
+        h+=lbl(f.x+s/2,f.y+s/2+5,f.n,f.c,10);
+      });
+      return h;
+    },
+    calc:`<div class="enonce en0">Les 6 faces du cube :</div>
+          <div class="ligne">• <span class="hl c0">Haut et bas</span> (bleu) : les deux carrés au-dessus et en-dessous</div>
+          <div class="ligne">• <span class="hl" style="color:#6d28d9">Derrière et gauche</span> (violet) : faces cachées</div>
+          <div class="ligne">• <span class="hl c1">Devant</span> (vert) et <span class="hl c2">Droite</span> (orange)</div>
+          <div class="attention">⚠️ Il existe plusieurs patrons valides pour le cube (11 au total).</div>`
+  },
+  {
+    explic:"Pour savoir si un patron est valide, on peut le plier mentalement : chaque arête doit coïncider.",
+    draw(){
+      const s=56, x0=50, y0=20;
+      let h='';
+      const faces=[
+        {x:x0+s,y:y0,n:'↑ haut',c:CUBE_COL,fc:'#dbeafe'},
+        {x:x0,y:y0+s,n:'gauche',c:'#6d28d9',fc:'#ede9fe'},
+        {x:x0+s,y:y0+s,n:'devant',c:'#15803d',fc:'#dcfce7'},
+        {x:x0+2*s,y:y0+s,n:'droite',c:'#b45309',fc:'#fef3c7'},
+        {x:x0+s,y:y0+2*s,n:'↓ bas',c:CUBE_COL,fc:'#dbeafe'},
+        {x:x0+s,y:y0+3*s,n:'derrière',c:'#6d28d9',fc:'#ede9fe'},
+      ];
+      faces.forEach(f=>{ h+=rect(f.x,f.y,s,s,f.fc,f.c,2,0.85); h+=lbl(f.x+s/2,f.y+s/2+5,f.n,f.c,10); });
+      // Flèches de pliage
+      h+=`<text x="340" y="80" font-size="11" fill="#dc2626" font-weight="bold">← arêtes communes</text>`;
+      h+=seg(x0+s,y0+s,x0+s,y0+s,'#dc2626',1.5,'4,2');
+      // Côté du carré annoté
+      h+=seg(x0+s,y0+s,x0+2*s,y0+s,'#dc2626',2);
+      h+=lbl((x0+1.5*s),y0+s-7,'a','#dc2626',12);
+      return h;
+    },
+    calc:`<div class="enonce en0">Côté du carré = arête du cube</div>
+          <div class="ligne">Si l'arête du cube vaut <span class="cr hl">a</span>, chaque carré du patron a un côté <span class="cr hl">a</span>.</div>
+          <div class="ligne">Pour plier : les arêtes communes s'assemblent.</div>
+          <div class="conclusion-ok">Patron cube = 6 carrés de côté a</div>`
+  },
+];
+
+const cubePerspective=[
+  {
+    explic:"La perspective cavalière montre un solide en 3D sur une feuille. Les arêtes fuyantes sont inclinées à 45° et dessinées à moitié de leur longueur réelle.",
+    draw(){
+      // Cube en perspective cavalière
+      const x=100,y=80,s=100;
+      const dx2=40, dy2=-20;
+      let h='';
+      // Face avant (rectangle plein)
+      h+=rect(x,y,s,s,'#dbeafe',CUBE_COL,2,0.7);
+      // Face supérieure (parallélogramme)
+      h+=poly([[x,y],[x+s,y],[x+s+dx2,y+dy2],[x+dx2,y+dy2]],
+        '#bfdbfe',CUBE_COL,2,0.8);
+      // Face droite (parallélogramme)
+      h+=poly([[x+s,y],[x+s+dx2,y+dy2],[x+s+dx2,y+dy2+s],[x+s,y+s]],
+        '#93c5fd',CUBE_COL,2,0.8);
+      // Arêtes cachées
+      h+=seg(x,y+s,x+dx2,y+dy2+s,CUBE_COL,1.5,'5,3');
+      h+=seg(x+dx2,y+dy2,x+dx2,y+dy2+s,CUBE_COL,1.5,'5,3');
+      h+=seg(x+dx2,y+dy2+s,x+s+dx2,y+dy2+s,CUBE_COL,1.5,'5,3');
+      // Annotations
+      h+=seg(x,y+s+14,x+s,y+s+14,'#374151',1.5);
+      h+=lbl((x+x+s)/2,y+s+26,'a','#374151',12);
+      h+=seg(x-14,y,x-14,y+s,'#374151',1.5);
+      h+=lbl(x-26,(y+y+s)/2,'a','#374151',12);
+      // Flèche fuyante 45°
+      h+=seg(x+s,y,x+s+dx2,y+dy2,'#dc2626',2);
+      h+=lbl(x+s+dx2+12,y+dy2-6,'a/2 à 45°','#dc2626',10,'start');
+      return h;
+    },
+    calc:`<div class="enonce en0">Perspective cavalière du cube</div>
+          <div class="ligne">• Face avant : dessinée <span class="hl c0">en vraie grandeur</span></div>
+          <div class="ligne">• Arêtes fuyantes : inclinées à <span class="cr hl">45°</span>, longueur = <span class="cr hl">a/2</span></div>
+          <div class="ligne">• Arêtes cachées : <span class="hl">en pointillés</span></div>`
+  },
+  {
+    explic:"Les trois faces visibles sont le devant, le dessus et la droite. Les arêtes cachées sont en pointillés.",
+    draw(){
+      const x=90,y=75,s=100,dx2=40,dy2=-20;
+      let h='';
+      h+=rect(x,y,s,s,'#dbeafe',CUBE_COL,2,0.5);
+      h+=poly([[x,y],[x+s,y],[x+s+dx2,y+dy2],[x+dx2,y+dy2]],'#bfdbfe',CUBE_COL,2,0.7);
+      h+=poly([[x+s,y],[x+s+dx2,y+dy2],[x+s+dx2,y+dy2+s],[x+s,y+s]],'#93c5fd',CUBE_COL,2,0.7);
+      h+=seg(x,y+s,x+dx2,y+dy2+s,CUBE_COL,1.5,'5,3');
+      h+=seg(x+dx2,y+dy2,x+dx2,y+dy2+s,CUBE_COL,1.5,'5,3');
+      h+=seg(x+dx2,y+dy2+s,x+s+dx2,y+dy2+s,CUBE_COL,1.5,'5,3');
+      // Labels faces
+      h+=lbl(x+s/2,y+s/2+5,'devant',CUBE_COL,11);
+      h+=lbl(x+s/2+dx2/2,y+dy2/2-6,'dessus',CUBE_COL,11);
+      h+=lbl(x+s+dx2/2+2,y+s/2,'droite',CUBE_COL,11);
+      h+=lbl(300,70,'3 faces',CUBE_COL,11);
+      h+=lbl(300,86,'visibles',CUBE_COL,11);
+      return h;
+    },
+    calc:`<div class="enonce en0">Faces visibles et cachées</div>
+          <div class="ligne">Faces <span class="hl c0">visibles</span> : devant, dessus, droite</div>
+          <div class="ligne">Faces <span class="hl" style="color:#94a3b8">cachées</span> : derrière, dessous, gauche (pointillés)</div>
+          <div class="attention">💡 Les trois faces visibles forment un "coin" du cube.</div>`
+  },
+];
+
+// ============================================================
+// PAVÉ DROIT (L=5, l=3, h=4)
+// ============================================================
+const PAVE_COL='#15803d';
+const pavePatron=[
+  {
+    explic:"Le patron du pavé droit est composé de 3 paires de rectangles : les grandes faces, les faces latérales et les bases.",
+    draw(){
+      // L=longueur=100px, l=largeur=60px, h=hauteur=80px
+      const L=100,l=60,hh=80, x0=30,y0=15;
+      let h='';
+      // Disposition : en croix
+      // Bas (L×l) centré
+      h+=rect(x0+l,y0,L,l,'#dcfce7',PAVE_COL,2,0.7);
+      h+=lbl(x0+l+L/2,y0+l/2+5,'L × l',PAVE_COL,10);
+      // Côté gauche (l×h)
+      h+=rect(x0,y0+l,l,hh,'#bbf7d0',PAVE_COL,2,0.7);
+      h+=lbl(x0+l/2,y0+l+hh/2+5,'l × h',PAVE_COL,10);
+      // Face avant (L×h)
+      h+=rect(x0+l,y0+l,L,hh,'#dcfce7',PAVE_COL,2,0.7);
+      h+=lbl(x0+l+L/2,y0+l+hh/2+5,'L × h',PAVE_COL,10);
+      // Côté droit (l×h)
+      h+=rect(x0+l+L,y0+l,l,hh,'#bbf7d0',PAVE_COL,2,0.7);
+      h+=lbl(x0+l+L+l/2,y0+l+hh/2+5,'l × h',PAVE_COL,10);
+      // Derrière (L×h)
+      h+=rect(x0+l+L+l,y0+l,L,hh,'#86efac',PAVE_COL,2,0.7);
+      h+=lbl(x0+l+L+l+L/2,y0+l+hh/2+5,'L × h',PAVE_COL,10);
+      // Dessus (L×l)
+      h+=rect(x0+l,y0+l+hh,L,l,'#dcfce7',PAVE_COL,2,0.7);
+      h+=lbl(x0+l+L/2,y0+l+hh+l/2+5,'L × l',PAVE_COL,10);
+      return h;
+    },
+    calc:`<div class="enonce en1">Patron du pavé droit (longueur L, largeur l, hauteur h)</div>
+          <div class="ligne">• 2 faces <span class="hl c1">L × l</span> : dessus et dessous</div>
+          <div class="ligne">• 2 faces <span class="hl c1">L × h</span> : devant et derrière</div>
+          <div class="ligne">• 2 faces <span class="hl c1">l × h</span> : gauche et droite</div>`
+  },
+  {
+    explic:"Toutes les faces se déroulent à plat autour de la bande centrale qui forme les 4 côtés du pavé.",
+    draw(){
+      const L=100,l=60,hh=80,x0=30,y0=15;
+      let h='';
+      const cols=[['#dcfce7','Dessous'],['#bbf7d0','Gauche'],['#dcfce7','Devant'],['#bbf7d0','Droite'],['#86efac','Derrière']];
+      h+=rect(x0+l,y0,L,l,'#bef264',PAVE_COL,2,0.7); h+=lbl(x0+l+L/2,y0+l/2+5,'Dessus',PAVE_COL,10);
+      h+=rect(x0,y0+l,l,hh,cols[1][0],PAVE_COL,2,0.7); h+=lbl(x0+l/2,y0+l+hh/2+5,cols[1][1],PAVE_COL,9);
+      h+=rect(x0+l,y0+l,L,hh,cols[2][0],PAVE_COL,2.5,0.8); h+=lbl(x0+l+L/2,y0+l+hh/2+5,cols[2][1],'#14532d',10);
+      h+=rect(x0+l+L,y0+l,l,hh,cols[3][0],PAVE_COL,2,0.7); h+=lbl(x0+l+L+l/2,y0+l+hh/2+5,cols[3][1],PAVE_COL,9);
+      h+=rect(x0+l+L+l,y0+l,L,hh,cols[4][0],PAVE_COL,2,0.7); h+=lbl(x0+l+L+l+L/2,y0+l+hh/2+5,cols[4][1],PAVE_COL,9);
+      h+=rect(x0+l,y0+l+hh,L,l,'#dcfce7',PAVE_COL,2,0.7); h+=lbl(x0+l+L/2,y0+l+hh+l/2+5,'Dessous',PAVE_COL,10);
+      // Annotations dimensions
+      h+=seg(x0+l,y0+l+hh+l+10,x0+l+L,y0+l+hh+l+10,'#374151',1.5);
+      h+=lbl(x0+l+L/2,y0+l+hh+l+22,'L','#374151',11);
+      h+=seg(x0+l-12,y0+l,x0+l-12,y0+l+hh,'#374151',1.5);
+      h+=lbl(x0+l-22,y0+l+hh/2+5,'h','#374151',11);
+      return h;
+    },
+    calc:`<div class="enonce en1">La bande centrale du patron :</div>
+          <div class="ligne">En dépliant, la bande gauche-devant-droite-derrière forme un grand rectangle de périmètre <span class="hl c1">2L + 2l</span> et de hauteur <span class="hl c1">h</span>.</div>
+          <div class="conclusion-ok">6 faces, 3 paires de rectangles identiques.</div>`
+  },
+];
+const pavePerspective=[
+  {
+    explic:"La perspective cavalière du pavé droit montre les 3 faces visibles. La face avant est en vraie grandeur.",
+    draw(){
+      const x=70,y=60,L=160,hh=120,dx2=50,dy2=-25;
+      let h='';
+      h+=rect(x,y,L,hh,'#dcfce7',PAVE_COL,2,0.6);
+      h+=poly([[x,y],[x+L,y],[x+L+dx2,y+dy2],[x+dx2,y+dy2]],'#bbf7d0',PAVE_COL,2,0.7);
+      h+=poly([[x+L,y],[x+L+dx2,y+dy2],[x+L+dx2,y+dy2+hh],[x+L,y+hh]],'#86efac',PAVE_COL,2,0.7);
+      // Cachés
+      h+=seg(x,y+hh,x+dx2,y+dy2+hh,PAVE_COL,1.5,'5,3');
+      h+=seg(x+dx2,y+dy2,x+dx2,y+dy2+hh,PAVE_COL,1.5,'5,3');
+      h+=seg(x+dx2,y+dy2+hh,x+L+dx2,y+dy2+hh,PAVE_COL,1.5,'5,3');
+      // Labels
+      h+=seg(x,y+hh+12,x+L,y+hh+12,'#374151',1.5);
+      h+=lbl(x+L/2,y+hh+24,'L','#374151',12);
+      h+=seg(x-14,y,x-14,y+hh,'#374151',1.5);
+      h+=lbl(x-26,y+hh/2+5,'h','#374151',12);
+      h+=seg(x+L,y+hh+12,x+L+dx2,y+dy2+hh+12,'#dc2626',1.5,'4,2');
+      h+=lbl(x+L+dx2/2+4,y+hh+22,'l/2','#dc2626',10);
+      return h;
+    },
+    calc:`<div class="enonce en1">Perspective cavalière du pavé droit</div>
+          <div class="ligne">• Face avant <span class="hl c1">L × h</span> en vraie grandeur</div>
+          <div class="ligne">• Fuyantes à 45° de longueur <span class="cr hl">l/2</span></div>
+          <div class="ligne">• Arêtes cachées en pointillés</div>`
+  },
+];
+
+// ============================================================
+// PRISME DROIT (base triangulaire)
+// ============================================================
+const PRIS_COL='#b45309';
+const prismePatron=[
+  {
+    explic:"Le patron du prisme droit à base triangulaire est formé de 2 triangles (les bases) et 3 rectangles (les faces latérales).",
+    draw(){
+      const x0=30,y0=20,a=80,hh=90;
+      // Triangle équilatéral base : 3 rectangles en bande + 2 triangles
+      let h='';
+      // Triangle haut (base)
+      h+=poly([[x0+90,y0],[x0+90+a,y0],[x0+90+a/2,y0-60]],
+        '#fef3c7',PRIS_COL,2,0.7);
+      h+=lbl(x0+90+a/2,y0-18,'base',PRIS_COL,10);
+      // 3 rectangles côte à côte
+      h+=rect(x0,y0,a,hh,'#fef3c7',PRIS_COL,2,0.7); h+=lbl(x0+a/2,y0+hh/2+5,'face 1',PRIS_COL,10);
+      h+=rect(x0+a,y0,a,hh,'#fde68a',PRIS_COL,2,0.7); h+=lbl(x0+a+a/2,y0+hh/2+5,'face 2',PRIS_COL,10);
+      h+=rect(x0+2*a,y0,a,hh,'#fef3c7',PRIS_COL,2,0.7); h+=lbl(x0+2*a+a/2,y0+hh/2+5,'face 3',PRIS_COL,10);
+      // Triangle bas (base)
+      h+=poly([[x0+90,y0+hh],[x0+90+a,y0+hh],[x0+90+a/2,y0+hh+60]],
+        '#fef3c7',PRIS_COL,2,0.7);
+      h+=lbl(x0+90+a/2,y0+hh+40,'base',PRIS_COL,10);
+      return h;
+    },
+    calc:`<div class="enonce en2">Patron du prisme droit triangulaire</div>
+          <div class="ligne">• <span class="hl c2">2 triangles</span> : les bases (dessus et dessous)</div>
+          <div class="ligne">• <span class="hl c2">3 rectangles</span> : les faces latérales</div>
+          <div class="ligne">Les 3 rectangles ont la même hauteur <span class="hl c2">h</span> (hauteur du prisme) et pour largeur les 3 côtés du triangle.</div>`
+  },
+  {
+    explic:"La bande des 3 rectangles entoure les deux triangles. En repliant la bande, on forme le prisme.",
+    draw(){
+      const x0=30,y0=20,a=80,hh=90;
+      let h='';
+      h+=poly([[x0+90,y0],[x0+90+a,y0],[x0+90+a/2,y0-60]],'#fed7aa',PRIS_COL,2.5,0.8);
+      h+=lbl(x0+90+a/2,y0-18,'base ↑',PRIS_COL,10);
+      h+=rect(x0,y0,a,hh,'#fef3c7',PRIS_COL,2,0.7);
+      h+=rect(x0+a,y0,a,hh,'#fde68a',PRIS_COL,2,0.7);
+      h+=rect(x0+2*a,y0,a,hh,'#fef3c7',PRIS_COL,2,0.7);
+      h+=poly([[x0+90,y0+hh],[x0+90+a,y0+hh],[x0+90+a/2,y0+hh+60]],'#fed7aa',PRIS_COL,2.5,0.8);
+      h+=lbl(x0+90+a/2,y0+hh+40,'base ↓',PRIS_COL,10);
+      // Annotations
+      h+=seg(x0,y0+hh+8,x0+a,y0+hh+8,'#374151',1.5);
+      h+=lbl(x0+a/2,y0+hh+20,'a','#374151',11);
+      h+=seg(x0-12,y0,x0-12,y0+hh,'#374151',1.5);
+      h+=lbl(x0-22,y0+hh/2+5,'h','#374151',11);
+      return h;
+    },
+    calc:`<div class="enonce en2">La hauteur du prisme = hauteur des rectangles</div>
+          <div class="ligne">Chaque face latérale est un rectangle de largeur <span class="hl c2">a</span> (côté du triangle) et de hauteur <span class="hl c2">h</span>.</div>
+          <div class="conclusion-ok">Patron prisme = 2 triangles + 3 rectangles</div>`
+  },
+];
+const prismePerspective=[
+  {
+    explic:"En perspective cavalière, le prisme montre deux des trois faces rectangulaires et les deux bases triangulaires.",
+    draw(){
+      const x=90,y=55,a=130,hh=130,dx2=45,dy2=-22;
+      // Base avant : triangle
+      const Ax=x, Ay=y+hh;
+      const Bx=x+a, By=y+hh;
+      const Cx=x+a/2, Cy=y;
+      // Base arrière (décalée)
+      const Ax2=Ax+dx2, Ay2=Ay+dy2;
+      const Bx2=Bx+dx2, By2=By+dy2;
+      const Cx2=Cx+dx2, Cy2=Cy+dy2;
+      let h='';
+      // Face latérale gauche
+      h+=poly([[Ax,Ay],[Cx,Cy],[Cx2,Cy2],[Ax2,Ay2]],'#fef3c7',PRIS_COL,2,0.6);
+      // Face latérale dessus
+      h+=poly([[Cx,Cy],[Bx,By],[Bx2,By2],[Cx2,Cy2]],'#fde68a',PRIS_COL,2,0.7);
+      // Triangle avant
+      h+=poly([[Ax,Ay],[Bx,By],[Cx,Cy]],'#fed7aa',PRIS_COL,2.5,0.8);
+      // Arêtes visibles droite
+      h+=seg(Bx,By,Bx2,By2,PRIS_COL,2);
+      // Arêtes cachées
+      h+=seg(Ax2,Ay2,Bx2,By2,PRIS_COL,1.5,'5,3');
+      h+=seg(Ax,Ay,Ax2,Ay2,PRIS_COL,1.5,'5,3');
+      // Triangle arrière visible en partie
+      h+=seg(Ax2,Ay2,Cx2,Cy2,PRIS_COL,1.5,'5,3');
+      h+=seg(Cx2,Cy2,Bx2,By2,PRIS_COL,2);
+      return h;
+    },
+    calc:`<div class="enonce en2">Perspective cavalière du prisme</div>
+          <div class="ligne">• <span class="hl c2">Triangle avant</span> dessiné en vraie grandeur</div>
+          <div class="ligne">• <span class="hl c2">Fuyantes</span> à 45°, longueur = h/2</div>
+          <div class="ligne">• <span class="hl">Arêtes cachées</span> en pointillés (arête de gauche et base arrière)</div>`
+  },
+];
+
+// ============================================================
+// CYLINDRE
+// ============================================================
+const CYL_COL='#9d174d';
+const cylindrePatron=[
+  {
+    explic:"Le patron du cylindre est formé de deux disques (les bases) et d'un rectangle (la surface latérale qui s'enroule).",
+    draw(){
+      const x0=30,y0=30,r=40,hh=110;
+      let h='';
+      // Disque haut
+      h+=`<ellipse cx="${x0+r}" cy="${y0+r}" rx="${r}" ry="${r}"
+        fill="#fce7f3" fill-opacity="0.8" stroke="${CYL_COL}" stroke-width="2"/>`;
+      h+=lbl(x0+r,y0+r+5,'disque',CYL_COL,10);
+      // Rectangle lateral
+      const rx=x0+2*r+20;
+      const rw=2*Math.PI*r; // largeur = circonférence = 2πr ≈ 251
+      const rw2=Math.min(rw,230);
+      h+=rect(rx,y0,rw2,hh,'#fce7f3',CYL_COL,2,0.7);
+      h+=lbl(rx+rw2/2,y0+hh/2+5,'rectangle',CYL_COL,10);
+      h+=lbl(rx+rw2/2,y0+hh/2+20,'2πr × h',CYL_COL,11);
+      // Disque bas
+      h+=`<ellipse cx="${x0+r}" cy="${y0+hh+r+20}" rx="${r}" ry="${r}"
+        fill="#fce7f3" fill-opacity="0.8" stroke="${CYL_COL}" stroke-width="2"/>`;
+      h+=lbl(x0+r,y0+hh+r+25,'disque',CYL_COL,10);
+      // Annotations
+      h+=seg(rx,y0-12,rx+rw2,y0-12,'#374151',1.5);
+      h+=lbl(rx+rw2/2,y0-2,'2πr (= circonférence)','#374151',10);
+      h+=seg(rx-14,y0,rx-14,y0+hh,'#374151',1.5);
+      h+=lbl(rx-26,y0+hh/2+5,'h','#374151',11);
+      return h;
+    },
+    calc:`<div class="enonce en3">Patron du cylindre (rayon r, hauteur h)</div>
+          <div class="ligne">• <span class="hl c3">2 disques</span> de rayon r : les bases</div>
+          <div class="ligne">• <span class="hl c3">1 rectangle</span> : la surface latérale</div>
+          <div class="ligne">La largeur du rectangle = <span class="hl c3">2πr</span> (circonférence du disque)</div>
+          <div class="ligne">La hauteur du rectangle = <span class="hl c3">h</span></div>`
+  },
+  {
+    explic:"En enroulant le rectangle, on retrouve la surface latérale du cylindre. Les deux disques ferment le dessus et le dessous.",
+    draw(){
+      const x0=30,y0=30,r=40,hh=110;
+      let h='';
+      h+=`<ellipse cx="${x0+r}" cy="${y0+r}" rx="${r}" ry="${r}"
+        fill="#f9a8d4" fill-opacity="0.8" stroke="${CYL_COL}" stroke-width="2.5"/>`;
+      h+=lbl(x0+r,y0+r+5,'r','#831843',11);
+      h+=seg(x0+r,y0+r,x0+2*r,y0+r,CYL_COL,2);
+      h+=lbl(x0+r*1.5,y0+r-8,'r',CYL_COL,11);
+      const rx=x0+2*r+20, rw2=220;
+      h+=rect(rx,y0,rw2,hh,'#fce7f3',CYL_COL,2.5,0.75);
+      // Flèches enroulement
+      h+=`<path d="M${rx},${y0-6} Q${rx+rw2/2},${y0-20} ${rx+rw2},${y0-6}"
+        fill="none" stroke="#9d174d" stroke-width="1.5" stroke-dasharray="5,3"
+        marker-end="url(#arr)"/>`;
+      h+=`<defs><marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#9d174d"/></marker></defs>`;
+      h+=lbl(rx+rw2/2,y0-22,'← s\'enroule →',CYL_COL,10);
+      h+=lbl(rx+rw2/2,y0+hh/2,'2πr × h',CYL_COL,12);
+      h+=`<ellipse cx="${x0+r}" cy="${y0+hh+r+20}" rx="${r}" ry="${r}"
+        fill="#f9a8d4" fill-opacity="0.8" stroke="${CYL_COL}" stroke-width="2.5"/>`;
+      return h;
+    },
+    calc:`<div class="enonce en3">Le rectangle s'enroule autour du cylindre :</div>
+          <div class="ligne">La largeur du rectangle <span class="hl c3">2πr</span> est exactement la circonférence du disque.</div>
+          <div class="conclusion-ok">Patron cylindre = 2 disques + 1 rectangle<br>Aire totale = 2πr² + 2πrh</div>`
+  },
+];
+const cylindrePerspective=[
+  {
+    explic:"Le cylindre se dessine avec deux ellipses (les bases vues en perspective) reliées par deux droites verticales.",
+    draw(){
+      const cx=200,ytop=70,ybot=190,rx=90,ry=22;
+      let h='';
+      // Corps
+      h+=`<rect x="${cx-rx}" y="${ytop}" width="${2*rx}" height="${ybot-ytop}"
+        fill="#fce7f3" fill-opacity="0.5" stroke="none"/>`;
+      // Ellipse basse (visible entière)
+      h+=`<ellipse cx="${cx}" cy="${ybot}" rx="${rx}" ry="${ry}"
+        fill="#f9a8d4" fill-opacity="0.7" stroke="${CYL_COL}" stroke-width="2"/>`;
+      // Ellipse haute (demi visible)
+      h+=`<path d="M${cx-rx},${ytop} A${rx},${ry} 0 0,1 ${cx+rx},${ytop}"
+        fill="#f9a8d4" fill-opacity="0.7" stroke="${CYL_COL}" stroke-width="2"/>`;
+      h+=`<path d="M${cx-rx},${ytop} A${rx},${ry} 0 0,0 ${cx+rx},${ytop}"
+        fill="none" stroke="${CYL_COL}" stroke-width="1.5" stroke-dasharray="5,3"/>`;
+      // Lignes verticales
+      h+=seg(cx-rx,ytop,cx-rx,ybot,CYL_COL,2);
+      h+=seg(cx+rx,ytop,cx+rx,ybot,CYL_COL,2);
+      // Rayon + hauteur
+      h+=seg(cx,ytop,cx+rx,ytop,CYL_COL,1.5,'4,2');
+      h+=lbl(cx+rx/2,ytop-8,'r',CYL_COL,12);
+      h+=seg(cx+rx+14,ytop,cx+rx+14,ybot,'#374151',1.5);
+      h+=lbl(cx+rx+26,ytop+(ybot-ytop)/2,'h','#374151',12);
+      return h;
+    },
+    calc:`<div class="enonce en3">Perspective cavalière du cylindre</div>
+          <div class="ligne">• Base du bas : <span class="hl c3">ellipse complète</span> visible</div>
+          <div class="ligne">• Base du haut : <span class="hl c3">demi-ellipse</span> visible + demi en pointillés</div>
+          <div class="ligne">• Côtés : <span class="hl c3">deux droites verticales</span> de hauteur h</div>
+          <div class="attention">💡 Les bases sont des cercles mais en perspective elles semblent elliptiques.</div>`
+  },
+];
+
+// ============================================================
+// DONNÉES
+// ============================================================
+const PATRONS=[cubePatron, pavePatron, prismePatron, cylindrePatron];
+const PERSPECTIVES=[cubePerspective, pavePerspective, prismePerspective, cylindrePerspective];
+const CALC_COLORS=[CUBE_COL,PAVE_COL,PRIS_COL,CYL_COL];
+
+function getData(){ return view===0 ? PATRONS[solide] : PERSPECTIVES[solide]; }
+
+function setSolide(s){
+  solide=s; etape=0;
+  document.querySelectorAll('.sbtn').forEach((b,i)=>b.classList.toggle('active',i===s));
+  document.querySelector('.btn-next').style.background=CALC_COLORS[s];
+  document.getElementById('calc-box').style.borderLeftColor=CALC_COLORS[s];
+  render();
+}
+function setView(v){
+  view=v; etape=0;
+  document.querySelectorAll('.vbtn').forEach((b,i)=>b.classList.toggle('active',i===v));
+  render();
+}
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ const arr=getData(); if(etape<arr.length-1){etape++;render();} }
+
+function render(){
+  const arr=getData();
+  if(etape>=arr.length) etape=arr.length-1;
+  const e=arr[etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent=`Étape ${etape+1} / ${arr.length}`;
+}
+render();
+</script>
+</body>
+</html>
