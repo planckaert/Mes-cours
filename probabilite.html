@@ -3,31 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Probabilités – 5ème</title>
+<title>Probabilités – 6ème</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #eff6ff; min-height: 100vh; }
-  h1 { text-align: center; padding: 14px; background: #1e3a8a; color: white; font-size: 1.2em; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #14532d; color: white; font-size: 1.2em; }
   .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
   .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
-  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
-  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
-  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab2.active { background: #b45309; color: white; border-color: #b45309; }
 
   .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
   svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
 
-  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #15803d; font-size: 0.97em; line-height: 2.1; }
   .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
-  .en1 { background: #dbeafe; color: #1e3a8a; }
-  .en2 { background: #fce7f3; color: #831843; }
+  .en1 { background: #dcfce7; color: #14532d; }
+  .en2 { background: #fef3c7; color: #78350f; }
   .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
-  .hl-b { color: #1d4ed8; font-weight: bold; }
-  .hl-r { color: #dc2626; font-weight: bold; }
   .hl-g { color: #15803d; font-weight: bold; }
   .hl-o { color: #b45309; font-weight: bold; }
-  .hl-p { color: #7c3aed; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
   .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.2; }
   .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; font-size: 0.95em; }
   .fr .d { padding: 0 5px; font-size: 0.95em; }
@@ -39,14 +38,14 @@
   .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
   button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
   .btn-prev { background: #e9ecef; color: #555; }
-  .btn-next { background: #1d4ed8; color: white; }
+  .btn-next { background: #15803d; color: white; }
 </style>
 </head>
 <body>
 <h1>🎲 Probabilités</h1>
 <div class="tabs">
-  <button class="tab tab1 active" onclick="setMode(0)">Avec un dé</button>
-  <button class="tab tab2" onclick="setMode(1)">Avec une urne</button>
+  <button class="tab tab1 active" onclick="setMode(0)">Expérience aléatoire</button>
+  <button class="tab tab2" onclick="setMode(1)">Probabilité d'un événement</button>
 </div>
 <div class="scene">
   <svg id="fig" viewBox="0 0 480 290"></svg>
@@ -60,274 +59,520 @@
 </div>
 
 <script>
-let mode=0, etape=0;
-const COLS=['#1d4ed8','#9d174d'];
+var mode=0, etape=0;
+var COLS=['#15803d','#b45309'];
 
-// ---- Helpers SVG ----
-function txt(x,y,t,col,size,anchor,bold){
-  size=size||13; anchor=anchor||'middle'; bold=bold||false;
-  return '<text x="'+x+'" y="'+y+'" font-size="'+size+'" text-anchor="'+anchor+'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')+'" font-family="Segoe UI,sans-serif">'+t+'</text>';
+// ─── Helpers SVG ───────────────────────────────────────────
+function tx(x,y,s,col,size,anchor,bold){
+  size=size||12; anchor=anchor||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+size+'" text-anchor="'+anchor
+    +'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')
+    +'" font-family="Segoe UI,sans-serif">'+s+'</text>';
 }
-function rct(x,y,w,h,rx,fill,stroke,sw){
+function bx(x,y,w,h,rx,fill,stroke,sw){
   stroke=stroke||'none'; sw=sw||1;
-  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h
+    +'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
 }
-function cir(cx,cy,r,fill,stroke,sw){
+function cx(px,py,r,fill,stroke,sw){
   stroke=stroke||'white'; sw=sw||2;
-  return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+  return '<circle cx="'+px+'" cy="'+py+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
 }
-function seg(x1,y1,x2,y2,col,w,dash){
+function sg(x1,y1,x2,y2,col,w,dash){
   w=w||2; dash=dash||'';
-  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2
+    +'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
 }
 
-// ---- Face de dé ----
-function face(x,y,s,v,fill,dotCol,opacity){
-  fill=fill||'#1d4ed8'; dotCol=dotCol||'white'; opacity=opacity===undefined?1:opacity;
-  var r=s*0.18;
-  var h='<g opacity="'+opacity+'">';
-  h+=rct(x,y,s,s,r*1.1,fill);
-  var c=s/2, off=s*0.27, dr=s*0.08;
-  var pts={1:[[c,c]],2:[[c-off,c-off],[c+off,c+off]],3:[[c-off,c-off],[c,c],[c+off,c+off]],
-    4:[[c-off,c-off],[c+off,c-off],[c-off,c+off],[c+off,c+off]],
-    5:[[c-off,c-off],[c+off,c-off],[c,c],[c-off,c+off],[c+off,c+off]],
-    6:[[c-off,c-off],[c+off,c-off],[c-off,c],[c+off,c],[c-off,c+off],[c+off,c+off]]};
+// Face de dé centrée en (px,py), côté s, valeur v
+function face(px,py,s,v,fill,dotCol,op){
+  fill=fill||'#15803d'; dotCol=dotCol||'white'; op=op===undefined?1:op;
+  var lx=px-s/2, ly=py-s/2, rr=s*0.18;
+  var h='<g opacity="'+op+'">';
+  h+=bx(lx,ly,s,s,rr*1.1,fill);
+  var off=s*0.27, dr=s*0.09;
+  var pts={1:[[0,0]],2:[[-off,-off],[off,off]],3:[[-off,-off],[0,0],[off,off]],
+    4:[[-off,-off],[off,-off],[-off,off],[off,off]],
+    5:[[-off,-off],[off,-off],[0,0],[-off,off],[off,off]],
+    6:[[-off,-off],[off,-off],[-off,0],[off,0],[-off,off],[off,off]]};
   var p=pts[v]||[];
-  for(var i=0;i<p.length;i++) h+=cir(x+p[i][0],y+p[i][1],dr,dotCol,'none',0);
+  for(var i=0;i<p.length;i++) h+=cx(px+p[i][0],py+p[i][1],dr,dotCol,'none',0);
   h+='</g>';
   return h;
 }
 
-// ---- Boule ----
-function boule(cx,cy,r,fill,label,opacity){
-  opacity=opacity===undefined?1:opacity;
-  var h='<g opacity="'+opacity+'">';
-  h+=cir(cx,cy,r,fill,'white',2);
-  h+='<circle cx="'+(cx-r*0.25)+'" cy="'+(cy-r*0.25)+'" r="'+(r*0.2)+'" fill="white" opacity="0.4"/>';
-  if(label) h+=txt(cx,cy+5,label,'white',r*0.9,'middle',true);
+// Pièce (cercle avec label)
+function piece(px,py,label,col,op){
+  op=op===undefined?1:op;
+  var h='<g opacity="'+op+'">';
+  h+=cx(px,py,26,col,'white',2);
+  h+=cx(px,py,20,'none',col,1.5);
+  h+=tx(px,py+5,label,'white',14,'middle',true);
   h+='</g>';
   return h;
 }
 
-// ---- Echelle probabilités ----
-function echelle(yBase, m1, c1, m2, c2){
-  var h='<defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">';
-  h+='<stop offset="0%" stop-color="#fee2e2"/>';
-  h+='<stop offset="50%" stop-color="#dbeafe"/>';
-  h+='<stop offset="100%" stop-color="#dcfce7"/>';
-  h+='</linearGradient></defs>';
-  h+=rct(40,yBase,400,16,8,'url(#sg)','#d1d5db',1);
-  h+=seg(40,yBase-4,40,yBase+20,'#374151',1.5);
-  h+=seg(240,yBase-4,240,yBase+20,'#374151',1.5);
-  h+=seg(440,yBase-4,440,yBase+20,'#374151',1.5);
-  h+=txt(40,yBase+32,'0','#991b1b',13);
-  h+=txt(240,yBase+32,'0,5','#1e3a8a',13);
-  h+=txt(440,yBase+32,'1','#065f46',13);
-  h+=txt(40,yBase-10,'impossible','#991b1b',9);
-  h+=txt(240,yBase-10,'équiprobable','#1e3a8a',9);
-  h+=txt(440,yBase-10,'certain','#065f46',9);
-  if(m1!==null){ var mx=40+m1*400; h+='<polygon points="'+mx+','+(yBase-6)+' '+(mx-7)+','+(yBase-18)+' '+(mx+7)+','+(yBase-18)+'" fill="'+c1+'"/>'; h+=txt(mx,yBase-20,m1===0.5?'½':(m1===0?'0':m1===1?'1':m1.toFixed(2)),c1,10,'middle',true); }
-  if(m2!==null){ var mx2=40+m2*400; h+='<polygon points="'+mx2+','+(yBase-6)+' '+(mx2-7)+','+(yBase-18)+' '+(mx2+7)+','+(yBase-18)+'" fill="'+c2+'"/>'; h+=txt(mx2,yBase-20,m2.toFixed(2),c2,10,'middle',true); }
+// Boule colorée
+function boule(px,py,r,fill,label,op){
+  op=op===undefined?1:op;
+  var h='<g opacity="'+op+'">';
+  h+=cx(px,py,r,fill,'white',2);
+  h+='<circle cx="'+(px-r*0.25)+'" cy="'+(py-r*0.25)+'" r="'+(r*0.18)+'" fill="white" opacity="0.5"/>';
+  if(label) h+=tx(px,py+4,label,'white',r*0.85,'middle',true);
+  h+='</g>';
   return h;
 }
 
-// ============================================================
-// MODE 0 — DÉ
-// ============================================================
-var DS=50, gap=10;
-var DX0=(480-6*DS-5*gap)/2;
-var DY=105;
-function dx(i){ return DX0+i*(DS+gap); }
-
-function baseDE(){
+// Roue à 4 secteurs
+function roue(px,py,R){
+  var col4=['#dc2626','#2563eb','#15803d','#d97706'];
+  var lab4=['R','B','V','J'];
   var h='';
-  h+=txt(240,30,'Univers Ω = { 1 ; 2 ; 3 ; 4 ; 5 ; 6 }','#1e3a8a',13,'middle',true);
-  h+=txt(240,46,'(dé non truqué — 6 issues équiprobables)','#64748b',10);
+  for(var i=0;i<4;i++){
+    var a1=(i*90-90)*Math.PI/180, a2=((i+1)*90-90)*Math.PI/180;
+    var x1=px+R*Math.cos(a1), y1=py+R*Math.sin(a1);
+    var x2=px+R*Math.cos(a2), y2=py+R*Math.sin(a2);
+    h+='<path d="M'+px+' '+py+' L'+x1.toFixed(1)+' '+y1.toFixed(1)
+      +' A'+R+' '+R+' 0 0 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z"'
+      +' fill="'+col4[i]+'" stroke="white" stroke-width="2"/>';
+    var am=(a1+a2)/2;
+    h+=tx(px+R*0.6*Math.cos(am),py+R*0.6*Math.sin(am)+4,lab4[i],'white',11,'middle',true);
+  }
+  h+=cx(px,py,7,'white','#374151',2);
   return h;
 }
 
+// Échelle de probabilité (yB = ordonnée de la barre)
+function echelle(yB, pts){
+  var h='<defs><linearGradient id="eg" x1="0" y1="0" x2="1" y2="0">'
+    +'<stop offset="0%" stop-color="#fee2e2"/>'
+    +'<stop offset="50%" stop-color="#fef9c3"/>'
+    +'<stop offset="100%" stop-color="#dcfce7"/>'
+    +'</linearGradient></defs>';
+  h+=bx(30,yB,420,14,7,'url(#eg)','#d1d5db',1);
+  [[0,'0','#dc2626','impossible'],[0.5,'½','#1d4ed8','équiprobable'],[1,'1','#15803d','certain']].forEach(function(g){
+    var mx=30+g[0]*420;
+    h+=sg(mx,yB-4,mx,yB+18,g[2],1.5);
+    h+=tx(mx,yB+30,g[1],g[2],12,'middle',true);
+    h+=tx(mx,yB-8,g[3],g[2],9);
+  });
+  (pts||[]).forEach(function(p){
+    var mx=30+p.v*420;
+    h+='<polygon points="'+mx+','+(yB-4)+' '+(mx-7)+','+(yB-16)+' '+(mx+7)+','+(yB-16)+'" fill="'+p.col+'"/>';
+    h+=tx(mx,yB-18,p.lbl,p.col,9,'middle',true);
+  });
+  return h;
+}
+
+// Urne SVG
+function urne(ux,uy,uw,uh){
+  var ucx=ux+uw/2, bot=uy+uh, top=uy+uh*0.2;
+  var h='<path d="M'+(ux+uw*0.1)+' '+top+' Q'+ux+' '+bot+' '+ucx+' '+(bot+8)
+    +' Q'+(ux+uw)+' '+bot+' '+(ux+uw*0.9)+' '+top+' Z" fill="#e0e7ff" stroke="#4338ca" stroke-width="2"/>';
+  h+='<ellipse cx="'+ucx+'" cy="'+top+'" rx="'+(uw*0.42)+'" ry="'+(uh*0.13)+'" fill="#c7d2fe" stroke="#4338ca" stroke-width="2"/>';
+  return h;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ONGLET 0 — EXPÉRIENCE ALÉATOIRE (Leçon 1)
+// ─────────────────────────────────────────────────────────────
 var e0=[
+
+  // Étape 1 : définition
   {
-    explic:"On lance un dé équilibré à 6 faces. On ne connaît pas le résultat à l'avance : c'est une expérience aléatoire. Les 6 résultats possibles forment l'univers Ω.",
+    explic:"Une expérience aléatoire est une expérience dont on ne peut pas prévoir le résultat à l'avance, même si l'on connaît toutes les conditions. Le hasard joue un rôle.",
     draw:function(){
-      var h=baseDE();
-      for(var i=0;i<6;i++){
-        h+=face(dx(i),DY,DS,i+1,'#1d4ed8');
-        h+=txt(dx(i)+DS/2,DY+DS+14,''+(i+1),'#64748b',11);
-      }
-      h+=txt(240,212,'Chaque issue est équiprobable :','#374151',12,'middle');
-      // fraction P=1/6
-      h+=txt(240,235,'P(1) = P(2) = ... = P(6) =','#374151',12,'middle');
-      h+=txt(355,228,'1','#1d4ed8',14,'middle',true);
-      h+=seg(343,232,367,232,'#1d4ed8',1.5);
-      h+=txt(355,244,'6','#1d4ed8',14,'middle',true);
+      var h='';
+      h+=tx(240,22,'Expérience aléatoire','#14532d',14,'middle',true);
+      h+=tx(240,40,'Le résultat dépend du hasard','#374151',11);
+      // Dé
+      h+=face(80,120,52,4,'#15803d');
+      h+=tx(80,154,'Lancer un dé','#374151',10);
+      h+=tx(80,167,'6 résultats possibles','#64748b',9);
+      // Pièce
+      h+=piece(240,120,'?','#b45309');
+      h+=tx(240,154,'Lancer une pièce','#374151',10);
+      h+=tx(240,167,'Pile ou Face','#64748b',9);
+      // Roue
+      h+=roue(390,120,44);
+      h+=tx(390,172,'Tourner une roue','#374151',10);
+      h+=tx(390,185,'4 couleurs','#64748b',9);
+      // Cadre définition
+      h+=bx(20,198,440,78,10,'#f0fdf4','#6ee7b7',2);
+      h+=tx(240,217,'Définition','#14532d',11,'middle',true);
+      h+=tx(240,233,'On ne peut pas prévoir le résultat à l\'avance,','#374151',11);
+      h+=tx(240,249,'même en connaissant toutes les conditions.','#374151',11);
+      h+=tx(240,267,'→ Le hasard joue un rôle.','#15803d',11,'middle',true);
       return h;
     },
-    calc:'<div class="enonce en1">Expérience aléatoire : lancer un dé.</div><div class="ligne">L\'<span class="hl-b">univers</span> est l\'ensemble de toutes les issues : Ω = { 1 ; 2 ; 3 ; 4 ; 5 ; 6 }</div><div class="ligne">Chaque issue a la même probabilité : <span class="hl-b"><span class="fr"><span class="n">1</span><span class="d">6</span></span></span></div>'
+    calc:'<div class="enonce en1">Définition : Expérience aléatoire</div>'
+      +'<div class="ligne">Une <span class="hl-g">expérience aléatoire</span> est une expérience dont on ne peut pas prévoir le résultat à l\'avance.</div>'
+      +'<div class="ligne">• Lancer un dé à 6 faces → on ne sait pas lequel sortira</div>'
+      +'<div class="ligne">• Lancer une pièce → Pile ou Face ?</div>'
+      +'<div class="ligne">• Tirer une carte → laquelle parmi 32 ?</div>'
   },
+
+  // Étape 2 : issues et univers
   {
-    explic:"On s'intéresse à l'événement A = « obtenir un nombre pair ». Les issues favorables sont 2, 4, 6. Les issues 1, 3, 5 ne sont pas favorables à A.",
+    explic:"Les issues sont tous les résultats possibles. L'ensemble de toutes les issues s'appelle l'univers, noté Ω (oméga). Pour un dé à 6 faces, Ω = {1 ; 2 ; 3 ; 4 ; 5 ; 6}.",
     draw:function(){
-      var h=baseDE();
+      var h='';
+      h+=tx(240,22,'Issues et univers Ω','#14532d',14,'middle',true);
+      // 6 dés
+      var s=48, gap=8, x0=(480-6*s-5*gap)/2;
       for(var i=0;i<6;i++){
-        var v=i+1, pair=v%2===0;
-        h+=face(dx(i),DY,DS,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
-        if(pair) h+=rct(dx(i)-3,DY-3,DS+6,DS+6,10,'none','#15803d',2.5);
+        var dcx=x0+i*(s+gap)+s/2;
+        h+=face(dcx,82,s,i+1,'#15803d');
+        h+=tx(dcx,113,''+(i+1),'#64748b',10);
       }
-      h+=txt(240,200,'Issues favorables à A = « nombre pair »','#15803d',12,'middle',true);
-      h+=txt(240,218,'{ 2 ; 4 ; 6 }','#15803d',15,'middle',true);
-      h+=txt(240,244,'3 issues favorables sur 6 issues au total','#64748b',11,'middle');
+      // Univers dé
+      h+=bx(20,123,440,30,8,'#f0fdf4','#15803d',2);
+      h+=tx(240,144,'Ω  =  { 1 ; 2 ; 3 ; 4 ; 5 ; 6 }   →   6 issues','#14532d',13,'middle',true);
+      // Pièce
+      h+=piece(90,210,'P','#b45309');
+      h+=tx(90,244,'Pile','#374151',10);
+      h+=piece(160,210,'F','#b45309');
+      h+=tx(160,244,'Face','#374151',10);
+      h+=bx(195,193,270,30,8,'#fef9c3','#fcd34d',2);
+      h+=tx(330,213,'Ω = { Pile ; Face }  →  2 issues','#78350f',11,'middle',true);
+      // Roue
+      h+=roue(75,255,28);
+      h+=bx(115,240,250,30,8,'#fff7ed','#f97316',2);
+      h+=tx(240,260,'Ω = { Rouge ; Bleu ; Vert ; Jaune }  →  4 issues','#b45309',10,'middle',true);
       return h;
     },
-    calc:'<div class="enonce en1">Événement A = « obtenir un nombre pair »</div><div class="ligne">Issues <span class="hl-g">favorables</span> à A : <span class="hl-g">2, 4, 6</span> ✓</div><div class="ligne">Issues non favorables : 1, 3, 5 ✗</div><div class="ligne"><span class="hl-g">3 issues favorables</span> sur 6 issues au total.</div>'
+    calc:'<div class="enonce en1">Définitions : Issues et univers</div>'
+      +'<div class="ligne">Les <span class="hl-g">issues</span> sont tous les résultats possibles d\'une expérience aléatoire.</div>'
+      +'<div class="ligne">L\'<span class="hl-g">univers</span> Ω est l\'ensemble de toutes les issues.</div>'
+      +'<div class="ligne"><b>Dé :</b> Ω = { 1 ; 2 ; 3 ; 4 ; 5 ; 6 }</div>'
+      +'<div class="ligne"><b>Pièce :</b> Ω = { Pile ; Face }</div>'
+      +'<div class="ligne"><b>Roue :</b> Ω = { Rouge ; Bleu ; Vert ; Jaune }</div>'
   },
+
+  // Étape 3 : certain / impossible / possible
   {
-    explic:"La probabilité d'un événement se calcule en divisant le nombre d'issues favorables par le nombre total d'issues (quand elles sont toutes équiprobables).",
+    explic:"Un événement est certain s'il se réalise toujours (il contient toutes les issues). Il est impossible s'il ne peut jamais arriver. Il est possible s'il peut arriver sans être garanti.",
     draw:function(){
-      var h=baseDE();
-      for(var i=0;i<6;i++){
-        var v=i+1, pair=v%2===0;
-        h+=face(dx(i),DY,DS,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
-      }
-      // Formule dans un bandeau bleu
-      h+=rct(50,190,380,75,12,'#1e3a8a');
-      h+=txt(240,208,'P(A)  =  issues favorables','white',12,'middle',true);
-      h+=seg(183,212,297,212,'white',1.5);
-      h+=txt(240,224,'nombre total d\'issues','white',11,'middle');
-      h+=txt(318,207,'3','white',18,'middle',true);
-      h+=seg(308,212,328,212,'white',1.5);
-      h+=txt(318,225,'6','white',18,'middle',true);
-      h+=txt(345,216,'=','white',14,'middle');
-      h+=txt(370,207,'1','white',18,'middle',true);
-      h+=seg(360,212,380,212,'white',1.5);
-      h+=txt(370,225,'2','white',18,'middle',true);
-      h+=txt(400,216,'= 0,5','white',13,'middle',true);
+      var h='';
+      h+=tx(240,18,'Événements — Dé à 6 faces','#14532d',13,'middle',true);
+      // Petits dés en fond
+      var s=36, gap=6, x0=(480-6*s-5*gap)/2;
+      for(var i=0;i<6;i++) h+=face(x0+i*(s+gap)+s/2,48,s,i+1,'#cbd5e1','#94a3b8',0.6);
+      // Certain
+      h+=bx(12,78,146,88,10,'#dcfce7','#22c55e',2);
+      h+=tx(85,96,'CERTAIN','#14532d',11,'middle',true);
+      h+=tx(85,112,'« obtenir un nombre','#374151',10);
+      h+=tx(85,126,'entre 1 et 6 »','#374151',10);
+      h+=tx(85,142,'Se réalise toujours','#15803d',10,'middle',true);
+      h+=tx(85,158,'P = 1','#15803d',13,'middle',true);
+      // Possible
+      h+=bx(167,78,146,88,10,'#dbeafe','#3b82f6',2);
+      h+=tx(240,96,'POSSIBLE','#1e3a8a',11,'middle',true);
+      h+=tx(240,112,'« obtenir un nombre','#374151',10);
+      h+=tx(240,126,'pair »','#374151',10);
+      h+=tx(240,142,'Peut arriver','#1d4ed8',10,'middle',true);
+      h+=tx(240,158,'0 < P < 1','#1d4ed8',13,'middle',true);
+      // Impossible
+      h+=bx(322,78,146,88,10,'#fee2e2','#ef4444',2);
+      h+=tx(395,96,'IMPOSSIBLE','#991b1b',11,'middle',true);
+      h+=tx(395,112,'« obtenir un 7 »','#374151',10);
+      h+=tx(395,126,' ','#374151',10);
+      h+=tx(395,142,'Ne peut pas arriver','#dc2626',10,'middle',true);
+      h+=tx(395,158,'P = 0','#dc2626',13,'middle',true);
+      // Méthode
+      h+=bx(12,176,456,102,10,'#fefce8','#fcd34d',2);
+      h+=tx(240,193,'Méthode : décrire un événement','#78350f',11,'middle',true);
+      h+=tx(240,210,'Événement A = « obtenir un nombre strictement supérieur à 4 »','#374151',10);
+      h+=tx(240,227,'→ Quelles issues réalisent A ?','#374151',10);
+      h+=tx(240,244,'→ Issues : 5 et 6','#b45309',12,'middle',true);
+      h+=tx(240,260,'→ A est un événement possible','#b45309',11,'middle',true);
+      h+=tx(240,275,'(car il ne contient ni toutes les issues, ni aucune)','#64748b',9);
       return h;
     },
-    calc:'<div class="enonce en1">Calcul de P(A)</div><div class="ligne">P(A) = <span class="fr hl-b"><span class="n">issues favorables</span><span class="d">nombre total</span></span> = <span class="fr hl-g"><span class="n">3</span><span class="d">6</span></span> = <span class="fr hl-g"><span class="n">1</span><span class="d">2</span></span> = <span class="hl-g">0,5</span></div><div class="ligne">La probabilité est toujours entre <span class="hl-b">0</span> et <span class="hl-b">1</span> : <span class="hl-b">0 ≤ P(A) ≤ 1</span></div>'
+    calc:'<div class="enonce en1">Les trois types d\'événements</div>'
+      +'<div class="ligne"><span class="hl-g">Certain</span> : se réalise à tous les coups → P = 1</div>'
+      +'<div class="ligne">Ex : « obtenir un nombre entre 1 et 6 » ✓</div>'
+      +'<div class="ligne"><span class="hl-r">Impossible</span> : ne peut jamais se réaliser → P = 0</div>'
+      +'<div class="ligne">Ex : « obtenir 7 » avec un dé à 6 faces ✗</div>'
+      +'<div class="ligne"><span class="hl-b">Possible</span> : peut se réaliser, mais pas garanti</div>'
+      +'<div class="ligne">Ex : « obtenir un nombre pair » → issues : 2, 4, 6</div>'
   },
+
+  // Étape 4 : équiprobabilité
   {
-    explic:"L'échelle de probabilités va de 0 (impossible) à 1 (certain). P(A) = 0,5 signifie que l'événement a une chance sur deux de se produire.",
+    explic:"Quand toutes les issues ont la même chance de se réaliser, on dit qu'elles sont équiprobables. Un dé équilibré et une pièce non truquée donnent des issues équiprobables.",
     draw:function(){
-      var h=baseDE();
+      var h='';
+      h+=tx(240,20,'Équiprobabilité','#14532d',14,'middle',true);
+      h+=tx(240,37,'Toutes les issues ont la même chance','#374151',11);
+      // 6 dés identiques
+      var s=46, gap=8, x0=(480-6*s-5*gap)/2;
       for(var i=0;i<6;i++){
-        var v=i+1, pair=v%2===0;
-        h+=face(dx(i),DY-50,DS*0.65,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
+        var dcx=x0+i*(s+gap)+s/2;
+        h+=face(dcx,86,s,i+1,'#15803d');
+        h+=tx(dcx,119,'p =','#374151',8);
+        h+=tx(dcx,128,'1','#15803d',9,'middle',true);
+        h+=sg(dcx-10,130,dcx+10,130,'#15803d',1);
+        h+=tx(dcx,140,'6','#15803d',9,'middle',true);
       }
-      h+=txt(240,120,'P(obtenir 7) = 0  → impossible','#991b1b',11,'middle');
-      h+=txt(240,136,'P(obtenir ≤ 6) = 1  → certain','#065f46',11,'middle');
-      h+=txt(240,152,'P(nombre pair) = ½  → équiprobable','#1d4ed8',11,'middle');
-      h+=echelle(185, 0.5, '#1d4ed8', null, null);
+      // Encadré dé
+      h+=bx(20,152,215,62,10,'#14532d');
+      h+=tx(127,170,'Dé équilibré :','white',11,'middle',true);
+      h+=tx(100,186,'P(face) =','white',11,'middle');
+      h+=tx(170,181,'1','white',16,'middle',true);
+      h+=sg(157,185,183,185,'white',1.5);
+      h+=tx(170,197,'6','white',16,'middle',true);
+      h+=tx(197,186,'≈ 0,17','white',11,'middle',true);
+
+      // Pièce
+      h+=piece(268,183,'P','#b45309');
+      h+=piece(314,183,'F','#b45309');
+      h+=bx(245,152,215,62,10,'#b45309');
+      h+=tx(352,170,'Pièce non truquée :','white',11,'middle',true);
+      h+=tx(340,186,'P(Pile) = P(Face) =','white',11,'middle');
+      h+=tx(434,181,'1','white',16,'middle',true);
+      h+=sg(422,185,446,185,'white',1.5);
+      h+=tx(434,197,'2','white',16,'middle',true);
+
+      // Attention
+      h+=bx(20,224,440,55,10,'#fff7ed','#f97316',2);
+      h+=tx(240,242,'⚠️ Attention','#7c2d12',11,'middle',true);
+      h+=tx(240,258,'Si le dé est truqué ou la roue déséquilibrée,','#374151',10);
+      h+=tx(240,272,'les issues ne sont plus équiprobables !','#374151',10);
       return h;
     },
-    calc:'<div class="enonce en1">Événements remarquables</div><div class="ligne"><span class="hl-r">P = 0</span> : événement impossible (ex : obtenir 7)</div><div class="ligne"><span class="hl-g">P = 1</span> : événement certain (ex : obtenir ≤ 6)</div><div class="ligne"><span class="hl-b">P = 0,5</span> : autant de chances de se produire que non</div><div class="conclusion-ok">Somme de toutes les probabilités : 6 × <span class="fr"><span class="n">1</span><span class="d">6</span></span> = 1 ✓</div>'
+    calc:'<div class="enonce en1">Définition : Équiprobabilité</div>'
+      +'<div class="ligne">Quand toutes les issues ont la <span class="hl-g">même chance</span> de se réaliser, elles sont <span class="hl-g">équiprobables</span>.</div>'
+      +'<div class="ligne">• Dé équilibré → P(chaque face) = <span class="fr hl-g"><span class="n">1</span><span class="d">6</span></span></div>'
+      +'<div class="ligne">• Pièce non truquée → P(Pile) = P(Face) = <span class="fr hl-o"><span class="n">1</span><span class="d">2</span></span></div>'
+      +'<div class="attention">⚠️ Si le dé est truqué, les issues ne sont plus équiprobables !</div>'
   }
 ];
 
-// ============================================================
-// MODE 1 — URNE
-// 3 rouges, 2 bleues, 1 verte, 1 jaune = 7 boules
-// ============================================================
-var BOULES=[
-  {col:'#dc2626',lab:'R'},{col:'#dc2626',lab:'R'},{col:'#dc2626',lab:'R'},
-  {col:'#2563eb',lab:'B'},{col:'#2563eb',lab:'B'},
-  {col:'#15803d',lab:'V'},
-  {col:'#d97706',lab:'J'}
-];
-var BR=22;
-function bx(i){ return (480-7*(BR*2+8))/2+BR+i*(BR*2+8); }
-var BY=175;
-
-function drawUrne(){
-  var h='';
-  h+='<path d="M110 235 Q108 268 240 275 Q372 268 370 235 Q358 195 325 178 Q285 168 240 168 Q195 168 155 178 Q122 195 110 235Z" fill="#e0e7ff" stroke="#4338ca" stroke-width="2"/>';
-  h+='<ellipse cx="240" cy="168" rx="85" ry="18" fill="#c7d2fe" stroke="#4338ca" stroke-width="2"/>';
-  return h;
-}
-
-function baseURNE(hi, fadedOp){
-  fadedOp=fadedOp===undefined?0.25:fadedOp;
-  var h=drawUrne();
-  h+=txt(240,35,'Urne : 3 rouges · 2 bleues · 1 verte · 1 jaune','#374151',11,'middle',true);
-  h+=txt(240,50,'→ 7 boules au total','#64748b',10);
-  for(var i=0;i<BOULES.length;i++){
-    var op=(hi===null||hi.indexOf(i)>=0)?1:fadedOp;
-    h+=boule(bx(i),BY,BR,BOULES[i].col,BOULES[i].lab,op);
-  }
-  return h;
-}
-
+// ─────────────────────────────────────────────────────────────
+// ONGLET 1 — PROBABILITÉ D'UN ÉVÉNEMENT (Leçon 2)
+// ─────────────────────────────────────────────────────────────
 var e1=[
+
+  // Étape 1 : définition + échelle
   {
-    explic:"Une urne contient 7 boules de différentes couleurs. On tire une boule au hasard sans regarder. Il y a 7 issues équiprobables — chaque boule a la même probabilité d'être tirée.",
+    explic:"La probabilité d'un événement est un nombre entre 0 et 1 qui mesure la chance que cet événement se réalise. Plus elle est proche de 1, plus l'événement est probable.",
     draw:function(){
-      var h=baseURNE(null);
-      h+=txt(240,218,'7 issues équiprobables','#374151',12,'middle',true);
-      h+=txt(240,234,'P(chaque boule) =','#374151',11,'middle');
-      h+=txt(348,227,'1','#7c3aed',14,'middle',true);
-      h+=seg(336,231,360,231,'#7c3aed',1.5);
-      h+=txt(348,243,'7','#7c3aed',14,'middle',true);
+      var h='';
+      h+=tx(240,18,'La probabilité : un nombre entre 0 et 1','#78350f',13,'middle',true);
+      h+=echelle(46, [
+        {v:0,   col:'#dc2626', lbl:'P=0'},
+        {v:1/6, col:'#b45309', lbl:'1/6'},
+        {v:0.5, col:'#1d4ed8', lbl:'P=½'},
+        {v:1,   col:'#14532d', lbl:'P=1'}
+      ]);
+      // 5 exemples illustrés
+      var exs=[
+        {x:60,  y:112, col:'#dc2626', l1:'Obtenir 7', l2:'dé 6 faces', l3:'Impossible'},
+        {x:155, y:112, col:'#b45309', l1:'Obtenir 1',  l2:'dé 6 faces', l3:'Peu probable'},
+        {x:240, y:112, col:'#1d4ed8', l1:'Pile ou Face',l2:'pièce',      l3:'Équiprobable'},
+        {x:325, y:112, col:'#15803d', l1:'Nombre ≤ 5', l2:'dé 6 faces',  l3:'Très probable'},
+        {x:420, y:112, col:'#14532d', l1:'Nombre ≤ 6', l2:'dé 6 faces',  l3:'Certain'}
+      ];
+      exs.forEach(function(e){
+        h+=bx(e.x-50,e.y,100,64,8,'white',e.col,1.5);
+        h+=tx(e.x,e.y+15,e.l1,e.col,10,'middle',true);
+        h+=tx(e.x,e.y+29,e.l2,'#64748b',9);
+        h+=tx(e.x,e.y+47,e.l3,e.col,10,'middle',true);
+      });
+      // Propriété
+      h+=bx(20,186,440,90,10,'#fef9c3','#fcd34d',2);
+      h+=tx(240,203,'Propriété','#78350f',11,'middle',true);
+      h+=tx(240,219,'• P = 0  →  événement impossible','#374151',11);
+      h+=tx(240,235,'• P = 1  →  événement certain','#374151',11);
+      h+=tx(240,251,'• Entre 0 et 1  →  événement possible','#374151',11);
+      h+=tx(240,267,'• Plus P est proche de 1, plus l\'événement est probable','#374151',10);
       return h;
     },
-    calc:'<div class="enonce en2">Expérience aléatoire : tirer une boule dans l\'urne.</div><div class="ligne">L\'<span class="hl-p">univers</span> contient <span class="hl-p">7 issues</span> équiprobables.</div><div class="ligne">Probabilité de chaque boule : <span class="fr hl-p"><span class="n">1</span><span class="d">7</span></span></div>'
+    calc:'<div class="enonce en2">Définition : Probabilité</div>'
+      +'<div class="ligne">La <span class="hl-o">probabilité</span> d\'un événement est un nombre entre <span class="hl-r">0</span> et <span class="hl-g">1</span>.</div>'
+      +'<div class="ligne"><span class="hl-r">P = 0</span> : événement impossible</div>'
+      +'<div class="ligne"><span class="hl-g">P = 1</span> : événement certain</div>'
+      +'<div class="ligne">Plus P est proche de 1, plus l\'événement a de chances de se réaliser.</div>'
   },
+
+  // Étape 2 : formule + calcul (dé, nombre pair)
   {
-    explic:"Événement A = « tirer une boule rouge ». Il y a 3 boules rouges sur 7. On applique la formule : P(rouge) = 3/7.",
+    explic:"Quand les issues sont équiprobables, la probabilité d'un événement A se calcule en divisant le nombre d'issues favorables par le nombre total d'issues.",
     draw:function(){
-      var h=baseURNE([0,1,2]);
-      // accolade rouges
-      var xa=bx(0)-BR, xb=bx(2)+BR;
-      h+=seg(xa,BY+BR+8,xb,BY+BR+8,'#dc2626',2);
-      h+=seg(xa,BY+BR+8,xa,BY+BR+14,'#dc2626',2);
-      h+=seg(xb,BY+BR+8,xb,BY+BR+14,'#dc2626',2);
-      h+=txt((xa+xb)/2,BY+BR+26,'3 rouges','#dc2626',11,'middle',true);
-      // résultat
-      h+=rct(148,218,184,48,8,'#dc2626');
-      h+=txt(240,233,'P(rouge) =','white',12,'middle',true);
-      h+=txt(305,226,'3','white',16,'middle',true);
-      h+=seg(293,230,317,230,'white',1.5);
-      h+=txt(305,242,'7','white',16,'middle',true);
-      h+=txt(328,234,'≈ 0,43','white',12,'middle',true);
+      var h='';
+      h+=tx(240,18,'Calculer une probabilité — Cas d\'équiprobabilité','#78350f',12,'middle',true);
+      h+=tx(240,34,'A = « obtenir un nombre pair »','#374151',11);
+      // 6 dés
+      var s=46, gap=7, x0=(480-6*s-5*gap)/2;
+      for(var i=0;i<6;i++){
+        var v=i+1, pair=v%2===0;
+        h+=face(x0+i*(s+gap)+s/2,84,s,v,pair?'#15803d':'#94a3b8',pair?'white':'#e2e8f0');
+        if(pair) h+=bx(x0+i*(s+gap)-3,84-s/2-3,s+6,s+6,10,'none','#15803d',2.5);
+      }
+      h+=tx(240,124,'Issues favorables à A : { 2 ; 4 ; 6 }  →  3 issues','#15803d',11,'middle',true);
+      // Formule
+      h+=bx(20,135,440,90,12,'#78350f');
+      h+=tx(145,156,'p(A)  =','white',13,'middle',true);
+      h+=tx(300,149,'nombre d\'issues favorables à A','white',9,'middle');
+      h+=sg(242,154,358,154,'white',1.5);
+      h+=tx(300,165,'nombre total d\'issues','white',9,'middle');
+      h+=tx(185,157,'=','white',13,'middle');
+      h+=tx(208,150,'3','white',16,'middle',true);
+      h+=sg(198,155,218,155,'white',1.5);
+      h+=tx(208,167,'6','white',16,'middle',true);
+      h+=tx(228,157,'=','white',13,'middle');
+      h+=tx(252,150,'1','white',16,'middle',true);
+      h+=sg(242,155,262,155,'white',1.5);
+      h+=tx(252,167,'2','white',16,'middle',true);
+      h+=tx(385,157,'= 0,5','white',14,'middle',true);
+      // Méthode
+      h+=bx(20,232,440,50,10,'#fef9c3','#fcd34d',2);
+      h+=tx(240,250,'Méthode : 1. Lister les issues  2. Repérer les favorables  3. Calculer','#78350f',10);
+      h+=tx(240,268,'0  ≤  p(A)  ≤  1   (la probabilité est toujours entre 0 et 1)','#14532d',11,'middle',true);
       return h;
     },
-    calc:'<div class="enonce en2">Événement A = « tirer une boule rouge »</div><div class="ligne">Issues favorables : <span class="hl-r">3 boules rouges</span></div><div class="ligne">P(rouge) = <span class="fr hl-r"><span class="n">3</span><span class="d">7</span></span> ≈ <span class="hl-r">0,43</span></div>'
+    calc:'<div class="enonce en2">Propriété : Calcul (issues équiprobables)</div>'
+      +'<div class="ligne">p(A) = <span class="fr hl-o"><span class="n">issues favorables à A</span><span class="d">nombre total d\'issues</span></span></div>'
+      +'<div class="ligne"><b>Exemple :</b> A = « obtenir un nombre pair » sur un dé</div>'
+      +'<div class="ligne">Issues favorables : <span class="hl-g">2, 4, 6</span>  →  3 issues</div>'
+      +'<div class="ligne">p(A) = <span class="fr hl-g"><span class="n">3</span><span class="d">6</span></span> = <span class="fr hl-g"><span class="n">1</span><span class="d">2</span></span> = <span class="hl-g">0,5</span></div>'
+      +'<div class="conclusion-ok">Méthode : 1. lister les issues · 2. repérer les favorables · 3. appliquer la formule</div>'
   },
+
+  // Étape 3 : fraction / décimal / pourcentage (urne)
   {
-    explic:"On peut calculer d'autres probabilités avec la même urne. La somme de toutes les probabilités doit toujours être égale à 1.",
+    explic:"Une probabilité peut s'exprimer sous trois formes équivalentes : fraction, nombre décimal ou pourcentage. Ici une urne contient 2 rouges, 3 bleues et 5 vertes.",
     draw:function(){
-      var h=baseURNE(null);
-      h+=rct(30,218,130,58,8,'white','#dc2626',2);
-      h+=txt(95,232,'P(rouge)','#dc2626',11,'middle',true);
-      h+=txt(95,248,'3/7 ≈ 0,43','#dc2626',13,'middle',true);
-      h+=rct(175,218,130,58,8,'white','#2563eb',2);
-      h+=txt(240,232,'P(bleue)','#2563eb',11,'middle',true);
-      h+=txt(240,248,'2/7 ≈ 0,29','#2563eb',13,'middle',true);
-      h+=rct(320,218,130,58,8,'white','#15803d',2);
-      h+=txt(385,232,'P(verte)','#15803d',11,'middle',true);
-      h+=txt(385,248,'1/7 ≈ 0,14','#15803d',13,'middle',true);
+      var h='';
+      h+=tx(240,16,'Fraction · Décimal · Pourcentage','#78350f',12,'middle',true);
+      // Urne
+      h+=urne(18,28,120,100);
+      // Boules dans l'urne
+      var bp=[
+        [42,65,'#dc2626','R'],[78,70,'#dc2626','R'],
+        [55,90,'#2563eb','B'],[90,88,'#2563eb','B'],[115,78,'#2563eb','B'],
+        [42,105,'#15803d','V'],[68,108,'#15803d','V'],[94,104,'#15803d','V'],[115,100,'#15803d','V'],[115,115,'#15803d','V']
+      ];
+      bp.forEach(function(b){ h+=boule(b[0],b[1],12,b[2],b[3]); });
+      h+=tx(78,138,'2 rouges · 3 bleues · 5 vertes','#374151',9,'middle');
+      h+=tx(78,150,'10 boules au total','#64748b',9,'middle');
+      // Tableau
+      var tx0=155, ty0=22, cols2=['#dc2626','#2563eb','#15803d'];
+      var rows=[
+        {col:'#dc2626',ev:'P(rouge)', fr:'2/10',si:'1/5', dec:'0,2', pct:'20 %'},
+        {col:'#2563eb',ev:'P(bleue)', fr:'3/10',si:'3/10',dec:'0,3', pct:'30 %'},
+        {col:'#15803d',ev:'P(verte)', fr:'5/10',si:'1/2', dec:'0,5', pct:'50 %'}
+      ];
+      var hdrs=['Événement','Fraction','Décimal','%'];
+      var wds=[90,72,66,52];
+      var cxt=tx0;
+      hdrs.forEach(function(hd,ci){
+        h+=bx(cxt,ty0,wds[ci],22,0,'#78350f');
+        h+=tx(cxt+wds[ci]/2,ty0+15,hd,'white',9,'middle',true);
+        cxt+=wds[ci];
+      });
+      rows.forEach(function(rw,ri){
+        var rx=tx0;
+        [rw.ev, rw.si, rw.dec, rw.pct].forEach(function(val,ci){
+          var bg=ci===0?rw.col:'white';
+          var tc=ci===0?'white':cols2[ri];
+          h+=bx(rx,ty0+22+ri*34,wds[ci],34,0,bg,'#e5e7eb',1);
+          h+=tx(rx+wds[ci]/2,ty0+22+ri*34+20,val,tc,ci===0?9.5:11,'middle',ci===0);
+          rx+=wds[ci];
+        });
+      });
+      // Vérif somme
+      h+=bx(tx0,ty0+22+3*34,280,26,6,'#dcfce7','#22c55e',2);
+      h+=tx(tx0+140,ty0+22+3*34+17,'0,2 + 0,3 + 0,5 = 1,0  ✓','#14532d',11,'middle',true);
+      // Remarque
+      h+=bx(18,230,440,50,10,'#fef9c3','#fcd34d',2);
+      h+=tx(238,248,'On peut exprimer p sous forme de fraction,','#78350f',10,'middle');
+      h+=tx(238,264,'de nombre décimal ou de pourcentage.','#78350f',10,'middle');
       return h;
     },
-    calc:'<div class="enonce en2">Calcul de plusieurs probabilités</div><div class="ligne">P(rouge) = <span class="fr hl-r"><span class="n">3</span><span class="d">7</span></span> &nbsp; P(bleue) = <span class="fr hl-b"><span class="n">2</span><span class="d">7</span></span> &nbsp; P(verte) = P(jaune) = <span class="fr hl-g"><span class="n">1</span><span class="d">7</span></span></div><div class="conclusion-ok">Vérification : <span class="fr"><span class="n">3</span><span class="d">7</span></span> + <span class="fr"><span class="n">2</span><span class="d">7</span></span> + <span class="fr"><span class="n">1</span><span class="d">7</span></span> + <span class="fr"><span class="n">1</span><span class="d">7</span></span> = <span class="fr"><span class="n">7</span><span class="d">7</span></span> = 1 ✓</div>'
+    calc:'<div class="enonce en2">Urne : 2 rouges · 3 bleues · 5 vertes → 10 boules</div>'
+      +'<div class="ligne">p(rouge) = <span class="fr hl-r"><span class="n">2</span><span class="d">10</span></span> = <span class="fr hl-r"><span class="n">1</span><span class="d">5</span></span> = <span class="hl-r">0,2 = 20 %</span></div>'
+      +'<div class="ligne">p(bleue) = <span class="fr hl-b"><span class="n">3</span><span class="d">10</span></span> = <span class="hl-b">0,3 = 30 %</span></div>'
+      +'<div class="ligne">p(verte) = <span class="fr hl-g"><span class="n">5</span><span class="d">10</span></span> = <span class="fr hl-g"><span class="n">1</span><span class="d">2</span></span> = <span class="hl-g">0,5 = 50 %</span></div>'
+      +'<div class="conclusion-ok">Somme : 0,2 + 0,3 + 0,5 = 1  ✓   (la somme de toutes les probabilités vaut toujours 1)</div>'
   },
+
+  // Étape 4 : fréquence vs probabilité
   {
-    explic:"Sur l'échelle, on place P(rouge) ≈ 0,43 et P(bleue) ≈ 0,29. Aucun événement ici n'est impossible ni certain — tous les marqueurs sont entre 0 et 1.",
+    explic:"La fréquence est le rapport entre le nombre de réalisations observées et le nombre total d'expériences. Quand on répète beaucoup l'expérience, la fréquence se rapproche de la probabilité théorique.",
     draw:function(){
-      var h=baseURNE(null,0.35);
-      h+=echelle(220, 3/7, '#dc2626', 2/7, '#2563eb');
-      h+=txt(40+3/7*400,260,'P(rouge)','#dc2626',9,'middle');
-      h+=txt(40+2/7*400,260,'P(bleue)','#2563eb',9,'middle');
+      var h='';
+      h+=tx(240,16,'Fréquence et probabilité théorique','#78350f',13,'middle',true);
+      // Pièce + formule
+      h+=piece(55,56,'?','#b45309');
+      h+=tx(55,88,'On lance','#374151',9);
+      h+=tx(55,100,'une pièce','#374151',9);
+      h+=bx(90,36,360,52,8,'#fef3c7','#fcd34d',2);
+      h+=tx(270,52,'fréquence(Face) =','#78350f',11,'middle',true);
+      h+=tx(380,46,'nb de Face obtenus','#78350f',9,'middle');
+      h+=sg(330,51,430,51,'#78350f',1.5);
+      h+=tx(380,62,'nb total de lancers','#78350f',9,'middle');
+      h+=tx(270,78,'P(Face) = ½ = 0,5  (probabilité théorique)','#14532d',10,'middle',true);
+      // Tableau d'évolution
+      var rows2=[
+        {n:'10 lancers',   f:4,  fr:'0,40'},
+        {n:'100 lancers',  f:53, fr:'0,53'},
+        {n:'500 lancers',  f:247,fr:'0,494'},
+        {n:'1000 lancers', f:487,fr:'0,487'}
+      ];
+      var hdrs=['Nb de lancers','Face','Fréquence','→ p(Face)'];
+      var wds=[118,54,76,72];
+      var ty2=96, tx2=18;
+      wds.forEach(function(wd,ci){
+        h+=bx(tx2,ty2,wd,22,0,'#b45309');
+        h+=tx(tx2+wd/2,ty2+15,hdrs[ci],'white',9,'middle',true);
+        tx2+=wd;
+      });
+      rows2.forEach(function(rw,ri){
+        var rx2=18; var bg=ri%2===0?'#fefce8':'white';
+        [rw.n,''+rw.f,rw.fr,'≈ 0,5'].forEach(function(val,ci){
+          var col=ci===2?'#b45309':ci===3?'#15803d':'#374151';
+          h+=bx(rx2,ty2+22+ri*28,wds[ci],28,0,bg,'#e5e7eb',1);
+          h+=tx(rx2+wds[ci]/2,ty2+22+ri*28+18,val,col,ci>=2?11:10,'middle',ci>=2);
+          rx2+=wds[ci];
+        });
+      });
+      // Conclusion
+      h+=bx(18,210,444,68,10,'#f0fdf4','#22c55e',2);
+      h+=tx(240,228,'Quand on répète beaucoup l\'expérience,','#14532d',11);
+      h+=tx(240,244,'la fréquence se stabilise autour de','#374151',11);
+      h+=tx(240,261,'la probabilité théorique.','#14532d',12,'middle',true);
+      h+=tx(240,277,'Plus n est grand, plus fréquence ≈ probabilité','#64748b',9);
       return h;
     },
-    calc:'<div class="enonce en2">Lecture sur l\'échelle de probabilités</div><div class="ligne">P(rouge) = <span class="hl-r">3/7 ≈ 0,43</span> → marqueur rouge</div><div class="ligne">P(bleue) = <span class="hl-b">2/7 ≈ 0,29</span> → marqueur bleu</div><div class="attention">💡 Plus P est proche de 1, plus l\'événement est probable. Plus P est proche de 0, plus il est rare.</div>'
+    calc:'<div class="enonce en2">Fréquence et probabilité</div>'
+      +'<div class="ligne"><span class="hl-o">Fréquence</span> = <span class="fr hl-o"><span class="n">nombre de réalisations observées</span><span class="d">nombre total d\'expériences</span></span></div>'
+      +'<div class="ligne">Exemple : 487 « Face » sur 1 000 lancers → f = 0,487</div>'
+      +'<div class="ligne">Probabilité théorique : p(Face) = <span class="fr hl-g"><span class="n">1</span><span class="d">2</span></span> = 0,5</div>'
+      +'<div class="conclusion-ok">Quand n est très grand, la fréquence se <b>stabilise</b> vers la probabilité théorique.</div>'
+      +'<div class="attention">⚠️ Fréquence ≠ probabilité théorique, mais elles se rapprochent quand n augmente.</div>'
   }
 ];
 
-// ============================================================
+// ─── Moteur ────────────────────────────────────────────────
 var ETAPES=[e0,e1];
-function setMode(m){ mode=m; etape=0; document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',i===m);}); document.querySelector('.btn-next').style.background=COLS[m]; document.getElementById('calc-box').style.borderLeftColor=COLS[m]; render(); }
-function prev(){ if(etape>0){etape--;render();} }
-function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
-function render(){ var e=ETAPES[mode][etape]; document.getElementById('fig').innerHTML=e.draw(); document.getElementById('calc-box').innerHTML=e.calc; document.getElementById('explication').textContent=e.explic; document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length; }
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach(function(tab,i){ tab.classList.toggle('active',i===m); });
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){ etape--; render(); } }
+function next(){ if(etape<ETAPES[mode].length-1){ etape++; render(); } }
+function render(){
+  var e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length;
+}
 render();
 </script>
 </body>
