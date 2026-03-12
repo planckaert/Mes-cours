@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solides – 4ème</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a5f; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-p { color: #7c3aed; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; font-size: 0.95em; }
+  .fr .d { padding: 0 5px; font-size: 0.95em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>📦 Solides de l'espace — 4ème</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Cube &amp; Prisme droit</button>
+  <button class="tab tab2" onclick="setMode(1)">Cylindre de révolution</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+var mode=0, etape=0;
+var COLS=['#1d4ed8','#9d174d'];
+
+// ─── Helpers SVG ───────────────────────────────────────────
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc
+    +'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')
+    +'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h
+    +'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function L(x1,y1,x2,y2,col,w,dash){
+  w=w||1.5; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2
+    +'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+function C(cx,cy,r,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+// Flèche double annotation
+function dim(x1,y1,x2,y2,lbl,col,lblOff){
+  lblOff=lblOff||[-8,-6];
+  var mx=(x1+x2)/2, my=(y1+y2)/2;
+  return L(x1,y1,x2,y2,col,1.5,'4,3')+T(mx+lblOff[0],my+lblOff[1],lbl,col,10,'middle',true);
+}
+
+// ─── CUBE en projection isométrique ───────────────────────
+// Origine (ox,oy) = coin bas-gauche visible, côté c
+function cube(ox,oy,c,fillF,fillT,fillR,stroke,op){
+  fillF=fillF||'#bfdbfe'; fillT=fillT||'#93c5fd'; fillR=fillR||'#60a5fa';
+  stroke=stroke||'#1d4ed8'; op=op===undefined?1:op;
+  var dx=c*0.5, dy=c*0.25; // offset isométrique
+  var h='<g opacity="'+op+'">';
+  // Face avant
+  h+='<polygon points="'
+    +(ox)+','+(oy)+' '
+    +(ox+c)+','+(oy)+' '
+    +(ox+c)+','+(oy-c)+' '
+    +(ox)+','+(oy-c)
+    +'" fill="'+fillF+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Face dessus
+  h+='<polygon points="'
+    +(ox)+','+(oy-c)+' '
+    +(ox+dx)+','+(oy-c-dy)+' '
+    +(ox+c+dx)+','+(oy-c-dy)+' '
+    +(ox+c)+','+(oy-c)
+    +'" fill="'+fillT+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Face droite
+  h+='<polygon points="'
+    +(ox+c)+','+(oy)+' '
+    +(ox+c+dx)+','+(oy-dy)+' '
+    +(ox+c+dx)+','+(oy-c-dy)+' '
+    +(ox+c)+','+(oy-c)
+    +'" fill="'+fillR+'" stroke="'+stroke+'" stroke-width="2"/>';
+  h+='</g>';
+  return h;
+}
+
+// ─── PRISME droit à base triangulaire ─────────────────────
+// base triangle rectangle en (bx,by), jambes a,b, profondeur d, hauteur h
+function prisme(ox,oy,a,b,h,dx,dy,fillB,fillL,fillT,stroke){
+  fillB=fillB||'#bbf7d0'; fillL=fillL||'#86efac'; fillT=fillT||'#4ade80';
+  stroke=stroke||'#15803d';
+  var svg='';
+  // Base avant (triangle rectangle)
+  var p0=[ox,oy], p1=[ox+a,oy], p2=[ox,oy-b];
+  // Base arrière (décalée de dx,dy)
+  var q0=[ox+dx,oy+dy], q1=[ox+a+dx,oy+dy], q2=[ox+dx,oy-b+dy];
+  // Face latérale bas (rectangle)
+  svg+='<polygon points="'+p0[0]+','+p0[1]+' '+p1[0]+','+p1[1]+' '+q1[0]+','+q1[1]+' '+q0[0]+','+q0[1]+'" fill="'+fillL+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Face latérale gauche (rectangle)
+  svg+='<polygon points="'+p0[0]+','+p0[1]+' '+p2[0]+','+p2[1]+' '+q2[0]+','+q2[1]+' '+q0[0]+','+q0[1]+'" fill="'+fillT+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Hypoténuse
+  svg+='<polygon points="'+p1[0]+','+p1[1]+' '+p2[0]+','+p2[1]+' '+q2[0]+','+q2[1]+' '+q1[0]+','+q1[1]+'" fill="'+fillB+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Face avant
+  svg+='<polygon points="'+p0[0]+','+p0[1]+' '+p1[0]+','+p1[1]+' '+p2[0]+','+p2[1]+'" fill="'+fillB+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Face arrière
+  svg+='<polygon points="'+q0[0]+','+q0[1]+' '+q1[0]+','+q1[1]+' '+q2[0]+','+q2[1]+'" fill="'+fillL+'" stroke="'+stroke+'" stroke-width="2" stroke-dasharray="4,3"/>';
+  // Angle droit
+  var sq=8;
+  svg+=R(p0[0],p0[1]-sq,sq,sq,0,'none',stroke,1.5);
+  return svg;
+}
+
+// ─── CYLINDRE SVG ─────────────────────────────────────────
+function cylindre(cx,cy,r,h,fillBody,fillTop,stroke){
+  fillBody=fillBody||'#fce7f3'; fillTop=fillTop||'#f9a8d4'; stroke=stroke||'#9d174d';
+  var ry=r*0.28; // demi-axe vertical de l'ellipse
+  var svg='';
+  // Corps
+  svg+='<rect x="'+(cx-r)+'" y="'+(cy-h)+'" width="'+(2*r)+'" height="'+h+'" fill="'+fillBody+'" stroke="none"/>';
+  // Ellipse bas
+  svg+='<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+r+'" ry="'+ry+'" fill="'+fillTop+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Contours corps
+  svg+=L(cx-r,cy,cx-r,cy-h,stroke,2);
+  svg+=L(cx+r,cy,cx+r,cy-h,stroke,2);
+  // Ellipse haut
+  svg+='<ellipse cx="'+cx+'" cy="'+(cy-h)+'" rx="'+r+'" ry="'+ry+'" fill="'+fillTop+'" stroke="'+stroke+'" stroke-width="2"/>';
+  // Ligne de fermeture corps bas (arc visible)
+  svg+='<path d="M'+(cx-r)+','+cy+' A'+r+','+ry+' 0 0,0 '+(cx+r)+','+cy+'" fill="none" stroke="'+stroke+'" stroke-width="2"/>';
+  return svg;
+}
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 0 — CUBE & PRISME DROIT
+// ════════════════════════════════════════════════════════════
+var e0=[
+
+  // Étape 1 : vocabulaire (faces, arêtes, sommets)
+  {
+    explic:"Un solide est délimité par des faces (surfaces planes), des arêtes (segments entre deux faces) et des sommets (points de jonction d'arêtes). Apprenons ce vocabulaire sur le cube.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Vocabulaire d\'un solide','#1e3a8a',14,'middle',true);
+      // Gros cube annoté
+      var ox=80, oy=200, c=100, dx=50, dy=25;
+      h+=cube(ox,oy,c,'#bfdbfe','#93c5fd','#60a5fa','#1d4ed8');
+      // Sommets (8) — face arrière décalée de +dx, -dy (vers haut-droite)
+      var sommets=[
+        [ox,oy],[ox+c,oy],[ox+c,oy-c],[ox,oy-c],
+        [ox+dx,oy-dy],[ox+c+dx,oy-dy],[ox+c+dx,oy-c-dy],[ox+dx,oy-c-dy]
+      ];
+      sommets.forEach(function(s){ h+=C(s[0],s[1],5,'#dc2626','white',1.5); });
+      // Flèche sommet
+      h+=L(ox+c+dx+5,oy-c-dy,ox+c+dx+40,oy-c-dy-20,'#dc2626',1.5);
+      h+=T(ox+c+dx+42,oy-c-dy-22,'Sommet','#dc2626',11,'start',true);
+      // Flèche arête
+      h+=L(ox,oy-c/2,ox-35,oy-c/2,'#15803d',1.5);
+      h+=T(ox-38,oy-c/2,'Arête','#15803d',11,'end',true);
+      // Flèche face
+      h+=L(ox+c/2,oy-c/2,ox+c/2+60,oy-c/2-40,'#b45309',1.5);
+      h+=T(ox+c/2+62,oy-c/2-42,'Face','#b45309',11,'start',true);
+      // Tableau récap
+      h+=R(295,70,170,175,10,'#f0f9ff','#93c5fd',2);
+      h+=T(380,90,'Cube','#1e3a8a',12,'middle',true);
+      [['Faces','6 (carrés)','#b45309'],['Arêtes','12 (égales)','#15803d'],['Sommets','8','#dc2626']].forEach(function(row,i){
+        h+=R(305,98+i*42,150,38,6,'white','#e0e7ff',1);
+        h+=T(360,120+i*42,row[0]+' :',row[2],11,'middle',true);
+        h+=T(420,120+i*42,row[1],'#374151',11,'middle');
+      });
+      return h;
+    },
+    calc:'<div class="enonce en1">Vocabulaire d\'un solide</div>'
+      +'<div class="ligne">• <span class="hl-o">Face</span> : surface plane qui délimite le solide</div>'
+      +'<div class="ligne">• <span class="hl-g">Arête</span> : segment commun à deux faces</div>'
+      +'<div class="ligne">• <span class="hl-r">Sommet</span> : point commun à plusieurs arêtes</div>'
+      +'<div class="conclusion-ok">Le cube : 6 faces · 12 arêtes · 8 sommets</div>'
+  },
+
+  // Étape 2 : le cube et son patron
+  {
+    explic:"Le cube possède 6 faces carrées toutes identiques. Toutes ses arêtes ont la même longueur c. Son patron (mise à plat) est une croix de 6 carrés qui se replie pour former le cube.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Le cube','#1e3a8a',14,'middle',true);
+      // Cube 3D
+      var ox=35, oy=170, c=80, dx=38, dy=20;
+      h+=cube(ox,oy,c,'#bfdbfe','#93c5fd','#60a5fa','#1d4ed8');
+      // Cote c
+      h+=L(ox,oy+12,ox+c,oy+12,'#1d4ed8',1,'3,2');
+      h+=T((ox+ox+c)/2,oy+24,'c','#1d4ed8',11,'middle',true);
+      h+=L(ox-12,oy,ox-12,oy-c,'#1d4ed8',1,'3,2');
+      h+=T(ox-22,(oy+oy-c)/2,'c','#1d4ed8',11,'middle',true);
+      // Patron simplifié (croix de 6 carrés)
+      var ps=38, px=250, py=50;
+      var positions=[[px+ps,py],[px,py+ps],[px+ps,py+ps],[px+2*ps,py+ps],[px+3*ps,py+ps],[px+ps,py+2*ps]];
+      positions.forEach(function(p,i){
+        h+=R(p[0],p[1],ps,ps,2,'#bfdbfe','#1d4ed8',1.5);
+      });
+      h+=T(px+ps*2+ps/2+2,py+ps*1.5,'Patron','#1e3a8a',10,'middle',true);
+      // Formule
+      h+=R(220,190,240,80,10,'#1e3a8a');
+      h+=T(340,210,'Volume du cube :','white',11,'middle',true);
+      h+=T(340,232,'V = c × c × c','white',12,'middle');
+      h+=T(340,252,'V = c³','white',14,'middle',true);
+      // Exemple
+      h+=R(30,198,180,70,10,'#f0f9ff','#93c5fd',2);
+      h+=T(120,215,'Exemple : c = 5 cm','#1e3a8a',11,'middle',true);
+      h+=T(120,233,'V = 5³','#374151',12,'middle');
+      h+=T(120,251,'= 5×5×5 = 125 cm³','#1d4ed8',12,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Définition : Cube de côté c</div>'
+      +'<div class="ligne">• 6 faces <span class="hl-b">carrées</span> identiques</div>'
+      +'<div class="ligne">• 12 arêtes de même longueur <span class="hl-b">c</span></div>'
+      +'<div class="ligne">• 8 sommets</div>'
+      +'<div class="ligne"><b>Volume :</b> <span class="hl-b">V = c³</span></div>'
+      +'<div class="ligne">Exemple : c = 5 cm → V = 5³ = <span class="hl-b">125 cm³</span></div>'
+  },
+
+  // Étape 3 : prisme droit (définition + vocabulaire)
+  {
+    explic:"Un prisme droit a deux bases identiques et parallèles (polygones), des faces latérales rectangulaires, et une hauteur h égale à la distance entre les bases.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Le prisme droit','#1e3a8a',14,'middle',true);
+      // Prisme à base triangle rectangle
+      var ox=55, oy=220;
+      h+=prisme(ox,oy,90,70,0,45,22,'#bbf7d0','#86efac','#4ade80','#15803d');
+      // Labels
+      h+=T(ox+45,oy+14,'Base (triangle)','#15803d',10,'middle',true);
+      h+=T(ox-16,oy-35,'h','#b45309',12,'middle',true);
+      // Flèche hauteur
+      h+=L(ox-8,oy,ox-8,oy-70,'#b45309',1.5,'4,3');
+      // Faces latérales
+      h+=T(ox+45,oy-90,'Face latérale','#1d4ed8',10,'middle');
+      h+=T(ox+45,oy-78,'(rectangle)','#1d4ed8',10,'middle');
+      // Tableau définition
+      h+=R(240,30,230,250,10,'#f0fdf4','#6ee7b7',2);
+      h+=T(355,50,'Prisme droit','#14532d',12,'middle',true);
+      var props=[
+        ['Bases :','2 polygones identiques','et parallèles'],
+        ['Faces lat. :','rectangles',''],
+        ['Hauteur h :','distance entre','les 2 bases'],
+        ['Cas part. :','Le cube est un','prisme droit !']
+      ];
+      props.forEach(function(p,i){
+        h+=R(250,58+i*54,210,50,6,'white','#d1fae5',1);
+        h+=T(280,76+i*54,p[0],'#15803d',10,'start',true);
+        h+=T(355,76+i*54,p[1],'#374151',10,'middle');
+        if(p[2]) h+=T(355,90+i*54,p[2],'#374151',10,'middle');
+      });
+      return h;
+    },
+    calc:'<div class="enonce en1">Définition : Prisme droit</div>'
+      +'<div class="ligne">• Deux <span class="hl-g">bases</span> : polygones identiques et parallèles</div>'
+      +'<div class="ligne">• Faces <span class="hl-b">latérales</span> : rectangles</div>'
+      +'<div class="ligne">• <span class="hl-o">Hauteur h</span> : distance entre les deux bases</div>'
+      +'<div class="attention">💡 Le cube est un cas particulier de prisme droit dont les bases sont des carrés et h = c.</div>'
+  },
+
+  // Étape 4 : volume du prisme droit
+  {
+    explic:"Le volume d'un prisme droit se calcule en multipliant l'aire de la base par la hauteur. Il faut d'abord calculer l'aire de la base selon sa forme (triangle, rectangle, etc.).",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Volume du prisme droit','#1e3a8a',14,'middle',true);
+      // Formule principale
+      h+=R(20,30,440,55,12,'#1e3a8a');
+      h+=T(240,52,'V  =  A',  'white',14,'middle',true);
+      h+=T(330,56,'base','white',9,'middle');
+      h+=T(360,52,' × h',  'white',14,'middle',true);
+      // Prisme
+      var ox=40, oy=215;
+      h+=prisme(ox,oy,85,65,0,42,21,'#bbf7d0','#86efac','#4ade80','#15803d');
+      // Cotes
+      h+=T(ox+42,oy+14,'a = 6 cm','#15803d',9,'middle',true);
+      h+=T(ox-3,oy-30,'b = 8 cm','#b45309',9,'middle',true);
+      h+=L(ox+85+42+5,oy,ox+85+42+5,oy-65,'#dc2626',1.5,'4,3');
+      h+=T(ox+85+42+18,oy-30,'h = 10 cm','#dc2626',9,'middle',true);
+      // Calcul étape par étape
+      h+=R(220,100,245,185,10,'#fef9c3','#fcd34d',2);
+      h+=T(342,118,'Étapes de calcul','#78350f',11,'middle',true);
+      var steps=[
+        ['1. Aire de la base','#374151'],
+        ['(triangle rect.)','#64748b'],
+        ['A = (6 × 8) ÷ 2','#b45309'],
+        ['A = 24 cm²','#b45309'],
+        ['2. Volume','#374151'],
+        ['V = 24 × 10','#dc2626'],
+        ['V = 240 cm³','#dc2626']
+      ];
+      steps.forEach(function(s,i){
+        h+=T(342,134+i*20,s[0],s[1],i===3||i===6?11:10,'middle',i===3||i===6);
+      });
+      // Deuxième exemple : cube comme prisme
+      h+=R(20,240,190,42,8,'#f0f9ff','#93c5fd',2);
+      h+=T(115,256,'Cube (c=5) comme prisme :','#1e3a8a',9,'middle',true);
+      h+=T(115,270,'A_base = 5² = 25 cm²,  V = 25×5 = 125 cm³','#374151',8,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Formule : Volume du prisme droit</div>'
+      +'<div class="ligne"><span class="hl-b">V = A<sub>base</sub> × h</span></div>'
+      +'<div class="ligne"><b>Exemple :</b> Base = triangle rectangle (a=6, b=8), h=10 cm</div>'
+      +'<div class="ligne">A<sub>base</sub> = (6 × 8) ÷ 2 = <span class="hl-o">24 cm²</span></div>'
+      +'<div class="ligne">V = 24 × 10 = <span class="hl-r">240 cm³</span></div>'
+      +'<div class="conclusion-ok">Méthode : 1. Calculer A<sub>base</sub> · 2. Multiplier par h</div>'
+  }
+];
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 1 — CYLINDRE DE RÉVOLUTION
+// ════════════════════════════════════════════════════════════
+var e1=[
+
+  // Étape 1 : définition et vocabulaire
+  {
+    explic:"Un cylindre de révolution est délimité par deux bases circulaires identiques de rayon r et une surface latérale courbe. La hauteur h est la distance entre les deux bases.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Cylindre de révolution','#9d174d',14,'middle',true);
+      // Cylindre centré
+      var cx=140, cy=210, r=70, ht=130;
+      h+=cylindre(cx,cy,r,ht,'#fce7f3','#f9a8d4','#9d174d');
+      // Annotations
+      // Rayon r
+      h+=L(cx,cy-ht,cx+r,cy-ht,'#dc2626',1.5,'4,3');
+      h+=T(cx+r/2,cy-ht-10,'r','#dc2626',12,'middle',true);
+      // Hauteur h
+      h+=L(cx+r+15,cy,cx+r+15,cy-ht,'#b45309',1.5,'4,3');
+      h+=T(cx+r+28,cy-ht/2,'h','#b45309',12,'middle',true);
+      // Axe
+      h+=L(cx,cy,cx,cy-ht,'#64748b',1,'6,4');
+      h+=T(cx+8,cy-ht-12,'axe','#64748b',9,'middle');
+      // Centre haut et bas
+      h+=C(cx,cy,4,'#9d174d','white',1.5);
+      h+=C(cx,cy-ht,4,'#9d174d','white',1.5);
+      // Tableau vocabulaire
+      h+=R(270,30,195,230,10,'#fdf2f8','#f9a8d4',2);
+      h+=T(367,50,'Vocabulaire','#831843',12,'middle',true);
+      var rows=[
+        {lbl:'Bases :',     val:'2 disques de rayon r', col:'#9d174d'},
+        {lbl:'Rayon :',     val:'r (commun aux 2 bases)', col:'#dc2626'},
+        {lbl:'Hauteur :',   val:'h (entre les 2 bases)', col:'#b45309'},
+        {lbl:'Axe :',       val:'droite passant par', val2:'les 2 centres', col:'#64748b'},
+        {lbl:'Exemples :', val:'boîte de conserve,',val2:'canette, tuyau…', col:'#15803d'}
+      ];
+      rows.forEach(function(rw,i){
+        h+=R(280,58+i*42,175,38,6,'white','#fce7f3',1);
+        h+=T(300,78+i*42,rw.lbl,rw.col,10,'start',true);
+        h+=T(367,70+i*42,rw.val,rw.col,9,'middle');
+        if(rw.val2) h+=T(367,82+i*42,rw.val2,rw.col,9,'middle');
+      });
+      return h;
+    },
+    calc:'<div class="enonce en2">Définition : Cylindre de révolution</div>'
+      +'<div class="ligne">• Deux <span class="hl-p">bases circulaires</span> identiques de rayon <span class="hl-r">r</span></div>'
+      +'<div class="ligne">• Surface <span class="hl-p">latérale courbe</span></div>'
+      +'<div class="ligne">• Hauteur <span class="hl-o">h</span> : distance entre les deux bases</div>'
+      +'<div class="ligne">• Axe : droite passant par les centres des 2 bases</div>'
+      +'<div class="attention">💡 Exemples : boîte de conserve, canette, tuyau.</div>'
+  },
+
+  // Étape 2 : le patron du cylindre
+  {
+    explic:"En déroulant la surface latérale d'un cylindre, on obtient un rectangle. Le patron d'un cylindre est composé de deux disques de rayon r et d'un rectangle de dimensions h × 2πr.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Patron du cylindre','#9d174d',14,'middle',true);
+      // Petit cylindre à gauche
+      var cx=75, cy=165, r=45, ht=90;
+      h+=cylindre(cx,cy,r,ht,'#fce7f3','#f9a8d4','#9d174d');
+      h+=T(cx,cy+18,'Cylindre','#9d174d',10,'middle',true);
+      // Flèche "dérouler"
+      h+=L(130,130,175,130,'#374151',2);
+      h+='<polygon points="175,124 186,130 175,136" fill="#374151"/>';
+      h+=T(157,122,'dérouler','#374151',9,'middle');
+      // Patron : rectangle + 2 disques tangents sur les côtés gauche et droit
+      // Le rayon visuel du disque = rh/2 pour s'aligner avec la hauteur du rectangle
+      var rx=175, ry=78, rw=140, rh=100;
+      var dr=rh/2; // rayon du disque = moitié de la hauteur → tangent haut et bas
+      var ery=Math.round(dr*0.32); // aplatissement ellipse
+      // Disque gauche (tangent au côté gauche du rectangle)
+      var d1cx=rx-dr, dcy=ry+rh/2;
+      h+='<ellipse cx="'+d1cx+'" cy="'+dcy+'" rx="'+dr+'" ry="'+ery+'" fill="#f9a8d4" stroke="#9d174d" stroke-width="2"/>';
+      h+=T(d1cx,dcy-ery-8,'Disque r','#9d174d',9,'middle',true);
+      // Disque droit (tangent au côté droit du rectangle)
+      var d2cx=rx+rw+dr;
+      h+='<ellipse cx="'+d2cx+'" cy="'+dcy+'" rx="'+dr+'" ry="'+ery+'" fill="#f9a8d4" stroke="#9d174d" stroke-width="2"/>';
+      h+=T(d2cx,dcy-ery-8,'Disque r','#9d174d',9,'middle',true);
+      // Rectangle (surface latérale) — par-dessus pour cacher les débords des ellipses
+      h+=R(rx,ry,rw,rh,0,'#fce7f3','#9d174d',2);
+      h+=T(rx+rw/2,ry+rh/2+4,'Surface latérale','#9d174d',10,'middle',true);
+      // Annotation largeur = 2πr (en bas)
+      h+=L(rx,ry+rh+14,rx+rw,ry+rh+14,'#dc2626',1.5,'3,2');
+      h+=T(rx+rw/2,ry+rh+27,'largeur = 2πr','#dc2626',10,'middle',true);
+      // Annotation hauteur (à gauche du rectangle)
+      h+=L(rx-dr*2-14,ry,rx-dr*2-14,ry+rh,'#b45309',1.5,'3,2');
+      h+=T(rx-dr*2-26,ry+rh/2,'h','#b45309',12,'middle',true);
+      // Remarque clé
+      h+=R(10,255,460,26,6,'#fdf2f8','#f9a8d4',2);
+      h+=T(240,272,'La largeur du rectangle = périmètre du disque = 2πr  ✓','#831843',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Patron du cylindre (rayon r, hauteur h)</div>'
+      +'<div class="ligne">• 2 <span class="hl-p">disques</span> de rayon r (les bases)</div>'
+      +'<div class="ligne">• 1 <span class="hl-r">rectangle</span> de dimensions <span class="hl-o">h</span> × <span class="hl-r">2πr</span></div>'
+      +'<div class="conclusion-ok">La largeur du rectangle = périmètre du disque = 2πr ✓<br>C\'est ce qui garantit que le patron se referme parfaitement.</div>'
+  },
+
+  // Étape 3 : formule du volume
+  {
+    explic:"Le volume d'un cylindre se calcule comme celui d'un prisme : aire de la base fois la hauteur. Ici la base est un disque d'aire πr², donc V = πr²h.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Volume du cylindre','#9d174d',14,'middle',true);
+      // Cylindre annoté
+      var cx=130, cy=215, r=65, ht=120;
+      h+=cylindre(cx,cy,r,ht,'#fce7f3','#f9a8d4','#9d174d');
+      h+=L(cx,cy-ht,cx+r,cy-ht,'#dc2626',1.5,'4,3');
+      h+=T(cx+r/2,cy-ht-12,'r','#dc2626',13,'middle',true);
+      h+=L(cx+r+16,cy,cx+r+16,cy-ht,'#b45309',1.5,'4,3');
+      h+=T(cx+r+30,cy-ht/2,'h','#b45309',13,'middle',true);
+      // Formule
+      h+=R(230,28,235,90,10,'#9d174d');
+      h+=T(347,48,'V = π × r² × h','white',13,'middle',true);
+      h+=T(347,68,'= Aire du disque × h','white',10,'middle');
+      h+=T(347,86,'= π r² × h','white',12,'middle',true);
+      // Méthode
+      h+=R(230,125,235,80,10,'#fdf2f8','#f9a8d4',2);
+      h+=T(347,143,'Méthode','#831843',11,'middle',true);
+      h+=T(347,160,'1. Repérer r et h','#374151',10,'middle');
+      h+=T(347,176,'2. Calculer A = πr²','#374151',10,'middle');
+      h+=T(347,192,'3. V = A × h = πr²h','#374151',10,'middle');
+      // Deux exemples
+      h+=R(230,212,235,70,8,'#f0fdf4','#6ee7b7',2);
+      h+=T(347,228,'r=3, h=8 → V=π×9×8=72π≈226 cm³','#14532d',9,'middle',true);
+      h+=R(230,288,235,0,0,'none','none',0); // spacer
+      return h;
+    },
+    calc:'<div class="enonce en2">Formule : Volume du cylindre</div>'
+      +'<div class="ligne"><span class="hl-p">V = π × r² × h</span></div>'
+      +'<div class="ligne"><b>Exemple 1 :</b> r = 3 cm, h = 8 cm</div>'
+      +'<div class="ligne">V = π × 3² × 8 = π × 9 × 8 = <span class="hl-p">72π ≈ 226,2 cm³</span></div>'
+      +'<div class="ligne"><b>Exemple 2 :</b> r = 5 cm, h = 8 cm</div>'
+      +'<div class="ligne">V = π × 5² × 8 = 200π ≈ <span class="hl-p">628,3 cm³</span></div>'
+      +'<div class="conclusion-ok">Méthode : 1. Repérer r et h · 2. A = πr² · 3. V = A × h</div>'
+  },
+
+  // Étape 4 : conversions de volume
+  {
+    explic:"Le centimètre cube (cm³) est l'unité principale de volume. On peut convertir en litres : 1 L = 1 dm³ = 1 000 cm³. Pour convertir des cm³ en litres, on divise par 1 000.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Conversions de volumes','#9d174d',14,'middle',true);
+      // Tableau de conversions
+      var cols2=[['km³','m³','dm³','cm³','mm³'],['','÷1000','÷1000','÷1000','÷1000']];
+      var tw=76, th=36, tx0=(480-5*tw)/2, ty0=40;
+      ['km³','m³','dm³\n= L','cm³','mm³'].forEach(function(lbl,i){
+        var bg=i===2?'#fce7f3':i===3?'#f9a8d4':'#f1f5f9';
+        var tc=i===2||i===3?'#831843':'#374151';
+        h+=R(tx0+i*tw,ty0,tw,th,4,bg,'#cbd5e1',1.5);
+        h+=T(tx0+i*tw+tw/2,ty0+14,lbl.split('\n')[0],tc,11,'middle',true);
+        if(lbl.indexOf('\n')>=0) h+=T(tx0+i*tw+tw/2,ty0+27,'= L',tc,9,'middle');
+      });
+      // Flèches ÷1000
+      for(var i=0;i<4;i++){
+        h+=L(tx0+i*tw+tw,ty0+th/2,tx0+(i+1)*tw,ty0+th/2,'#9d174d',1.5);
+        h+='<polygon points="'+(tx0+(i+1)*tw-6)+','+(ty0+th/2-4)+' '+(tx0+(i+1)*tw)+','+(ty0+th/2)+' '+(tx0+(i+1)*tw-6)+','+(ty0+th/2+4)+'" fill="#9d174d"/>';
+        h+=T(tx0+i*tw+tw+tw/2,ty0+th/2-8,'÷ 1 000','#9d174d',8,'middle');
+      }
+      // Encadré clé
+      h+=R(30,105,420,52,10,'#9d174d');
+      h+=T(240,127,'1 L = 1 dm³ = 1 000 cm³','white',14,'middle',true);
+      h+=T(240,147,'Pour convertir cm³ en L : ÷ 1 000','white',11,'middle');
+      // Exemple cylindre canette
+      h+=R(30,168,420,110,10,'#fdf2f8','#f9a8d4',2);
+      var cx2=90, cy2=248, r2=32, ht2=68;
+      h+=cylindre(cx2,cy2,r2,ht2,'#fce7f3','#f9a8d4','#9d174d');
+      h+=T(cx2,cy2+15,'canette','#9d174d',9,'middle');
+      h+=T(cx2,cy2+27,'r=3 h=11','#64748b',8,'middle');
+      h+=T(300,188,'V = π × 3² × 11','#831843',11,'middle',true);
+      h+=T(300,206,'V = 99π ≈ 311 cm³','#374151',11,'middle');
+      h+=T(300,224,'311 ÷ 1000 = 0,311 L','#9d174d',12,'middle',true);
+      h+=T(300,244,'≈ 0,311 litre','#9d174d',11,'middle');
+      h+=T(300,262,'(une canette ≈ 0,33 L en réalité)','#64748b',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Conversions : cm³ et litres</div>'
+      +'<div class="ligne"><span class="hl-p">1 L = 1 dm³ = 1 000 cm³</span></div>'
+      +'<div class="ligne">Pour convertir cm³ → L : <span class="hl-p">÷ 1 000</span></div>'
+      +'<div class="ligne"><b>Exemple :</b> Cylindre r=3 cm, h=11 cm</div>'
+      +'<div class="ligne">V = 99π ≈ <span class="hl-p">311 cm³</span></div>'
+      +'<div class="ligne">311 ÷ 1000 = <span class="hl-p">0,311 L</span></div>'
+      +'<div class="conclusion-ok">km³ → m³ → dm³(=L) → cm³ → mm³ : chaque fois ÷ 1 000</div>'
+  }
+];
+
+// ─── Moteur ────────────────────────────────────────────────
+var ETAPES=[e0,e1];
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach(function(tab,i){ tab.classList.toggle('active',i===m); });
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){ etape--; render(); } }
+function next(){ if(etape<ETAPES[mode].length-1){ etape++; render(); } }
+function render(){
+  var e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length;
+}
+render();
+</script>
+</body>
+</html>
