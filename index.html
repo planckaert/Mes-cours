@@ -106,23 +106,89 @@
 
     .scroll{flex:1;padding:16px 16px 32px;}
 
-    .notion-block{margin-bottom:24px;}
-    .notion-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:0 2px;}
-    .notion-pill{height:2px;flex:1;border-radius:2px;opacity:.4;}
-    .notion-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.75);letter-spacing:.3px;white-space:nowrap;}
+    /* ── ACCORDION NOTIONS ── */
+    .notion-block{margin-bottom:10px;}
 
+    /* Header cliquable */
+    .notion-header{
+      display:flex;align-items:center;gap:10px;
+      padding:11px 14px;border-radius:13px;
+      cursor:pointer;user-select:none;
+      border:1px solid transparent;
+      transition:background .18s, border-color .18s;
+    }
+    .notion-header:active{background:rgba(255,255,255,0.04);}
+
+    /* Notion normale (fermée) */
+    .notion-header.fermee{
+      background:var(--surface);
+      border-color:var(--border);
+    }
+    /* Notion "en cours" (fermée) : surlignée avec la couleur accent */
+    .notion-header.fermee.en-cours{
+      /* border-color et background injectés en inline via JS */
+    }
+    /* Header ouvert */
+    .notion-header.ouverte{
+      background:transparent;
+      border-color:transparent;
+      border-bottom-left-radius:0;
+      border-bottom-right-radius:0;
+      padding-bottom:6px;
+    }
+
+    .notion-pill{height:2px;flex:1;border-radius:2px;opacity:.35;}
+    .notion-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.75);letter-spacing:.3px;white-space:nowrap;}
+    .notion-chevron{
+      font-size:11px;color:rgba(255,255,255,.25);
+      transition:transform .25s ease;
+      flex-shrink:0;
+    }
+    .notion-block.open .notion-chevron{transform:rotate(180deg);}
+
+    /* Contenu accordéon (grid trick pour transition smooth) */
+    .notion-cards{
+      display:grid;
+      grid-template-rows:0fr;
+      transition:grid-template-rows .28s ease;
+    }
+    .notion-block.open .notion-cards{
+      grid-template-rows:1fr;
+    }
+    .notion-cards-inner{
+      overflow:hidden;
+      padding:0 0 4px;
+    }
+    .notion-block.open .notion-cards-inner{
+      padding-top:6px;
+    }
+
+    /* ── CARTES FICHIERS ── */
     .file-card{
       background:var(--surface);border:1px solid var(--border);border-radius:14px;
       padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:13px;
       text-decoration:none;transition:background .15s;
     }
     .file-card:active{background:var(--surface2);}
+    /* Cours surligné en haut de la notion ouverte */
+    .file-card.cours-hl{
+      /* border-color et box-shadow injectés en inline via JS */
+    }
     .file-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
     .file-body{flex:1;min-width:0;}
     .file-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .type-badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.3px;border-radius:6px;padding:2px 8px;}
     .badge-actif{font-size:9px;font-weight:700;letter-spacing:.5px;border-radius:5px;padding:2px 7px;}
     .arrow{color:rgba(255,255,255,.2);font-size:18px;flex-shrink:0;}
+
+    /* Bloc éval (non-accordéon, toujours visible) */
+    .eval-block{margin-bottom:14px;}
+    .eval-header{
+      display:flex;align-items:center;gap:10px;
+      margin-bottom:10px;padding:0 2px;
+    }
+    .eval-pill{height:2px;flex:1;border-radius:2px;background:#ef4444;opacity:.5;}
+    .eval-name{font-size:13px;font-weight:600;color:#ef4444;letter-spacing:.3px;white-space:nowrap;}
 
     .ai-mention{text-align:center;padding:8px 16px 28px;font-size:10px;color:rgba(255,255,255,0.12);letter-spacing:.3px;}
 
@@ -167,7 +233,7 @@
   <div class="login-inner">
     <div class="app-title">MesCours</div>
     <div class="app-sub">Collège — Mathématiques</div>
-    <div class="field-label">Quelle est de ta classe</div>
+    <div class="field-label">Quelle est ta classe</div>
     <input class="code-input" id="codeInput" placeholder="ex : 6A" maxlength="8" autocomplete="off"/>
     <div class="login-hint">Nom de ta classe</div>
     <div class="err" id="errMsg"></div>
@@ -262,7 +328,6 @@ function typeConfig(t) {
 }
 
 function nettoyerLien(url) {
-  // Convertit les liens Google Docs/Sheets/Slides en /preview pour compatibilité iPhone
   return url.replace(
     /(docs\.google\.com\/(document|spreadsheets|presentation)\/d\/[^/]+)\/.*/,
     "$1/preview"
@@ -337,7 +402,6 @@ async function chargerContenu(groupe) {
 // ── CSV ──────────────────────────────────────────────────────
 function parseCSV(text) {
   const lines = text.trim().split("\n");
-  // Nettoyer BOM et espaces des en-têtes
   const headers = lines[0]
     .replace(/^\uFEFF/, "")
     .split(",")
@@ -363,15 +427,12 @@ function grouperParNotion(rows) {
     if (!map[n]) map[n] = [];
     map[n].push(r);
   });
-  // Trier chaque notion : actif=1 en premier, puis cours, exercices, animations, reste
   const ordre = ["cours", "exercices", "animation", "dm", "ds", "énoncé", "corrigé", "énoncé+corrigé"];
   Object.keys(map).forEach(n => {
     map[n].sort((a, b) => {
-      // actif=1 tout en haut
       const aActif = a.actif && a.actif.trim() === "1" ? 0 : 1;
       const bActif = b.actif && b.actif.trim() === "1" ? 0 : 1;
       if (aActif !== bActif) return aActif - bActif;
-      // sinon par type
       const ai = ordre.indexOf((a.type||"").toLowerCase().trim());
       const bi = ordre.indexOf((b.type||"").toLowerCase().trim());
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
@@ -381,12 +442,27 @@ function grouperParNotion(rows) {
 }
 
 // ── AFFICHAGE ────────────────────────────────────────────────
-function carteHTML(f, accent) {
+function carteHTML(f, accent, highlightCours) {
   const cfg = typeConfig(f.type);
   const actif1 = f.actif && f.actif.trim() === "1";
   const actif2 = f.actif && f.actif.trim() === "2";
-  return `<a class="file-card" href="${nettoyerLien(f.lien)}" target="_blank" rel="noopener"
-    style="${(actif1||actif2) ? 'border-color:'+accent+';box-shadow:0 0 0 1px '+accent+'44;' : ''}">
+  const isCours = (f.type||"").toLowerCase().trim() === "cours";
+
+  // Style de surbrillance pour la carte cours
+  const coursStyle = (highlightCours && isCours)
+    ? `border-color:${accent};box-shadow:0 0 0 1px ${accent}55;background:${accent}0F;`
+    : "";
+
+  // Style pour actif=1 ou actif=2
+  const actifStyle = (actif1 || actif2)
+    ? `border-color:${actif2 ? "#ef4444" : accent};box-shadow:0 0 0 1px ${actif2 ? "#ef444444" : accent+"44"};`
+    : "";
+
+  const finalStyle = coursStyle || actifStyle;
+
+  return `<a class="file-card${highlightCours && isCours ? " cours-hl" : ""}"
+    href="${nettoyerLien(f.lien)}" target="_blank" rel="noopener"
+    style="${finalStyle}">
     <div class="file-icon" style="background:${cfg.bg}">${cfg.icon}</div>
     <div class="file-body">
       <div class="file-title">${f.titre}</div>
@@ -411,39 +487,85 @@ function afficherContenu(notions, accent) {
     return;
   }
 
-  // Collecter tous les fichiers actif=2 pour le bloc éval en haut
+  // ── Bloc évaluation (actif=2) — toujours en haut, non-accordéon ──
   const evalFichiers = [];
   Object.values(notions).forEach(fichiers => {
     fichiers.forEach(f => { if (f.actif && f.actif.trim() === "2") evalFichiers.push(f); });
   });
 
-  // Bloc évaluation en haut si nécessaire
   if (evalFichiers.length > 0) {
     const bloc = document.createElement("div");
-    bloc.className = "notion-block fu";
+    bloc.className = "eval-block fu";
     bloc.innerHTML = `
-      <div class="notion-header">
-        <div class="notion-name" style="color:#ef4444;">⚠️ Évaluation en cours</div>
-        <div class="notion-pill" style="background:#ef4444"></div>
+      <div class="eval-header">
+        <div class="eval-name">⚠️ Évaluation en cours</div>
+        <div class="eval-pill"></div>
       </div>
-      ${evalFichiers.map(f => carteHTML(f, accent)).join("")}
+      ${evalFichiers.map(f => carteHTML(f, accent, false)).join("")}
     `;
     el.appendChild(bloc);
   }
 
-  // Reste du contenu par notion
-  Object.entries(notions).forEach(([notion, fichiers]) => {
+  // ── Notions en accordéon ──
+  // Trier les notions : celles avec actif=1 en premier
+  const notionsEntries = Object.entries(notions);
+  notionsEntries.sort(([, fichiersA], [, fichiersB]) => {
+    const aEnCours = fichiersA.some(f => f.actif && f.actif.trim() === "1") ? 0 : 1;
+    const bEnCours = fichiersB.some(f => f.actif && f.actif.trim() === "1") ? 0 : 1;
+    return aEnCours - bEnCours;
+  });
+
+  notionsEntries.forEach(([notion, fichiers], idx) => {
+    const enCours = fichiers.some(f => f.actif && f.actif.trim() === "1");
+
+    // Dans la notion ouverte : cours toujours en premier, puis le reste
+    const coursFichiers = fichiers.filter(f => (f.type||"").toLowerCase().trim() === "cours");
+    const autreFichiers = fichiers.filter(f => (f.type||"").toLowerCase().trim() !== "cours");
+    const fichiersOrdonnes = [...coursFichiers, ...autreFichiers];
+
     const block = document.createElement("div");
     block.className = "notion-block fu";
+
+    // Style header selon état en-cours
+    const headerEnCoursStyle = enCours
+      ? `background:${accent}18;border-color:${accent}55;`
+      : "";
+    const nameEnCoursStyle = enCours
+      ? `color:${accent};`
+      : "";
+
     block.innerHTML = `
-      <div class="notion-header">
-        <div class="notion-name">${notion}</div>
-        <div class="notion-pill" style="background:${accent}"></div>
+      <div class="notion-header fermee${enCours ? " en-cours" : ""}"
+           style="${headerEnCoursStyle}"
+           onclick="toggleNotion(this)">
+        <div class="notion-name" style="${nameEnCoursStyle}">${notion}</div>
+        <div class="notion-pill" style="background:${enCours ? accent : "rgba(255,255,255,0.3)"}"></div>
+        <span class="notion-chevron">▼</span>
       </div>
-      ${fichiers.map(f => carteHTML(f, accent)).join("")}
+      <div class="notion-cards">
+        <div class="notion-cards-inner">
+          ${fichiersOrdonnes.map(f => carteHTML(f, accent, true)).join("")}
+        </div>
+      </div>
     `;
     el.appendChild(block);
   });
+}
+
+// ── TOGGLE ACCORDÉON ────────────────────────────────────────
+function toggleNotion(header) {
+  const block = header.closest(".notion-block");
+  const isOpen = block.classList.contains("open");
+
+  if (isOpen) {
+    block.classList.remove("open");
+    header.classList.remove("ouverte");
+    header.classList.add("fermee");
+  } else {
+    block.classList.add("open");
+    header.classList.remove("fermee");
+    header.classList.add("ouverte");
+  }
 }
 
 // ── DÉCONNEXION ──────────────────────────────────────────────
