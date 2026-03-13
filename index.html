@@ -448,8 +448,8 @@ function carteHTML(f, accent, highlightCours) {
   const actif2 = f.actif && f.actif.trim() === "2";
   const isCours = (f.type||"").toLowerCase().trim() === "cours";
 
-  // Style de surbrillance pour la carte cours
-  const coursStyle = (highlightCours && isCours)
+  // Style de surbrillance pour la carte cours actif=1 uniquement
+  const coursStyle = (highlightCours && isCours && actif1)
     ? `border-color:${accent};box-shadow:0 0 0 1px ${accent}55;background:${accent}0F;`
     : "";
 
