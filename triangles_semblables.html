@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triangles semblables</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #4c1d95; border: 2px solid #c4b5fd; }
+  .tab2 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #6d28d9; color: white; border-color: #6d28d9; }
+  .tab2.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #6d28d9; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #4c1d95; }
+  .en2 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-v { color: #6d28d9; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; font-size: 0.95em; }
+  .fr .d { padding: 0 5px; font-size: 0.95em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #6d28d9; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Triangles semblables</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Définition &amp; propriétés</button>
+  <button class="tab tab2" onclick="setMode(1)">Calculer un côté inconnu</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+var mode=0, etape=0;
+var COLS=['#6d28d9','#b45309'];
+
+// ─── Helpers SVG ───────────────────────────────────────────
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc
+    +'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')
+    +'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h
+    +'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function L(x1,y1,x2,y2,col,w,dash){
+  w=w||2; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2
+    +'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+function Pt(x,y,col){ return '<circle cx="'+x+'" cy="'+y+'" r="4.5" fill="'+col+'" stroke="white" stroke-width="1.5"/>'; }
+
+// Arc d'angle en un sommet (indique l'angle)
+function arcAngle(px,py, ax,ay, bx,by, r, col, dash){
+  dash=dash||'';
+  var a1=Math.atan2(ay-py,ax-px);
+  var a2=Math.atan2(by-py,bx-px);
+  // normalise a2 > a1
+  if(a2<a1) a2+=2*Math.PI;
+  var x1=px+r*Math.cos(a1), y1=py+r*Math.sin(a1);
+  var x2=px+r*Math.cos(a2), y2=py+r*Math.sin(a2);
+  var large=(a2-a1>Math.PI)?1:0;
+  return '<path d="M'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+'"'
+    +' fill="none" stroke="'+col+'" stroke-width="2" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+
+// Double arc (2ème marque d'angle)
+function arcAngle2(px,py,ax,ay,bx,by,r,col){
+  return arcAngle(px,py,ax,ay,bx,by,r,col)
+        +arcAngle(px,py,ax,ay,bx,by,r+5,col);
+}
+
+// Marque triple arc (3ème)
+function arcAngle3(px,py,ax,ay,bx,by,r,col){
+  return arcAngle(px,py,ax,ay,bx,by,r,col)
+        +arcAngle(px,py,ax,ay,bx,by,r+5,col)
+        +arcAngle(px,py,ax,ay,bx,by,r+10,col);
+}
+
+// Tiret de milieu (marque les côtés homologues)
+function marqueCote(ax,ay,bx,by,n,col){
+  var mx=(ax+bx)/2, my=(ay+by)/2;
+  var dx=bx-ax, dy=by-ay, len=Math.sqrt(dx*dx+dy*dy);
+  var nx=-dy/len*6, ny=dx/len*6;
+  var h='';
+  for(var i=0;i<n;i++){
+    var off=(i-(n-1)/2)*5;
+    var ux=dx/len, uy=dy/len;
+    h+=L(mx+ux*off-nx,my+uy*off-ny, mx+ux*off+nx,my+uy*off+ny, col,2);
+  }
+  return h;
+}
+
+// Étiquette centrée sur un côté (milieu + décalage perpendiculaire)
+function lblCote(ax,ay,bx,by,lbl,col,offset){
+  offset=offset||14;
+  var mx=(ax+bx)/2, my=(ay+by)/2;
+  var dx=bx-ax, dy=by-ay, len=Math.sqrt(dx*dx+dy*dy);
+  var nx=-dy/len, ny=dx/len;
+  return T(mx+nx*offset, my+ny*offset, lbl, col, 11, 'middle', true);
+}
+
+// ─── Triangles de référence ─────────────────────────────
+// Grand triangle ABC (référence)
+// A en bas-gauche, B en bas-droite, C en haut
+// Angles : A=50°, B=70°, C=60°
+// On fixe AB = 120, on calcule les autres côtés par la loi des sinus
+var scale1 = 1.0;
+var AB1 = 120;
+// loi des sinus : a/sin(A) = b/sin(B) = c/sin(C)
+// a = BC, b = AC, c = AB
+var angA1=50*Math.PI/180, angB1=70*Math.PI/180, angC1=60*Math.PI/180;
+var k1 = AB1/Math.sin(angC1);
+var BC1 = k1*Math.sin(angA1); // côté opposé à A
+var AC1 = k1*Math.sin(angB1); // côté opposé à B
+
+// Coordonnées triangle 1
+var A1={x:60, y:240};
+var B1={x:A1.x+AB1, y:240};
+// C1 en haut : on place depuis A1 avec l'angle en A
+var C1={x:A1.x+AC1*Math.cos(angA1*0+0), y:0}; // simplifié ci-dessous
+
+// Calcul propre de C1
+// angle en A1 par rapport à horizontale : angA1 depuis A vers B direction
+// on place C1 à partir de A1 sur direction de l'angle A
+var dirAB={x:1,y:0}; // AB horizontal
+// Angle A = 50° → C est à 50° au-dessus de AB depuis A
+C1={x:A1.x+AC1*Math.cos(angA1), y:A1.y-AC1*Math.sin(angA1)};
+
+// Petit triangle A'B'C' semblable, rapport k=0.55
+var k=0.55;
+var A2={x:290, y:240};
+var B2={x:A2.x+AB1*k, y:240};
+var C2={x:A2.x+AC1*k*Math.cos(angA1), y:A2.y-AC1*k*Math.sin(angA1)};
+
+// Longueurs arrondies pour affichage
+var ab1=AB1, bc1=Math.round(BC1), ac1=Math.round(AC1);
+var ab2=Math.round(AB1*k), bc2=Math.round(BC1*k), ac2=Math.round(AC1*k);
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 0 — DÉFINITION & PROPRIÉTÉS
+// ════════════════════════════════════════════════════════════
+var e0=[
+
+  // Étape 1 : définition — angles égaux
+  {
+    explic:"Deux triangles sont semblables si leurs angles sont égaux deux à deux (même mesure). On dit que les sommets correspondants sont les sommets homologues. Ici ABC et A'B'C' sont semblables.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Triangles semblables — Définition','#4c1d95',13,'middle',true);
+      h+=T(240,34,'Deux triangles ont leurs angles égaux deux à deux','#374151',10);
+
+      // Triangle 1 — grand
+      h+=L(A1.x,A1.y,B1.x,B1.y,'#6d28d9',2.5);
+      h+=L(B1.x,B1.y,C1.x,C1.y,'#6d28d9',2.5);
+      h+=L(A1.x,A1.y,C1.x,C1.y,'#6d28d9',2.5);
+      h+=Pt(A1.x,A1.y,'#6d28d9'); h+=T(A1.x-12,A1.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B1.x,B1.y,'#6d28d9'); h+=T(B1.x+12,B1.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C1.x,C1.y,'#6d28d9'); h+=T(C1.x,C1.y-10,'C','#6d28d9',12,'middle',true);
+
+      // Triangle 2 — petit
+      h+=L(A2.x,A2.y,B2.x,B2.y,'#b45309',2.5);
+      h+=L(B2.x,B2.y,C2.x,C2.y,'#b45309',2.5);
+      h+=L(A2.x,A2.y,C2.x,C2.y,'#b45309',2.5);
+      h+=Pt(A2.x,A2.y,'#b45309'); h+=T(A2.x-12,A2.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B2.x,B2.y,'#b45309'); h+=T(B2.x+14,B2.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C2.x,C2.y,'#b45309'); h+=T(C2.x,C2.y-10,"C'",'#b45309',12,'middle',true);
+
+      // Marques d'angles : A=A' (1 arc rouge), B=B' (2 arcs bleus), C=C' (3 arcs verts)
+      // Angle A (50°) — 1 arc
+      h+=arcAngle(A1.x,A1.y, B1.x,B1.y, C1.x,C1.y, 20,'#dc2626');
+      h+=arcAngle(A2.x,A2.y, B2.x,B2.y, C2.x,C2.y, 20,'#dc2626');
+      h+=T(A1.x+26,A1.y-14,'50°','#dc2626',9,'middle');
+      h+=T(A2.x+16,A2.y-10,'50°','#dc2626',9,'middle');
+
+      // Angle B (70°) — 2 arcs
+      h+=arcAngle2(B1.x,B1.y, A1.x,A1.y, C1.x,C1.y, 20,'#1d4ed8');
+      h+=arcAngle2(B2.x,B2.y, A2.x,A2.y, C2.x,C2.y, 20,'#1d4ed8');
+      h+=T(B1.x-28,B1.y-18,'70°','#1d4ed8',9,'middle');
+      h+=T(B2.x-18,B2.y-14,'70°','#1d4ed8',9,'middle');
+
+      // Angle C (60°) — 3 arcs
+      h+=arcAngle3(C1.x,C1.y, A1.x,A1.y, B1.x,B1.y, 18,'#15803d');
+      h+=arcAngle3(C2.x,C2.y, A2.x,A2.y, B2.x,B2.y, 18,'#15803d');
+      h+=T(C1.x+24,C1.y+18,'60°','#15803d',9,'middle');
+      h+=T(C2.x+16,C2.y+14,'60°','#15803d',9,'middle');
+
+      // Bandeau définition
+      h+=R(10,260,460,25,6,'#ede9fe','#c4b5fd',2);
+      h+=T(240,276,'ABC et A\'B\'C\' sont semblables car leurs angles sont égaux deux à deux.','#4c1d95',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Définition : Triangles semblables</div>'
+      +'<div class="ligne">Deux triangles sont <span class="hl-v">semblables</span> si leurs angles sont égaux deux à deux.</div>'
+      +'<div class="ligne"><span class="hl-r">Â = Â\'</span> = 50°, <span class="hl-b">B̂ = B̂\'</span> = 70°, <span class="hl-g">Ĉ = Ĉ\'</span> = 60°</div>'
+      +'<div class="ligne">Les sommets <span class="hl-v">homologues</span> correspondent : A↔A\', B↔B\', C↔C\'</div>'
+  },
+
+  // Étape 2 : côtés homologues
+  {
+    explic:"Dans deux triangles semblables, les côtés situés en face des angles égaux sont appelés côtés homologues. Ils se correspondent : AB et A'B' (en face de C), BC et B'C' (en face de A), AC et A'C' (en face de B).",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Côtés homologues','#4c1d95',13,'middle',true);
+
+      // Triangle 1
+      h+=L(A1.x,A1.y,B1.x,B1.y,'#dc2626',2.5);   // AB — rouge
+      h+=L(B1.x,B1.y,C1.x,C1.y,'#1d4ed8',2.5);   // BC — bleu
+      h+=L(A1.x,A1.y,C1.x,C1.y,'#15803d',2.5);   // AC — vert
+      h+=Pt(A1.x,A1.y,'#6d28d9'); h+=T(A1.x-12,A1.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B1.x,B1.y,'#6d28d9'); h+=T(B1.x+12,B1.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C1.x,C1.y,'#6d28d9'); h+=T(C1.x,C1.y-10,'C','#6d28d9',12,'middle',true);
+
+      // Triangle 2
+      h+=L(A2.x,A2.y,B2.x,B2.y,'#dc2626',2.5);
+      h+=L(B2.x,B2.y,C2.x,C2.y,'#1d4ed8',2.5);
+      h+=L(A2.x,A2.y,C2.x,C2.y,'#15803d',2.5);
+      h+=Pt(A2.x,A2.y,'#b45309'); h+=T(A2.x-12,A2.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B2.x,B2.y,'#b45309'); h+=T(B2.x+14,B2.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C2.x,C2.y,'#b45309'); h+=T(C2.x,C2.y-10,"C'",'#b45309',12,'middle',true);
+
+      // Marques de côtés homologues
+      h+=marqueCote(A1.x,A1.y,B1.x,B1.y,1,'#dc2626');
+      h+=marqueCote(A2.x,A2.y,B2.x,B2.y,1,'#dc2626');
+      h+=marqueCote(B1.x,B1.y,C1.x,C1.y,2,'#1d4ed8');
+      h+=marqueCote(B2.x,B2.y,C2.x,C2.y,2,'#1d4ed8');
+      h+=marqueCote(A1.x,A1.y,C1.x,C1.y,3,'#15803d');
+      h+=marqueCote(A2.x,A2.y,C2.x,C2.y,3,'#15803d');
+
+      // Étiquettes côtés
+      h+=lblCote(A1.x,A1.y,B1.x,B1.y,'AB','#dc2626',-12);
+      h+=lblCote(A2.x,A2.y,B2.x,B2.y,"A'B'",'#dc2626',-12);
+      h+=lblCote(B1.x,B1.y,C1.x,C1.y,'BC','#1d4ed8',12);
+      h+=lblCote(B2.x,B2.y,C2.x,C2.y,"B'C'",'#1d4ed8',10);
+      h+=lblCote(A1.x,A1.y,C1.x,C1.y,'AC','#15803d',-12);
+      h+=lblCote(A2.x,A2.y,C2.x,C2.y,"A'C'",'#15803d',-10);
+
+      // Bandeau
+      h+=R(10,262,460,24,6,'#ede9fe','#c4b5fd',2);
+      h+=T(240,278,'Même couleur = côtés homologues (ils se font face aux angles égaux).','#4c1d95',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Côtés homologues</div>'
+      +'<div class="ligne">Les côtés <span class="hl-v">homologues</span> sont en face des angles égaux :</div>'
+      +'<div class="ligne"><span class="hl-r">AB</span> et <span class="hl-r">A\'B\'</span> (en face de Ĉ = 60°)</div>'
+      +'<div class="ligne"><span class="hl-b">BC</span> et <span class="hl-b">B\'C\'</span> (en face de Â = 50°)</div>'
+      +'<div class="ligne"><span class="hl-g">AC</span> et <span class="hl-g">A\'C\'</span> (en face de B̂ = 70°)</div>'
+  },
+
+  // Étape 3 : proportionnalité des côtés — rapport de similitude
+  {
+    explic:"Dans deux triangles semblables, les côtés homologues sont proportionnels : leur rapport est toujours le même. Ce rapport constant s'appelle le rapport de similitude k.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Rapport de similitude','#4c1d95',13,'middle',true);
+
+      // Triangles avec mesures
+      h+=L(A1.x,A1.y,B1.x,B1.y,'#dc2626',2.5);
+      h+=L(B1.x,B1.y,C1.x,C1.y,'#1d4ed8',2.5);
+      h+=L(A1.x,A1.y,C1.x,C1.y,'#15803d',2.5);
+      h+=Pt(A1.x,A1.y,'#6d28d9'); h+=T(A1.x-12,A1.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B1.x,B1.y,'#6d28d9'); h+=T(B1.x+12,B1.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C1.x,C1.y,'#6d28d9'); h+=T(C1.x,C1.y-10,'C','#6d28d9',12,'middle',true);
+
+      h+=L(A2.x,A2.y,B2.x,B2.y,'#dc2626',2.5);
+      h+=L(B2.x,B2.y,C2.x,C2.y,'#1d4ed8',2.5);
+      h+=L(A2.x,A2.y,C2.x,C2.y,'#15803d',2.5);
+      h+=Pt(A2.x,A2.y,'#b45309'); h+=T(A2.x-12,A2.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B2.x,B2.y,'#b45309'); h+=T(B2.x+14,B2.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C2.x,C2.y,'#b45309'); h+=T(C2.x,C2.y-10,"C'",'#b45309',12,'middle',true);
+
+      // Mesures côtés
+      h+=lblCote(A1.x,A1.y,B1.x,B1.y,ab1+' cm','#dc2626',-13);
+      h+=lblCote(B1.x,B1.y,C1.x,C1.y,bc1+' cm','#1d4ed8',13);
+      h+=lblCote(A1.x,A1.y,C1.x,C1.y,ac1+' cm','#15803d',-13);
+      h+=lblCote(A2.x,A2.y,B2.x,B2.y,ab2+' cm','#dc2626',-11);
+      h+=lblCote(B2.x,B2.y,C2.x,C2.y,bc2+' cm','#1d4ed8',11);
+      h+=lblCote(A2.x,A2.y,C2.x,C2.y,ac2+' cm','#15803d',-11);
+
+      // Bandeau rapport
+      h+=R(10,228,460,58,10,'#4c1d95');
+      h+=T(240,246,'Rapport de similitude :','white',11,'middle',true);
+      // Fractions
+      var fx=75;
+      h+=T(fx,258,"A'B'",'#f87171',11,'middle',true);
+      h+=L(fx-20,262,fx+20,262,'white',1);
+      h+=T(fx,274,'AB','#f87171',11,'middle',true);
+      h+=T(fx+30,265,'=','white',12,'middle');
+      h+=T(fx+55,258,ab2,'#fca5a5',12,'middle',true);
+      h+=L(fx+38,262,fx+72,262,'white',1);
+      h+=T(fx+55,274,ab1,'#fca5a5',12,'middle',true);
+
+      var fx2=185;
+      h+=T(fx2,258,"B'C'",'#93c5fd',11,'middle',true);
+      h+=L(fx2-20,262,fx2+20,262,'white',1);
+      h+=T(fx2,274,'BC','#93c5fd',11,'middle',true);
+      h+=T(fx2+30,265,'=','white',12,'middle');
+      h+=T(fx2+55,258,bc2,'#bfdbfe',12,'middle',true);
+      h+=L(fx2+38,262,fx2+72,262,'white',1);
+      h+=T(fx2+55,274,bc1,'#bfdbfe',12,'middle',true);
+
+      var fx3=305;
+      h+=T(fx3,258,"A'C'",'#86efac',11,'middle',true);
+      h+=L(fx3-20,262,fx3+20,262,'white',1);
+      h+=T(fx3,274,'AC','#86efac',11,'middle',true);
+      h+=T(fx3+30,265,'=','white',12,'middle');
+      h+=T(fx3+55,258,ac2,'#bbf7d0',12,'middle',true);
+      h+=L(fx3+38,262,fx3+72,262,'white',1);
+      h+=T(fx3+55,274,ac1,'#bbf7d0',12,'middle',true);
+
+      h+=T(410,265,'= k = 0,55','#fde68a',12,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Propriété : côtés proportionnels</div>'
+      +'<div class="ligne">Dans deux triangles semblables, les côtés homologues sont <span class="hl-v">proportionnels</span> :</div>'
+      +'<div class="ligne"><span class="fr hl-r"><span class="n">A\'B\'</span><span class="d">AB</span></span> = <span class="fr hl-b"><span class="n">B\'C\'</span><span class="d">BC</span></span> = <span class="fr hl-g"><span class="n">A\'C\'</span><span class="d">AC</span></span> = <span class="hl-v">k</span></div>'
+      +'<div class="ligne">Ce rapport constant <span class="hl-v">k</span> s\'appelle le <span class="hl-v">rapport de similitude</span>.</div>'
+      +'<div class="conclusion-ok">k &lt; 1 : le 2ème triangle est une réduction · k &gt; 1 : c\'est un agrandissement</div>'
+  },
+
+  // Étape 4 : critères de similitude
+  {
+    explic:"Il suffit que deux angles soient égaux dans deux triangles pour qu'ils soient semblables (le troisième angle est alors automatiquement égal, car la somme des angles d'un triangle vaut 180°).",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Critère de similitude (AA)','#4c1d95',13,'middle',true);
+
+      // Triangle 1
+      h+=L(A1.x,A1.y,B1.x,B1.y,'#6d28d9',2.5);
+      h+=L(B1.x,B1.y,C1.x,C1.y,'#6d28d9',2.5);
+      h+=L(A1.x,A1.y,C1.x,C1.y,'#6d28d9',2.5);
+      h+=Pt(A1.x,A1.y,'#6d28d9'); h+=T(A1.x-12,A1.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B1.x,B1.y,'#6d28d9'); h+=T(B1.x+12,B1.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C1.x,C1.y,'#6d28d9'); h+=T(C1.x,C1.y-10,'C','#6d28d9',12,'middle',true);
+      // Angle A et B marqués (2 angles connus suffisent)
+      h+=arcAngle(A1.x,A1.y,B1.x,B1.y,C1.x,C1.y,22,'#dc2626');
+      h+=T(A1.x+28,A1.y-12,'50°','#dc2626',9,'middle',true);
+      h+=arcAngle2(B1.x,B1.y,A1.x,A1.y,C1.x,C1.y,22,'#1d4ed8');
+      h+=T(B1.x-30,B1.y-18,'70°','#1d4ed8',9,'middle',true);
+      // Angle C déduit (grisé)
+      h+=arcAngle3(C1.x,C1.y,A1.x,A1.y,B1.x,B1.y,18,'#94a3b8');
+      h+=T(C1.x+28,C1.y+18,'60°','#94a3b8',9,'middle');
+      h+=T(C1.x+52,C1.y+18,'(déduit)','#94a3b8',8,'middle');
+
+      // Triangle 2
+      h+=L(A2.x,A2.y,B2.x,B2.y,'#b45309',2.5);
+      h+=L(B2.x,B2.y,C2.x,C2.y,'#b45309',2.5);
+      h+=L(A2.x,A2.y,C2.x,C2.y,'#b45309',2.5);
+      h+=Pt(A2.x,A2.y,'#b45309'); h+=T(A2.x-12,A2.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B2.x,B2.y,'#b45309'); h+=T(B2.x+14,B2.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C2.x,C2.y,'#b45309'); h+=T(C2.x,C2.y-10,"C'",'#b45309',12,'middle',true);
+      h+=arcAngle(A2.x,A2.y,B2.x,B2.y,C2.x,C2.y,18,'#dc2626');
+      h+=T(A2.x+22,A2.y-10,'50°','#dc2626',9,'middle',true);
+      h+=arcAngle2(B2.x,B2.y,A2.x,A2.y,C2.x,C2.y,18,'#1d4ed8');
+      h+=T(B2.x-22,B2.y-14,'70°','#1d4ed8',9,'middle',true);
+
+      // Encadré critère
+      h+=R(10,228,460,58,10,'#4c1d95');
+      h+=T(240,246,'Critère AA (deux angles égaux)','white',11,'middle',true);
+      h+=T(240,262,'Si deux angles d\'un triangle sont égaux à deux angles d\'un autre,','white',9,'middle');
+      h+=T(240,276,'alors les deux triangles sont semblables.','#fde68a',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Critère de similitude AA</div>'
+      +'<div class="ligne">Il suffit de vérifier que <span class="hl-v">deux angles</span> sont égaux.</div>'
+      +'<div class="ligne">Le 3ème angle est automatiquement égal car :</div>'
+      +'<div class="ligne" style="padding-left:10px;">50° + 70° + <b>?</b> = 180°  →  <b>?</b> = 60°</div>'
+      +'<div class="conclusion-ok">Si Â = Â\' et B̂ = B̂\' alors ABC et A\'B\'C\' sont semblables.</div>'
+      +'<div class="attention">⚠️ Attention à bien faire correspondre les bons sommets (angles égaux ↔ sommets homologues).</div>'
+  }
+];
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 1 — CALCULER UN CÔTÉ INCONNU
+// ════════════════════════════════════════════════════════════
+
+// Triangles avec valeurs numériques concrètes pour les calculs
+// Grand : A3B3=8, B3C3=6, A3C3=7  (angles 47°, 62°, 71° environ)
+// Petit : A4B4=?, B4C4=?, A4C4=?, rapport k=5/8=0.625 (A4B4=5)
+// On connaît : A4B4=5, on cherche B4C4 et A4C4
+
+var A3={x:55, y:240}, B3={x:185, y:240};
+// Angle en A3 ≈ 47° pour avoir C3 raisonnable
+var angA3=47*Math.PI/180;
+var ac3_len=90; // AC3
+var C3={x:A3.x+ac3_len*Math.cos(angA3), y:A3.y-ac3_len*Math.sin(angA3)};
+var ab3=130, bc3=Math.round(Math.sqrt(Math.pow(B3.x-C3.x,2)+Math.pow(B3.y-C3.y,2)));
+
+var kk=5/8;
+var A4={x:280, y:240};
+var B4={x:A4.x+ab3*kk, y:240};
+var C4={x:A4.x+ac3_len*kk*Math.cos(angA3), y:A4.y-ac3_len*kk*Math.sin(angA3)};
+var ab4=Math.round(ab3*kk); // = 81 (environ)
+var bc4=Math.round(bc3*kk);
+var ac4=Math.round(ac3_len*kk);
+
+var e1=[
+
+  // Étape 1 : mise en place — identifier les triangles semblables
+  {
+    explic:"Avant de calculer, on identifie les deux triangles semblables et on repère les sommets homologues (angles égaux). Ici ABC et A'B'C' sont semblables. On connaît AB = 8 cm, BC = 6 cm, AC = 7 cm et A'B' = 5 cm.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Identification des triangles','#78350f',13,'middle',true);
+
+      // Grand triangle
+      h+=L(A3.x,A3.y,B3.x,B3.y,'#6d28d9',2.5);
+      h+=L(B3.x,B3.y,C3.x,C3.y,'#6d28d9',2.5);
+      h+=L(A3.x,A3.y,C3.x,C3.y,'#6d28d9',2.5);
+      h+=Pt(A3.x,A3.y,'#6d28d9'); h+=T(A3.x-12,A3.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B3.x,B3.y,'#6d28d9'); h+=T(B3.x+12,B3.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C3.x,C3.y,'#6d28d9'); h+=T(C3.x,C3.y-10,'C','#6d28d9',12,'middle',true);
+      // Angles
+      h+=arcAngle(A3.x,A3.y,B3.x,B3.y,C3.x,C3.y,22,'#dc2626');
+      h+=arcAngle2(B3.x,B3.y,A3.x,A3.y,C3.x,C3.y,22,'#1d4ed8');
+      // Mesures
+      h+=lblCote(A3.x,A3.y,B3.x,B3.y,'8 cm','#dc2626',-12);
+      h+=lblCote(B3.x,B3.y,C3.x,C3.y,'6 cm','#1d4ed8',12);
+      h+=lblCote(A3.x,A3.y,C3.x,C3.y,'7 cm','#15803d',-12);
+
+      // Petit triangle
+      h+=L(A4.x,A4.y,B4.x,B4.y,'#b45309',2.5);
+      h+=L(B4.x,B4.y,C4.x,C4.y,'#b45309',2.5);
+      h+=L(A4.x,A4.y,C4.x,C4.y,'#b45309',2.5);
+      h+=Pt(A4.x,A4.y,'#b45309'); h+=T(A4.x-12,A4.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B4.x,B4.y,'#b45309'); h+=T(B4.x+14,B4.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C4.x,C4.y,'#b45309'); h+=T(C4.x,C4.y-10,"C'",'#b45309',12,'middle',true);
+      h+=arcAngle(A4.x,A4.y,B4.x,B4.y,C4.x,C4.y,18,'#dc2626');
+      h+=arcAngle2(B4.x,B4.y,A4.x,A4.y,C4.x,C4.y,18,'#1d4ed8');
+      // Mesure connue
+      h+=lblCote(A4.x,A4.y,B4.x,B4.y,'5 cm','#dc2626',-11);
+      h+=lblCote(B4.x,B4.y,C4.x,C4.y,'?','#1d4ed8',11);
+      h+=lblCote(A4.x,A4.y,C4.x,C4.y,'?','#15803d',-11);
+
+      h+=R(10,262,460,24,6,'#fef9c3','#fcd34d',2);
+      h+=T(240,278,'On connaît AB=8, BC=6, AC=7, A\'B\'=5. On cherche B\'C\' et A\'C\'.','#78350f',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Données du problème</div>'
+      +'<div class="ligne">ABC et A\'B\'C\' sont semblables (Â=Â\', B̂=B̂\').</div>'
+      +'<div class="ligne">Connus : <span class="hl-r">AB = 8 cm</span>, <span class="hl-b">BC = 6 cm</span>, <span class="hl-g">AC = 7 cm</span></div>'
+      +'<div class="ligne">Connu : <span class="hl-r">A\'B\' = 5 cm</span></div>'
+      +'<div class="ligne">Inconnus : <span class="hl-b">B\'C\'</span> = ? et <span class="hl-g">A\'C\'</span> = ?</div>'
+  },
+
+  // Étape 2 : trouver le rapport de similitude k
+  {
+    explic:"On calcule d'abord le rapport de similitude k en divisant le côté connu du petit triangle par le côté homologue connu du grand. Ici k = A'B' ÷ AB = 5 ÷ 8.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Étape 1 : calculer le rapport k','#78350f',13,'middle',true);
+
+      // Grand triangle
+      h+=L(A3.x,A3.y,B3.x,B3.y,'#dc2626',3);
+      h+=L(B3.x,B3.y,C3.x,C3.y,'#94a3b8',2);
+      h+=L(A3.x,A3.y,C3.x,C3.y,'#94a3b8',2);
+      h+=Pt(A3.x,A3.y,'#6d28d9'); h+=T(A3.x-12,A3.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B3.x,B3.y,'#6d28d9'); h+=T(B3.x+12,B3.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C3.x,C3.y,'#6d28d9'); h+=T(C3.x,C3.y-10,'C','#6d28d9',12,'middle',true);
+      h+=lblCote(A3.x,A3.y,B3.x,B3.y,'AB = 8 cm','#dc2626',-13);
+      h+=marqueCote(A3.x,A3.y,B3.x,B3.y,1,'#dc2626');
+
+      // Petit triangle
+      h+=L(A4.x,A4.y,B4.x,B4.y,'#dc2626',3);
+      h+=L(B4.x,B4.y,C4.x,C4.y,'#94a3b8',2);
+      h+=L(A4.x,A4.y,C4.x,C4.y,'#94a3b8',2);
+      h+=Pt(A4.x,A4.y,'#b45309'); h+=T(A4.x-12,A4.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B4.x,B4.y,'#b45309'); h+=T(B4.x+14,B4.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C4.x,C4.y,'#b45309'); h+=T(C4.x,C4.y-10,"C'",'#b45309',12,'middle',true);
+      h+=lblCote(A4.x,A4.y,B4.x,B4.y,"A'B' = 5 cm",'#dc2626',-13);
+      h+=marqueCote(A4.x,A4.y,B4.x,B4.y,1,'#dc2626');
+
+      // Calcul k
+      h+=R(30,188,420,90,12,'#78350f');
+      h+=T(240,208,'Rapport de similitude','white',11,'middle',true);
+      h+=T(130,224,"A'B'",'#fca5a5',12,'middle',true);
+      h+=L(100,228,160,228,'white',1.5);
+      h+=T(130,242,'AB','#fca5a5',12,'middle',true);
+      h+=T(170,232,'=','white',13,'middle');
+      h+=T(215,224,'5','white',16,'middle',true);
+      h+=L(194,228,236,228,'white',1.5);
+      h+=T(215,244,'8','white',16,'middle',true);
+      h+=T(255,232,'=','white',13,'middle');
+      h+=T(315,232,'0,625','#fde68a',16,'middle',true);
+      h+=T(370,232,'= k','white',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Étape 1 : calculer k</div>'
+      +'<div class="ligne">k = <span class="fr hl-r"><span class="n">A\'B\'</span><span class="d">AB</span></span> = <span class="fr hl-r"><span class="n">5</span><span class="d">8</span></span> = <span class="hl-v">0,625</span></div>'
+      +'<div class="ligne">On utilise la paire de côtés homologues <b>tous les deux connus</b>.</div>'
+      +'<div class="attention">⚠️ Toujours diviser le côté du MÊME triangle (petit ÷ grand, ou grand ÷ petit) pour tous les rapports.</div>'
+  },
+
+  // Étape 3 : calculer B'C'
+  {
+    explic:"Maintenant on applique la proportionnalité : B'C' / BC = k. On multiplie le côté du grand triangle par k pour trouver le côté homologue du petit triangle.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,"Étape 2 : calculer B'C'",'#78350f',13,'middle',true);
+
+      h+=L(A3.x,A3.y,B3.x,B3.y,'#94a3b8',2);
+      h+=L(B3.x,B3.y,C3.x,C3.y,'#1d4ed8',3);
+      h+=L(A3.x,A3.y,C3.x,C3.y,'#94a3b8',2);
+      h+=Pt(A3.x,A3.y,'#6d28d9'); h+=T(A3.x-12,A3.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B3.x,B3.y,'#6d28d9'); h+=T(B3.x+12,B3.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C3.x,C3.y,'#6d28d9'); h+=T(C3.x,C3.y-10,'C','#6d28d9',12,'middle',true);
+      h+=lblCote(B3.x,B3.y,C3.x,C3.y,'BC = 6 cm','#1d4ed8',13);
+      h+=marqueCote(B3.x,B3.y,C3.x,C3.y,2,'#1d4ed8');
+
+      h+=L(A4.x,A4.y,B4.x,B4.y,'#94a3b8',2);
+      h+=L(B4.x,B4.y,C4.x,C4.y,'#1d4ed8',3);
+      h+=L(A4.x,A4.y,C4.x,C4.y,'#94a3b8',2);
+      h+=Pt(A4.x,A4.y,'#b45309'); h+=T(A4.x-12,A4.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B4.x,B4.y,'#b45309'); h+=T(B4.x+14,B4.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C4.x,C4.y,'#b45309'); h+=T(C4.x,C4.y-10,"C'",'#b45309',12,'middle',true);
+      h+=lblCote(B4.x,B4.y,C4.x,C4.y,"B'C' = ?",'#1d4ed8',11);
+      h+=marqueCote(B4.x,B4.y,C4.x,C4.y,2,'#1d4ed8');
+
+      // Calcul
+      h+=R(30,192,420,88,12,'#1e3a8a');
+      h+=T(240,211,"B'C' = BC × k","white",11,'middle',true);
+      h+=T(240,230,"B'C' = 6 × 0,625","white",13,'middle');
+      h+=T(240,252,"B'C' = 3,75 cm","#93c5fd",15,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Étape 2 : calculer B\'C\'</div>'
+      +'<div class="ligne"><span class="fr hl-b"><span class="n">B\'C\'</span><span class="d">BC</span></span> = k = 0,625</div>'
+      +'<div class="ligne">B\'C\' = BC × k = 6 × 0,625</div>'
+      +'<div class="conclusion-ok">B\'C\' = <span class="hl-b">3,75 cm</span></div>'
+  },
+
+  // Étape 4 : calculer A'C' + vérification
+  {
+    explic:"On calcule A'C' de la même façon. Puis on vérifie que les trois rapports sont bien tous égaux à k = 0,625.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,"Étape 3 : calculer A'C' et vérifier",'#78350f',13,'middle',true);
+
+      h+=L(A3.x,A3.y,B3.x,B3.y,'#94a3b8',2);
+      h+=L(B3.x,B3.y,C3.x,C3.y,'#94a3b8',2);
+      h+=L(A3.x,A3.y,C3.x,C3.y,'#15803d',3);
+      h+=Pt(A3.x,A3.y,'#6d28d9'); h+=T(A3.x-12,A3.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B3.x,B3.y,'#6d28d9'); h+=T(B3.x+12,B3.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C3.x,C3.y,'#6d28d9'); h+=T(C3.x,C3.y-10,'C','#6d28d9',12,'middle',true);
+      h+=lblCote(A3.x,A3.y,C3.x,C3.y,'AC = 7 cm','#15803d',-13);
+      h+=marqueCote(A3.x,A3.y,C3.x,C3.y,3,'#15803d');
+
+      h+=L(A4.x,A4.y,B4.x,B4.y,'#94a3b8',2);
+      h+=L(B4.x,B4.y,C4.x,C4.y,'#94a3b8',2);
+      h+=L(A4.x,A4.y,C4.x,C4.y,'#15803d',3);
+      h+=Pt(A4.x,A4.y,'#b45309'); h+=T(A4.x-12,A4.y+4,"A'",'#b45309',12,'middle',true);
+      h+=Pt(B4.x,B4.y,'#b45309'); h+=T(B4.x+14,B4.y+4,"B'",'#b45309',12,'middle',true);
+      h+=Pt(C4.x,C4.y,'#b45309'); h+=T(C4.x,C4.y-10,"C'",'#b45309',12,'middle',true);
+      h+=lblCote(A4.x,A4.y,C4.x,C4.y,"A'C' = ?",'#15803d',-11);
+      h+=marqueCote(A4.x,A4.y,C4.x,C4.y,3,'#15803d');
+
+      // Calcul + vérification
+      h+=R(30,188,420,94,12,'#14532d');
+      h+=T(240,207,"A'C' = AC × k = 7 × 0,625 = 4,375 cm",'#bbf7d0',11,'middle',true);
+      h+=T(240,226,'Vérification :','white',10,'middle',true);
+      // 3 fractions
+      h+=T(90,244,'5/8','#fca5a5',11,'middle',true); h+=T(90,258,'= 0,625','#fca5a5',10,'middle');
+      h+=T(200,244,'3,75/6','#93c5fd',11,'middle',true); h+=T(200,258,'= 0,625','#93c5fd',10,'middle');
+      h+=T(315,244,'4,375/7','#86efac',11,'middle',true); h+=T(315,258,'= 0,625','#86efac',10,'middle');
+      h+=T(410,250,'✓','#fde68a',20,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Étape 3 : calculer A\'C\'</div>'
+      +'<div class="ligne">A\'C\' = AC × k = 7 × 0,625 = <span class="hl-g">4,375 cm</span></div>'
+      +'<div class="conclusion-ok">Vérification : <span class="fr hl-r"><span class="n">5</span><span class="d">8</span></span> = <span class="fr hl-b"><span class="n">3,75</span><span class="d">6</span></span> = <span class="fr hl-g"><span class="n">4,375</span><span class="d">7</span></span> = 0,625 ✓</div>'
+      +'<div class="attention">💡 Si on cherchait un côté du GRAND triangle, on diviserait par k au lieu de multiplier.</div>'
+  }
+];
+
+// ─── Moteur ────────────────────────────────────────────────
+var ETAPES=[e0,e1];
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach(function(tab,i){ tab.classList.toggle('active',i===m); });
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){ etape--; render(); } }
+function next(){ if(etape<ETAPES[mode].length-1){ etape++; render(); } }
+function render(){
+  var e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length;
+}
+render();
+</script>
+</body>
+</html>
