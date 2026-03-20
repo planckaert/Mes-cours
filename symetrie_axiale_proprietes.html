@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Symétrie axiale – propriétés</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0fdf4; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #14532d; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab2 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab1.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab2.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #15803d; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dcfce7; color: #14532d; }
+  .en2 { background: #dbeafe; color: #1e3a8a; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; }
+  .fr .d { padding: 0 5px; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #15803d; color: white; }
+</style>
+</head>
+<body>
+<h1>🪞 Symétrie axiale — Propriétés</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Symétrie d'un point</button>
+  <button class="tab tab2" onclick="setMode(1)">Symétrie d'une figure</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+var mode=0, etape=0;
+var COLS=['#15803d','#1d4ed8'];
+
+// ─── Helpers SVG ───────────────────────────────────────────
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc
+    +'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')
+    +'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h
+    +'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function L(x1,y1,x2,y2,col,w,dash){
+  w=w||1.5; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2
+    +'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+function Pt(x,y,col,r){ r=r||5; return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+col+'" stroke="white" stroke-width="1.5"/>'; }
+
+// Petit carré d'angle droit
+function angleDroit(px,py, dx,dy, sz){
+  sz=sz||8;
+  // perpendiculaire : (dx,dy) direction de la droite, on place le carré côté (-dy,dx)
+  var len=Math.sqrt(dx*dx+dy*dy);
+  var ux=dx/len, uy=dy/len;
+  var vx=-uy, vy=ux; // perpendiculaire
+  // 4 coins du carré
+  var p1x=px+ux*sz, p1y=py+uy*sz;
+  var p2x=p1x+vx*sz, p2y=p1y+vy*sz;
+  var p3x=px+vx*sz, p3y=py+vy*sz;
+  return '<polyline points="'+p1x.toFixed(1)+','+p1y.toFixed(1)+' '
+    +p2x.toFixed(1)+','+p2y.toFixed(1)+' '
+    +p3x.toFixed(1)+','+p3y.toFixed(1)+'"'
+    +' fill="none" stroke="#374151" stroke-width="1.5" stroke-linejoin="miter"/>';
+}
+
+// Axe de symétrie vertical en x=ax, de y1 à y2
+function axe(ax,y1,y2,col){
+  col=col||'#15803d';
+  return L(ax,y1,ax,y2,col,2,'8,5')
+    +T(ax,y1-8,'(d)',col,11,'middle',true);
+}
+
+// Axe oblique
+function axeOblique(x1,y1,x2,y2,col,lbl){
+  col=col||'#15803d'; lbl=lbl||'(d)';
+  var dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+  var ex=x2+dx/len*12, ey=y2+dy/len*12;
+  return L(x1,y1,x2,y2,col,2,'8,5')
+    +T(ex,ey,lbl,col,11,'middle',true);
+}
+
+// Symétrique d'un point par rapport à un axe vertical ax
+function symetriqueV(px,py,ax){ return {x:2*ax-px, y:py}; }
+
+// Symétrique d'un point par rapport à un axe oblique (passant par (ox,oy) direction (dx,dy))
+function symetriqueObl(px,py,ox,oy,dx,dy){
+  var len2=dx*dx+dy*dy;
+  // projection de (P-O) sur la direction
+  var t=((px-ox)*dx+(py-oy)*dy)/len2;
+  var fx=ox+t*dx, fy=oy+t*dy; // pied de perpendiculaire
+  return {x:2*fx-px, y:2*fy-py};
+}
+
+// Pied de perpendiculaire de P sur axe vertical ax
+function piedV(px,py,ax){ return {x:ax, y:py}; }
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 0 — SYMÉTRIE D'UN POINT
+// ════════════════════════════════════════════════════════════
+
+// Axe vertical en x=240
+var AX=240;
+
+var e0=[
+
+  // Étape 1 : définition — M' est le symétrique de M
+  {
+    explic:"Le symétrique d'un point M par rapport à un axe (d) est le point M' tel que l'axe (d) est la médiatrice du segment [MM']. M et M' sont à égale distance de l'axe.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Symétrique d\'un point','#14532d',13,'middle',true);
+      h+=axe(AX,28,275,'#15803d');
+
+      var M={x:100, y:150};
+      var Mp=symetriqueV(M.x,M.y,AX);
+      var I=piedV(M.x,M.y,AX);
+
+      // Segment [MM']
+      h+=L(M.x,M.y,Mp.x,Mp.y,'#dc2626',1.5,'5,4');
+
+      // Pied de perp + carré angle droit
+      h+=Pt(I.x,I.y,'#374151',4);
+      h+=angleDroit(I.x,I.y, 1,0, 9); // direction axe = (0,1), perp = (1,0)
+
+      // Distance d et d' (égales)
+      h+=L(M.x,M.y-6,I.x,I.y-6,'#b45309',1.5);
+      h+=T((M.x+I.x)/2,M.y-14,'d','#b45309',11,'middle',true);
+      h+=L(I.x,Mp.y-6,Mp.x,Mp.y-6,'#b45309',1.5);
+      h+=T((I.x+Mp.x)/2,Mp.y-14,"d'",'#b45309',11,'middle',true);
+
+      // Points
+      h+=Pt(M.x,M.y,'#dc2626'); h+=T(M.x-14,M.y+4,'M','#dc2626',13,'middle',true);
+      h+=Pt(Mp.x,Mp.y,'#1d4ed8'); h+=T(Mp.x+14,Mp.y+4,"M'",'#1d4ed8',13,'middle',true);
+
+      // Définition encadrée
+      h+=R(20,245,440,38,8,'#14532d');
+      h+=T(240,259,'M\' est le symétrique de M par rapport à (d)','white',11,'middle',true);
+      h+=T(240,273,'⟺  (d) est la médiatrice de [MM\']','#86efac',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Définition : symétrique d\'un point</div>'
+      +'<div class="ligne">M\' est le <span class="hl-g">symétrique</span> de M par rapport à (d) si :</div>'
+      +'<div class="ligne">• (d) est <span class="hl-g">perpendiculaire</span> à [MM\']</div>'
+      +'<div class="ligne">• (d) passe par le <span class="hl-g">milieu</span> de [MM\']</div>'
+      +'<div class="conclusion-ok">(d) est la médiatrice de [MM\'] ⟺ d = d\'</div>'
+  },
+
+  // Étape 2 : propriété — conservation des distances
+  {
+    explic:"Propriété fondamentale : la symétrie axiale conserve les distances. Si M' est le symétrique de M et N' celui de N, alors M'N' = MN. Les longueurs sont préservées.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Propriété : conservation des distances','#14532d',13,'middle',true);
+      h+=axe(AX,28,275,'#15803d');
+
+      var M={x:95,y:110}, N={x:130,y:210};
+      var Mp=symetriqueV(M.x,M.y,AX);
+      var Np=symetriqueV(N.x,N.y,AX);
+
+      // Segments MN et M'N'
+      h+=L(M.x,M.y,N.x,N.y,'#dc2626',2.5);
+      h+=L(Mp.x,Mp.y,Np.x,Np.y,'#1d4ed8',2.5);
+
+      // Liaisons pointillées M-M' et N-N'
+      h+=L(M.x,M.y,Mp.x,Mp.y,'#94a3b8',1,'5,4');
+      h+=L(N.x,N.y,Np.x,Np.y,'#94a3b8',1,'5,4');
+
+      // Points
+      h+=Pt(M.x,M.y,'#dc2626'); h+=T(M.x-12,M.y,'M','#dc2626',13,'middle',true);
+      h+=Pt(N.x,N.y,'#dc2626'); h+=T(N.x-12,N.y+4,'N','#dc2626',13,'middle',true);
+      h+=Pt(Mp.x,Mp.y,'#1d4ed8'); h+=T(Mp.x+14,Mp.y,"M'",'#1d4ed8',13,'middle',true);
+      h+=Pt(Np.x,Np.y,'#1d4ed8'); h+=T(Np.x+14,Np.y+4,"N'",'#1d4ed8',13,'middle',true);
+
+      // Marques d'égalité sur les segments
+      var mx=(M.x+N.x)/2, my=(M.y+N.y)/2;
+      var mx2=(Mp.x+Np.x)/2, my2=(Mp.y+Np.y)/2;
+      var dx=N.x-M.x, dy=N.y-M.y, len=Math.sqrt(dx*dx+dy*dy);
+      var nx=-dy/len*7, ny=dx/len*7;
+      h+=L(mx-nx,my-ny,mx+nx,my+ny,'#dc2626',2.5);
+      h+=L(mx2-nx,my2-ny,mx2+nx,my2+ny,'#1d4ed8',2.5);
+
+      // Label MN = M'N'
+      h+=T(mx-20,my-10,'MN','#dc2626',11,'middle',true);
+      h+=T(mx2+24,my2-10,"M'N'",'#1d4ed8',11,'middle',true);
+
+      // Bandeau propriété
+      h+=R(20,244,440,40,8,'#14532d');
+      h+=T(240,259,'MN = M\'N\'','#fde68a',14,'middle',true);
+      h+=T(240,275,'La symétrie axiale conserve les distances.','white',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Propriété : conservation des distances</div>'
+      +'<div class="ligne">Si M\' = sym(M) et N\' = sym(N) par rapport à (d), alors :</div>'
+      +'<div class="ligne"><span class="hl-r">MN</span> = <span class="hl-b">M\'N\'</span></div>'
+      +'<div class="conclusion-ok">La symétrie axiale <b>conserve les distances</b>.</div>'
+      +'<div class="attention">💡 Conséquence : les figures symétriques ont la même taille.</div>'
+  },
+
+  // Étape 3 : propriété — l'axe est la médiatrice + perpendicularité
+  {
+    explic:"La médiatrice de [MM'] est exactement l'axe de symétrie. Autrement dit : MM' est perpendiculaire à l'axe, et le milieu I de [MM'] est sur l'axe. Ces deux conditions sont équivalentes.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'L\'axe est la médiatrice de [MM\']','#14532d',13,'middle',true);
+      h+=axe(AX,28,275,'#15803d');
+
+      var M={x:90,y:145};
+      var Mp=symetriqueV(M.x,M.y,AX);
+      var I={x:AX,y:M.y};
+
+      // Segment [MM']
+      h+=L(M.x,M.y,Mp.x,Mp.y,'#dc2626',2);
+
+      // Angle droit à I
+      h+=Pt(I.x,I.y,'#374151',4);
+      h+=angleDroit(I.x,I.y, 1,0, 9);
+
+      // Cotes égales MI = IM'
+      h+=L(M.x,M.y+10,I.x,I.y+10,'#b45309',1.5);
+      h+=T((M.x+I.x)/2,M.y+24,'MI','#b45309',10,'middle',true);
+      h+=L(I.x,I.y+10,Mp.x,Mp.y+10,'#b45309',1.5);
+      h+=T((I.x+Mp.x)/2,I.y+24,"IM'",'#b45309',10,'middle',true);
+      // Marques d'égalité
+      h+=L((M.x+I.x)/2-3,M.y+6,(M.x+I.x)/2+3,M.y+6,'#b45309',2);
+      h+=L((I.x+Mp.x)/2-3,I.y+6,(I.x+Mp.x)/2+3,I.y+6,'#b45309',2);
+
+      h+=Pt(M.x,M.y,'#dc2626'); h+=T(M.x-12,M.y+4,'M','#dc2626',13,'middle',true);
+      h+=Pt(Mp.x,Mp.y,'#1d4ed8'); h+=T(Mp.x+14,Mp.y+4,"M'",'#1d4ed8',13,'middle',true);
+      h+=T(I.x+12,I.y-10,'I (milieu)','#374151',10,'start');
+
+      // 2 conditions encadrées
+      h+=R(20,218,210,64,8,'#f0fdf4','#6ee7b7',2);
+      h+=T(125,235,'Condition 1','#14532d',10,'middle',true);
+      h+=T(125,251,'MM\' ⊥ (d)','#15803d',12,'middle',true);
+      h+=T(125,268,'angle droit en I','#374151',9,'middle');
+
+      h+=R(250,218,210,64,8,'#f0fdf4','#6ee7b7',2);
+      h+=T(355,235,'Condition 2','#14532d',10,'middle',true);
+      h+=T(355,251,'I milieu de [MM\']','#15803d',12,'middle',true);
+      h+=T(355,268,'I est sur (d)','#374151',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">L\'axe (d) est la médiatrice de [MM\']</div>'
+      +'<div class="ligne">① <span class="hl-g">MM\' ⊥ (d)</span> : le segment est perpendiculaire à l\'axe</div>'
+      +'<div class="ligne">② I = milieu de [MM\'] est sur <span class="hl-g">(d)</span></div>'
+      +'<div class="conclusion-ok">Ces deux conditions sont équivalentes et définissent la symétrie.</div>'
+      +'<div class="attention">⚠️ Il faut vérifier les DEUX conditions pour construire un symétrique.</div>'
+  },
+
+  // Étape 4 : propriété — conservation des angles
+  {
+    explic:"La symétrie axiale conserve également les angles. Si l'angle ABC vaut α, alors l'angle A'B'C' vaut aussi α. Les figures symétriques ont les mêmes angles.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Propriété : conservation des angles','#14532d',13,'middle',true);
+      h+=axe(AX,28,275,'#15803d');
+
+      // Triangle ABC à gauche
+      var A={x:80,y:200}, B={x:160,y:80}, C={x:185,y:215};
+      var Ap=symetriqueV(A.x,A.y,AX);
+      var Bp=symetriqueV(B.x,B.y,AX);
+      var Cp=symetriqueV(C.x,C.y,AX);
+
+      // Triangles
+      h+='<polygon points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>';
+      h+='<polygon points="'+Ap.x+','+Ap.y+' '+Bp.x+','+Bp.y+' '+Cp.x+','+Cp.y+'" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>';
+
+      // Sommets
+      h+=Pt(A.x,A.y,'#15803d',4); h+=T(A.x-12,A.y+4,'A','#15803d',11,'middle',true);
+      h+=Pt(B.x,B.y,'#15803d',4); h+=T(B.x-2,B.y-10,'B','#15803d',11,'middle',true);
+      h+=Pt(C.x,C.y,'#15803d',4); h+=T(C.x+8,C.y+4,'C','#15803d',11,'middle',true);
+      h+=Pt(Ap.x,Ap.y,'#1d4ed8',4); h+=T(Ap.x+14,Ap.y+4,"A'",'#1d4ed8',11,'middle',true);
+      h+=Pt(Bp.x,Bp.y,'#1d4ed8',4); h+=T(Bp.x+2,Bp.y-10,"B'",'#1d4ed8',11,'middle',true);
+      h+=Pt(Cp.x,Cp.y,'#1d4ed8',4); h+=T(Cp.x-10,Cp.y+4,"C'",'#1d4ed8',11,'middle',true);
+
+      // Arcs d'angles égaux en B et B'
+      function arcSommets(px,py,ax,ay,bx,by,r,col){
+        var a1=Math.atan2(ay-py,ax-px), a2=Math.atan2(by-py,bx-px);
+        if(a2<a1) a2+=2*Math.PI;
+        var x1=px+r*Math.cos(a1), y1=py+r*Math.sin(a1);
+        var x2=px+r*Math.cos(a2), y2=py+r*Math.sin(a2);
+        return '<path d="M'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 0,1 '+x2.toFixed(1)+','+y2.toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="2"/>';
+      }
+      h+=arcSommets(B.x,B.y,A.x,A.y,C.x,C.y,22,'#15803d');
+      h+=arcSommets(Bp.x,Bp.y,Ap.x,Ap.y,Cp.x,Cp.y,22,'#1d4ed8');
+      h+=T(B.x-28,B.y+16,'α','#15803d',11,'middle',true);
+      h+=T(Bp.x+28,Bp.y+16,'α','#1d4ed8',11,'middle',true);
+
+      // Bandeau
+      h+=R(20,246,440,40,8,'#14532d');
+      h+=T(240,261,'Â = Â\', B̂ = B̂\', Ĉ = Ĉ\'','#fde68a',13,'middle',true);
+      h+=T(240,276,'La symétrie axiale conserve les angles.','white',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Propriété : conservation des angles</div>'
+      +'<div class="ligne">Si ABC et A\'B\'C\' sont symétriques par rapport à (d), alors :</div>'
+      +'<div class="ligne"><span class="hl-g">Â = Â\'</span>,  <span class="hl-g">B̂ = B̂\'</span>,  <span class="hl-g">Ĉ = Ĉ\'</span></div>'
+      +'<div class="conclusion-ok">La symétrie axiale conserve les angles.</div>'
+      +'<div class="attention">💡 Récapitulatif : la symétrie axiale conserve les distances, les angles, et donc les formes et les aires.</div>'
+  }
+];
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 1 — SYMÉTRIE D'UNE FIGURE
+// ════════════════════════════════════════════════════════════
+
+// Axe oblique pour cet onglet
+var OX=240, OY=145; // point de passage
+var DX=1, DY=0.6;  // direction (normalisée après)
+var dlen=Math.sqrt(DX*DX+DY*DY);
+DX/=dlen; DY/=dlen;
+
+function symP(px,py){
+  return symetriqueObl(px,py,OX,OY,DX,DY);
+}
+function axeObl(){
+  var t=160;
+  return axeOblique(OX-DX*t,OY-DY*t,OX+DX*t,OY+DY*t,'#1d4ed8','(d)');
+}
+
+var e1=[
+
+  // Étape 1 : axe de symétrie d'une figure — définition
+  {
+    explic:"Une figure admet un axe de symétrie si, en la repliant le long de cet axe, les deux parties se superposent exactement. Chaque point de la figure a son symétrique sur la même figure.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Axe de symétrie d\'une figure','#1e3a8a',13,'middle',true);
+
+      // Carré avec axe de symétrie vertical (milieu à x=240)
+      var cx=240, cy=158, a=80;
+      h+=R(cx-a/2,cy-a/2,a,a,0,'#dbeafe','#1d4ed8',2.5);
+      // Axe vertical du carré
+      h+=L(cx,cy-a/2-20,cx,cy+a/2+20,'#1d4ed8',2,'7,5');
+      h+=T(cx,cy-a/2-28,'(d₁)','#1d4ed8',10,'middle',true);
+      // Axe horizontal
+      h+=L(cx-a/2-20,cy,cx+a/2+20,cy,'#9d174d',2,'7,5');
+      h+=T(cx+a/2+28,cy,'(d₂)','#9d174d',10,'start',true);
+      // Axe diagonal 1
+      h+=L(cx-a/2-10,cy-a/2-10,cx+a/2+10,cy+a/2+10,'#15803d',1.5,'5,4');
+      h+=T(cx+a/2+12,cy+a/2+16,'(d₃)','#15803d',10,'start',true);
+      // Axe diagonal 2
+      h+=L(cx+a/2+10,cy-a/2-10,cx-a/2-10,cy+a/2+10,'#b45309',1.5,'5,4');
+      h+=T(cx-a/2-12,cy+a/2+16,'(d₄)','#b45309',10,'end',true);
+
+      // Compteur
+      h+=R(20,252,440,34,8,'#1e3a8a');
+      h+=T(240,264,'Le carré possède','white',11,'middle');
+      h+=T(240,276,'4 axes de symétrie','#93c5fd',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Axe de symétrie d\'une figure</div>'
+      +'<div class="ligne">Une figure admet un <span class="hl-b">axe de symétrie</span> si on peut la "plier" le long de cet axe et que les deux parties se superposent.</div>'
+      +'<div class="ligne">• Le carré : <span class="hl-b">4 axes</span> (2 médianes + 2 diagonales)</div>'
+      +'<div class="ligne">• Le rectangle : <span class="hl-b">2 axes</span> (les 2 médianes seulement)</div>'
+      +'<div class="attention">💡 Un cercle a une <b>infinité</b> d\'axes de symétrie (tous ses diamètres).</div>'
+  },
+
+  // Étape 2 : construire le symétrique d'un segment
+  {
+    explic:"Pour construire le symétrique d'un segment [AB] par rapport à un axe (d), on construit le symétrique A' de A et B' de B, puis on trace le segment [A'B']. La longueur est conservée : A'B' = AB.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Symétrique d\'un segment [AB]','#1e3a8a',13,'middle',true);
+      h+=axeObl();
+
+      var A={x:80,y:80}, B={x:160,y:200};
+      var Ap=symP(A.x,A.y), Bp=symP(B.x,B.y);
+
+      // Segment original
+      h+=L(A.x,A.y,B.x,B.y,'#dc2626',2.5);
+      h+=Pt(A.x,A.y,'#dc2626'); h+=T(A.x-12,A.y,'A','#dc2626',12,'middle',true);
+      h+=Pt(B.x,B.y,'#dc2626'); h+=T(B.x-12,B.y+4,'B','#dc2626',12,'middle',true);
+
+      // Pointillés A→A' et B→B'
+      h+=L(A.x,A.y,Ap.x,Ap.y,'#94a3b8',1,'5,3');
+      h+=L(B.x,B.y,Bp.x,Bp.y,'#94a3b8',1,'5,3');
+
+      // Pieds de perpendiculaire sur l'axe
+      var Ia=symetriqueObl(A.x,A.y,OX,OY,DX,DY);
+      var Pia={x:(A.x+Ia.x)/2, y:(A.y+Ia.y)/2};
+      var Ib=symetriqueObl(B.x,B.y,OX,OY,DX,DY);
+      var Pib={x:(B.x+Ib.x)/2, y:(B.y+Ib.y)/2};
+      h+=Pt(Pia.x,Pia.y,'#374151',3);
+      h+=Pt(Pib.x,Pib.y,'#374151',3);
+
+      // Segment symétrique
+      h+=L(Ap.x,Ap.y,Bp.x,Bp.y,'#1d4ed8',2.5);
+      h+=Pt(Ap.x,Ap.y,'#1d4ed8'); h+=T(Ap.x+14,Ap.y,"A'",'#1d4ed8',12,'middle',true);
+      h+=Pt(Bp.x,Bp.y,'#1d4ed8'); h+=T(Bp.x+14,Bp.y+4,"B'",'#1d4ed8',12,'middle',true);
+
+      // Égalité de longueur
+      var mAB=((A.x+B.x)/2, (A.y+B.y)/2);
+      h+=T((A.x+B.x)/2-18,(A.y+B.y)/2,'AB','#dc2626',10,'middle',true);
+      h+=T((Ap.x+Bp.x)/2+18,(Ap.y+Bp.y)/2,"A'B'",'#1d4ed8',10,'middle',true);
+
+      h+=R(20,256,440,30,6,'#1e3a8a');
+      h+=T(240,268,'AB = A\'B\'','#fde68a',13,'middle',true);
+      h+=T(240,278,'La longueur est conservée.','white',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Construire le symétrique de [AB]</div>'
+      +'<div class="ligne">1. Construire <span class="hl-b">A\'</span> symétrique de A par rapport à (d)</div>'
+      +'<div class="ligne">2. Construire <span class="hl-b">B\'</span> symétrique de B par rapport à (d)</div>'
+      +'<div class="ligne">3. Tracer le segment <span class="hl-b">[A\'B\']</span></div>'
+      +'<div class="conclusion-ok">AB = A\'B\' : la symétrie conserve les longueurs.</div>'
+  },
+
+  // Étape 3 : symétrique d'un triangle — toutes les propriétés
+  {
+    explic:"Pour le symétrique d'un triangle, on construit les symétriques des trois sommets, puis on relie. Le triangle image est identique : mêmes longueurs de côtés et mêmes angles. On dit que les deux triangles sont superposables.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Symétrique d\'un triangle','#1e3a8a',13,'middle',true);
+      h+=axeObl();
+
+      var A={x:65,y:90}, B={x:170,y:80}, C={x:100,y:210};
+      var Ap=symP(A.x,A.y), Bp=symP(B.x,B.y), Cp=symP(C.x,C.y);
+
+      // Triangle original
+      h+='<polygon points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'" fill="#dcfce7" fill-opacity="0.7" stroke="#15803d" stroke-width="2"/>';
+      h+=Pt(A.x,A.y,'#15803d',4); h+=T(A.x-10,A.y-6,'A','#15803d',12,'middle',true);
+      h+=Pt(B.x,B.y,'#15803d',4); h+=T(B.x+2,B.y-10,'B','#15803d',12,'middle',true);
+      h+=Pt(C.x,C.y,'#15803d',4); h+=T(C.x-10,C.y+6,'C','#15803d',12,'middle',true);
+
+      // Pointillés
+      h+=L(A.x,A.y,Ap.x,Ap.y,'#94a3b8',1,'4,3');
+      h+=L(B.x,B.y,Bp.x,Bp.y,'#94a3b8',1,'4,3');
+      h+=L(C.x,C.y,Cp.x,Cp.y,'#94a3b8',1,'4,3');
+
+      // Triangle image
+      h+='<polygon points="'+Ap.x+','+Ap.y+' '+Bp.x+','+Bp.y+' '+Cp.x+','+Cp.y+'" fill="#dbeafe" fill-opacity="0.7" stroke="#1d4ed8" stroke-width="2"/>';
+      h+=Pt(Ap.x,Ap.y,'#1d4ed8',4); h+=T(Ap.x+12,Ap.y-6,"A'",'#1d4ed8',12,'middle',true);
+      h+=Pt(Bp.x,Bp.y,'#1d4ed8',4); h+=T(Bp.x+2,Bp.y-10,"B'",'#1d4ed8',12,'middle',true);
+      h+=Pt(Cp.x,Cp.y,'#1d4ed8',4); h+=T(Cp.x+12,Cp.y+6,"C'",'#1d4ed8',12,'middle',true);
+
+      // Marques côtés égaux
+      function marque(ax,ay,bx,by,col){
+        var mx=(ax+bx)/2, my=(ay+by)/2;
+        var dx=bx-ax, dy=by-ay, l=Math.sqrt(dx*dx+dy*dy);
+        var nx=-dy/l*6, ny=dx/l*6;
+        return L(mx-nx,my-ny,mx+nx,my+ny,col,2);
+      }
+      h+=marque(A.x,A.y,B.x,B.y,'#15803d');
+      h+=marque(Ap.x,Ap.y,Bp.x,Bp.y,'#1d4ed8');
+
+      h+=R(20,256,440,30,6,'#1e3a8a');
+      h+=T(240,268,'AB=A\'B\'  BC=B\'C\'  AC=A\'C\'  et  Â=Â\'  B̂=B̂\'  Ĉ=Ĉ\'','#93c5fd',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Symétrique d\'un triangle ABC</div>'
+      +'<div class="ligne">On construit A\', B\', C\' symétriques de A, B, C.</div>'
+      +'<div class="ligne">Propriétés conservées :</div>'
+      +'<div class="ligne">• <span class="hl-b">Distances :</span> AB=A\'B\', BC=B\'C\', AC=A\'C\'</div>'
+      +'<div class="ligne">• <span class="hl-b">Angles :</span> Â=Â\', B̂=B̂\', Ĉ=Ĉ\'</div>'
+      +'<div class="conclusion-ok">Les deux triangles sont superposables (même forme, même taille).</div>'
+  },
+
+  // Étape 4 : récapitulatif de toutes les propriétés
+  {
+    explic:"Récapitulatif : la symétrie axiale conserve les distances, les angles, les aires et les périmètres. Elle transforme droites en droites, cercles en cercles, triangles en triangles.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Récapitulatif des propriétés','#1e3a8a',14,'middle',true);
+
+      var props=[
+        {ico:'📏', titre:'Distances',  desc:'AB = A\'B\'',          col:'#dc2626'},
+        {ico:'📐', titre:'Angles',     desc:'Â = Â\'',              col:'#15803d'},
+        {ico:'⬛', titre:'Aires',      desc:'Aire = Aire\'',        col:'#1d4ed8'},
+        {ico:'🔲', titre:'Périmètres', desc:'Périm. = Périm.\'',    col:'#b45309'},
+        {ico:'➡️', titre:'Droites',    desc:'droite → droite',      col:'#7c3aed'},
+        {ico:'⭕', titre:'Cercles',    desc:'cercle → cercle',      col:'#9d174d'},
+      ];
+
+      props.forEach(function(p,i){
+        var col2=i%2, row=Math.floor(i/2);
+        var rx=18+col2*232, ry=42+row*76, rw=224, rh=68;
+        var bg=col2===0?'#f0fdf4':'#eff6ff';
+        h+=R(rx,ry,rw,rh,10,bg,p.col,2);
+        h+=T(rx+28,ry+rh/2+5,p.ico,'black',18,'middle');
+        h+=T(rx+rw/2+14,ry+24,p.titre,p.col,12,'middle',true);
+        h+=T(rx+rw/2+14,ry+46,p.desc,'#374151',11,'middle');
+      });
+
+      h+=R(18,278,444,12,4,'#1e3a8a');
+      h+=T(240,287,'La figure et son image sont superposables (même forme, même taille).','white',8,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Bilan : ce que conserve la symétrie axiale</div>'
+      +'<div class="ligne">✓ Les <span class="hl-r">distances</span> (AB = A\'B\')</div>'
+      +'<div class="ligne">✓ Les <span class="hl-g">angles</span> (Â = Â\')</div>'
+      +'<div class="ligne">✓ Les <span class="hl-b">aires</span> et les <span class="hl-o">périmètres</span></div>'
+      +'<div class="ligne">✓ La <span class="hl-b">nature</span> des figures (droite→droite, cercle→cercle)</div>'
+      +'<div class="conclusion-ok">La figure et son image sont superposables.</div>'
+  }
+];
+
+// ─── Moteur ────────────────────────────────────────────────
+var ETAPES=[e0,e1];
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active',i===m); });
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){ etape--; render(); } }
+function next(){ if(etape<ETAPES[mode].length-1){ etape++; render(); } }
+function render(){
+  var e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length;
+}
+render();
+</script>
+</body>
+</html>
