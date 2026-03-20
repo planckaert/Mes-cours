@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pourcentage d'un nombre</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #4c1d95; border: 2px solid #c4b5fd; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #6d28d9; color: white; border-color: #6d28d9; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #6d28d9; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #4c1d95; }
+  .en2 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-v { color: #6d28d9; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 4px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 6px; font-size: 1em; }
+  .fr .d { padding: 0 6px; font-size: 1em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #6d28d9; color: white; }
+</style>
+</head>
+<body>
+<h1>% Pourcentage d'un nombre</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Sens &amp; méthode</button>
+  <button class="tab tab2" onclick="setMode(1)">Problèmes concrets</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+var mode=0, etape=0;
+var COLS=['#6d28d9','#9d174d'];
+
+// ─── Helpers SVG ───────────────────────────────────────────
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc
+    +'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')
+    +'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h
+    +'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function L(x1,y1,x2,y2,col,w,dash){
+  w=w||1.5; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2
+    +'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+
+// Barre de pourcentage : (x,y,w,h) = zone totale, pct = 0..100, couleurs
+function barrePct(x,y,w,h,pct,colFill,colEmpty,colStroke){
+  colFill=colFill||'#a78bfa'; colEmpty=colEmpty||'#ede9fe'; colStroke=colStroke||'#6d28d9';
+  var fw=w*pct/100;
+  var s='';
+  s+=R(x,y,w,h,6,colEmpty,colStroke,1.5);
+  s+=R(x,y,fw,h,6,colFill,'none');
+  // graduation 0%, 50%, 100%
+  s+=T(x,y+h+14,'0 %','#64748b',9,'middle');
+  s+=T(x+w/2,y+h+14,'50 %','#64748b',9,'middle');
+  s+=T(x+w,y+h+14,'100 %','#64748b',9,'middle');
+  s+=L(x+w/2,y+h+2,x+w/2,y+h+6,'#64748b',1);
+  // marqueur de fin de zone coloriée
+  if(pct>0 && pct<100){
+    s+=L(x+fw,y-4,x+fw,y+h+4,colStroke,1.5,'4,3');
+    s+=T(x+fw,y-10,pct+' %',colStroke,9,'middle',true);
+  }
+  return s;
+}
+
+// Fraction inline
+function frac(cx,cy,num,den,col,sz){
+  sz=sz||15;
+  var half=sz*0.72;
+  var h='';
+  h+=T(cx,cy-1,''+num,col,sz,'middle',true);
+  h+=L(cx-half,cy+4,cx+half,cy+4,col,1.5);
+  h+=T(cx,cy+sz+2,''+den,col,sz,'middle',true);
+  return h;
+}
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 0 — SENS & MÉTHODE
+// ════════════════════════════════════════════════════════════
+var e0=[
+
+  // Étape 1 : sens de « % » — pour cent
+  {
+    explic:"Le symbole % signifie « pour cent » : p % = p pour 100. Prendre 30 % d'un nombre, c'est en prendre 30 sur 100, soit les 30/100. La barre montre visuellement la proportion.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Que signifie % ?','#4c1d95',14,'middle',true);
+      h+=T(240,38,'« % » = « pour cent » = « sur 100 »','#374151',11,'middle');
+
+      // Barre 30%
+      h+=barrePct(40,65,400,52,30,'#a78bfa','#ede9fe','#6d28d9');
+      h+=T(40+400*0.15,65+26,'30 %','white',12,'middle',true);
+      h+=T(40+400*0.65,65+26,'70 %','#a78bfa',11,'middle');
+
+      // Définition formelle
+      h+=R(20,140,440,62,10,'#4c1d95');
+      h+=T(240,160,'p %','white',16,'middle',true);
+      h+=T(240,178,'signifie','white',11,'middle');
+      h+=frac(330,159,'p','100','#c4b5fd',15);
+      h+=T(370,170,'= p ÷ 100','#e9d5ff',12,'middle');
+
+      // Exemples : 10% = 1/10, 50% = 1/2, 25% = 1/4
+      var exs=[
+        {p:'10 %',fr:'1/10',dec:'0,1',col:'#dc2626'},
+        {p:'50 %',fr:'1/2', dec:'0,5',col:'#1d4ed8'},
+        {p:'25 %',fr:'1/4', dec:'0,25',col:'#15803d'},
+        {p:'1 %', fr:'1/100',dec:'0,01',col:'#b45309'}
+      ];
+      exs.forEach(function(ex,i){
+        h+=R(20+i*110,212,105,64,8,'white',ex.col,1.5);
+        h+=T(72+i*110,228,ex.p,ex.col,13,'middle',true);
+        h+=T(72+i*110,245,'= '+ex.fr,'#374151',10,'middle');
+        h+=T(72+i*110,261,'= '+ex.dec,'#64748b',10,'middle');
+      });
+      return h;
+    },
+    calc:'<div class="enonce en1">Définition : p %</div>'
+      +'<div class="ligne"><span class="hl-v">p %</span> = <span class="fr hl-v"><span class="n">p</span><span class="d">100</span></span> = p ÷ 100</div>'
+      +'<div class="ligne">• 10 % = <span class="fr hl-r"><span class="n">10</span><span class="d">100</span></span> = <span class="fr hl-r"><span class="n">1</span><span class="d">10</span></span> = 0,1</div>'
+      +'<div class="ligne">• 50 % = <span class="fr hl-b"><span class="n">1</span><span class="d">2</span></span> = 0,5</div>'
+      +'<div class="ligne">• 25 % = <span class="fr hl-g"><span class="n">1</span><span class="d">4</span></span> = 0,25</div>'
+      +'<div class="attention">💡 100 % du total = le tout entier.</div>'
+  },
+
+  // Étape 2 : règle — multiplier par p/100
+  {
+    explic:"Pour calculer p % d'un nombre n, on multiplie n par p/100, ce qui revient à calculer n × p ÷ 100. C'est exactement la formule de la fraction d'un nombre avec dénominateur 100.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Règle : calculer p % d\'un nombre n','#4c1d95',14,'middle',true);
+
+      // Grande formule
+      h+=R(20,34,440,70,12,'#4c1d95');
+      h+=T(95,62,'p %  de  n','white',15,'middle',true);
+      h+=T(192,62,'=','white',18,'middle');
+      h+=T(222,62,'n  ×','white',15,'middle');
+      h+=frac(275,45,'p','100','#c4b5fd',15);
+      h+=T(320,62,'=','white',15,'middle');
+      h+=T(380,51,'n × p','#fde68a',14,'middle',true);
+      h+=L(356,57,404,57,'white',1.5);
+      h+=T(380,72,'100','#fde68a',14,'middle',true);
+
+      // Deux méthodes
+      h+=R(20,114,215,80,10,'#ede9fe','#c4b5fd',2);
+      h+=T(127,132,'Méthode ①','#4c1d95',11,'middle',true);
+      h+=T(127,148,'n ÷ 100 × p','#6d28d9',12,'middle',true);
+      h+=T(127,164,'diviser d\'abord par 100','#374151',9,'middle');
+      h+=T(127,178,'puis multiplier par p','#374151',9,'middle');
+
+      h+=R(245,114,215,80,10,'#fce7f3','#f9a8d4',2);
+      h+=T(352,132,'Méthode ②','#9d174d',11,'middle',true);
+      h+=T(352,148,'n × p ÷ 100','#9d174d',12,'middle',true);
+      h+=T(352,164,'multiplier par p d\'abord','#374151',9,'middle');
+      h+=T(352,178,'puis diviser par 100','#374151',9,'middle');
+
+      // Exemple fil conducteur : 30% de 200
+      h+=R(20,202,440,78,10,'#4c1d95');
+      h+=T(240,220,'Exemple : 30 % de 200','white',12,'middle',true);
+      h+=T(120,243,'① 200 ÷ 100 × 30','#c4b5fd',12,'middle');
+      h+=T(120,260,'= 2 × 30 = 60','#fde68a',13,'middle',true);
+      h+=L(240,230,240,270,'white',1,'4,3');
+      h+=T(360,243,'② 200 × 30 ÷ 100','#f9a8d4',12,'middle');
+      h+=T(360,260,'= 6000 ÷ 100 = 60','#fde68a',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Règle</div>'
+      +'<div class="ligne"><span class="hl-v">p %</span> de n = n × <span class="fr hl-v"><span class="n">p</span><span class="d">100</span></span> = <span class="fr hl-v"><span class="n">n × p</span><span class="d">100</span></span></div>'
+      +'<div class="ligne">① n <span class="hl-v">÷ 100 × p</span>  (diviser d\'abord)</div>'
+      +'<div class="ligne">② n <span class="hl-v">× p ÷ 100</span>  (multiplier d\'abord)</div>'
+      +'<div class="ligne">Exemple : 30 % de 200 = 200 ÷ 100 × 30 = <span class="hl-v">60</span></div>'
+      +'<div class="attention">⚠️ On choisit la méthode qui donne les calculs les plus simples.</div>'
+  },
+
+  // Étape 3 : visualisation barre — 25% de 80
+  {
+    explic:"Visualisons 25 % de 80. La barre représente 80 au total (= 100 %). On colorie 25 %, soit le quart. 25 % = 1/4, donc 80 ÷ 4 = 20.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Visualisation : 25 % de 80','#4c1d95',13,'middle',true);
+
+      // Barre 25%
+      h+=barrePct(40,48,400,56,25,'#a78bfa','#ede9fe','#6d28d9');
+      h+=T(40+50,48+28,'25 %','white',13,'middle',true);
+      h+=T(40+300,48+28,'75 %','#a78bfa',11,'middle');
+
+      // Double graduation : % et valeurs réelles
+      h+=T(40,130,'0','#374151',10,'middle');
+      h+=T(40+100,130,'20','#dc2626',11,'middle',true);
+      h+=T(40+200,130,'40','#374151',10,'middle');
+      h+=T(40+300,130,'60','#374151',10,'middle');
+      h+=T(440,130,'80','#374151',10,'middle');
+      h+=L(40+100,118,40+100,128,'#dc2626',1.5);
+
+      // Lien 25% ↔ 1/4
+      h+=R(20,142,440,52,10,'#ede9fe','#c4b5fd',2);
+      h+=T(240,160,'25 % =','#4c1d95',13,'middle',true);
+      h+=frac(316,152,'25','100','#6d28d9',13);
+      h+=T(356,163,'=','#4c1d95',13,'middle');
+      h+=frac(394,152,'1','4','#6d28d9',13);
+      h+=T(430,163,'(un quart)','#374151',10,'middle');
+
+      // Calcul
+      h+=R(30,202,420,76,10,'#4c1d95');
+      h+=T(240,222,'25 % de 80','white',13,'middle',true);
+      h+=T(105,247,'Méthode ①','#c4b5fd',10,'middle');
+      h+=T(105,263,'80 ÷ 100 × 25','white',11,'middle');
+      h+=T(105,275,'= 0,8 × 25 = 20','#fde68a',12,'middle',true);
+      h+=L(240,222,240,278,'white',1,'4,3');
+      h+=T(355,247,'Méthode ②','#f9a8d4',10,'middle');
+      h+=T(355,263,'80 × 25 ÷ 100','white',11,'middle');
+      h+=T(355,275,'= 2000 ÷ 100 = 20','#fde68a',12,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">25 % de 80 = ?</div>'
+      +'<div class="ligne">25 % = <span class="fr hl-v"><span class="n">1</span><span class="d">4</span></span>  →  80 ÷ 4 = <span class="hl-v">20</span></div>'
+      +'<div class="ligne">① 80 ÷ 100 × 25 = 0,8 × 25 = <span class="hl-v">20</span></div>'
+      +'<div class="ligne">② 80 × 25 ÷ 100 = 2 000 ÷ 100 = <span class="hl-v">20</span></div>'
+      +'<div class="conclusion-ok">25 % de 80 = <span class="hl-v">20</span></div>'
+  },
+
+  // Étape 4 : pourcentages courants à connaître
+  {
+    explic:"Certains pourcentages courants correspondent à des fractions simples. Les connaître permet de calculer de tête rapidement. Par exemple : 50 % = moitié, 10 % = dixième, 1 % = centième.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Pourcentages courants à connaître','#4c1d95',13,'middle',true);
+
+      var data=[
+        {p:1,  fr:'1/100', op:'÷ 100',     ex:'de 300 = 3',    col:'#dc2626'},
+        {p:10, fr:'1/10',  op:'÷ 10',      ex:'de 80 = 8',     col:'#b45309'},
+        {p:20, fr:'1/5',   op:'÷ 5',       ex:'de 60 = 12',    col:'#15803d'},
+        {p:25, fr:'1/4',   op:'÷ 4',       ex:'de 200 = 50',   col:'#1d4ed8'},
+        {p:50, fr:'1/2',   op:'÷ 2',       ex:'de 46 = 23',    col:'#7c3aed'},
+        {p:75, fr:'3/4',   op:'÷ 4 × 3',   ex:'de 80 = 60',    col:'#9d174d'},
+      ];
+
+      data.forEach(function(d,i){
+        var col=i%2===0?'#faf5ff':'#f5f3ff';
+        var row=Math.floor(i/3), col2=i%3;
+        var rx=18+col2*154, ry=38+row*118, rw=148, rh=110;
+        h+=R(rx,ry,rw,rh,10,col,d.col,2);
+        h+=T(rx+rw/2,ry+24,d.p+' %',d.col,18,'middle',true);
+        h+=T(rx+rw/2,ry+44,'= '+d.fr,'#374151',12,'middle',true);
+        h+=T(rx+rw/2,ry+62,'→ '+d.op,'#6d28d9',10,'middle',true);
+        h+=L(rx+10,ry+70,rx+rw-10,ry+70,d.col,1,'4,3');
+        h+=T(rx+rw/2,ry+83,d.p+' %','#374151',9,'middle');
+        h+=T(rx+rw/2,ry+98,d.ex,d.col,10,'middle',true);
+      });
+      return h;
+    },
+    calc:'<div class="enonce en1">Pourcentages à retenir</div>'
+      +'<div class="ligne"><span class="hl-r">1 %</span> = <span class="fr hl-r"><span class="n">1</span><span class="d">100</span></span> → ÷ 100</div>'
+      +'<div class="ligne"><span class="hl-o">10 %</span> = <span class="fr hl-o"><span class="n">1</span><span class="d">10</span></span> → ÷ 10</div>'
+      +'<div class="ligne"><span class="hl-g">25 %</span> = <span class="fr hl-g"><span class="n">1</span><span class="d">4</span></span> → ÷ 4</div>'
+      +'<div class="ligne"><span class="hl-b">50 %</span> = <span class="fr hl-b"><span class="n">1</span><span class="d">2</span></span> → ÷ 2</div>'
+      +'<div class="conclusion-ok">Astuce : 30 % = 3 × (10 %) · 15 % = 10 % + 5 %</div>'
+  }
+];
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 1 — PROBLÈMES CONCRETS
+// ════════════════════════════════════════════════════════════
+var e1=[
+
+  // Étape 1 : soldes — réduction de prix
+  {
+    explic:"Problème de soldes : un article coûte 80 €, il est soldé à − 20 %. Quel est le montant de la réduction ? On calcule 20 % de 80.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Soldes : − 20 % sur 80 €','#831843',13,'middle',true);
+
+      // Tag de prix
+      h+=R(60,40,160,80,12,'#9d174d');
+      h+=T(140,68,'80 €','white',24,'middle',true);
+      h+=T(140,86,'prix initial','white',10,'middle');
+      // Badge -20%
+      h+=R(200,40,100,80,40,'#fde68a','#b45309',3);
+      h+=T(250,72,'-20 %','#92400e',16,'middle',true);
+      // Flèche
+      h+='<polygon points="310,80 322,74 322,86" fill="#374151"/>';
+      h+=L(300,80,322,80,'#374151',2);
+      // Prix après
+      h+=R(330,40,120,80,12,'#14532d');
+      h+=T(390,65,'?','white',26,'middle',true);
+      h+=T(390,82,'réduction','white',10,'middle');
+
+      // Calcul
+      h+=R(20,132,440,90,10,'#9d174d');
+      h+=T(240,150,'20 % de 80','white',12,'middle',true);
+      h+=T(120,175,'80 ÷ 100 × 20','#f9a8d4',12,'middle');
+      h+=T(120,190,'= 0,8 × 20 = 16','#fde68a',14,'middle',true);
+      h+=L(240,152,240,196,'white',1,'4,3');
+      h+=T(360,175,'80 × 20 ÷ 100','#f9a8d4',12,'middle');
+      h+=T(360,190,'= 1600 ÷ 100 = 16','#fde68a',14,'middle',true);
+
+      // Prix final
+      h+=R(20,232,440,50,10,'#14532d');
+      h+=T(160,252,'Réduction :','white',12,'middle');
+      h+=T(270,252,'16 €','#fde68a',18,'middle',true);
+      h+=T(380,252,'Prix soldé : 64 €','#86efac',12,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Article à 80 € soldé − 20 %</div>'
+      +'<div class="ligne">20 % de 80 = 80 × 20 ÷ 100 = <span class="hl-r">16 €</span> de réduction</div>'
+      +'<div class="conclusion-ok">Prix soldé = 80 − 16 = <span class="hl-g">64 €</span></div>'
+      +'<div class="attention">💡 On peut aussi calculer directement : 80 % de 80 = 64 € (le prix payé).</div>'
+  },
+
+  // Étape 2 : résultats scolaires
+  {
+    explic:"Problème de résultats : un élève a 18 bonnes réponses sur 24 questions. Quel pourcentage de bonnes réponses a-t-il ? Puis : combien faut-il de bonnes réponses pour avoir 75 % ?",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Score : 18 bonnes réponses sur 24','#831843',13,'middle',true);
+
+      // Barre score
+      var bx=30, by=42, bw=420, bh=46;
+      var pct=Math.round(18/24*100);
+      // barre manuelle : 18 bonnes (violet), 6 mauvaises (gris)
+      var pw=bw/24;
+      for(var i=0;i<24;i++){
+        h+=R(bx+i*pw,by,pw-1,bh,2,i<18?'#a78bfa':'#e5e7eb',i<18?'#6d28d9':'#9ca3af',1);
+        if(i<18) h+=T(bx+i*pw+pw/2,by+bh/2+5,'✓','white',9,'middle');
+        else     h+=T(bx+i*pw+pw/2,by+bh/2+5,'✗','#9ca3af',9,'middle');
+      }
+      h+=T(bx+18*pw/2,by+bh+16,'18 bonnes','#6d28d9',10,'middle',true);
+      h+=T(bx+18*pw+6*pw/2,by+bh+16,'6 erreurs','#9ca3af',10,'middle');
+
+      // Calcul du pourcentage
+      h+=R(20,118,440,72,10,'#4c1d95');
+      h+=T(240,136,'Quel pourcentage ?','white',11,'middle',true);
+      h+=T(100,156,'Score =','#c4b5fd',12,'middle');
+      h+=frac(182,147,'18','24','white',14);
+      h+=T(224,159,'=','white',13,'middle');
+      h+=frac(268,147,'75','100','#fde68a',14);
+      h+=T(312,159,'= 75 %','#fde68a',14,'middle',true);
+      h+=T(240,170,'(18 × 100 ÷ 24 = 1800 ÷ 24 = 75)','#c4b5fd',9,'middle');
+
+      // 75% de 24
+      h+=R(20,200,440,60,10,'#fce7f3','#f9a8d4',2);
+      h+=T(240,218,'Pour avoir 75 % de 24 questions :','#831843',11,'middle',true);
+      h+=T(240,238,'75 % de 24 = 24 × 75 ÷ 100 = 1800 ÷ 100 = 18 bonnes réponses','#374151',10,'middle');
+      h+=T(240,254,'→ il faut exactement 18 bonnes réponses ✓','#9d174d',11,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">18 bonnes réponses sur 24</div>'
+      +'<div class="ligne">Score = <span class="fr hl-v"><span class="n">18</span><span class="d">24</span></span> = <span class="fr hl-v"><span class="n">75</span><span class="d">100</span></span> = <span class="hl-v">75 %</span></div>'
+      +'<div class="ligne">Vérif : 75 % de 24 = 24 × 75 ÷ 100 = <span class="hl-v">18</span> ✓</div>'
+      +'<div class="conclusion-ok">L\'élève a obtenu 75 % de bonnes réponses.</div>'
+      +'<div class="attention">💡 Pour trouver un pourcentage : (partie ÷ total) × 100.</div>'
+  },
+
+  // Étape 3 : augmentation en %
+  {
+    explic:"Une ville a 15 000 habitants. Sa population augmente de 8 %. Combien de nouveaux habitants ? Et quelle est la nouvelle population ? On calcule 8 % de 15 000.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Population : + 8 % de 15 000 hab.','#831843',13,'middle',true);
+
+      // Barre population
+      var bx=30, by=42, bw=420, bh=44;
+      // 100% base
+      h+=R(bx,by,bw,bh,6,'#e9d5ff','#6d28d9',1.5);
+      h+=T(bx+bw/2,by+bh/2+5,'15 000 habitants (100 %)','#4c1d95',11,'middle',true);
+      // augmentation +8%
+      var aug=bw*0.08;
+      h+=R(bx+bw,by,aug,bh,6,'#fde68a','#b45309',2);
+      h+=T(bx+bw+aug/2,by+bh/2+5,'+ 8 %','#92400e',10,'middle',true);
+      // Flèche totale
+      h+=L(bx,by+bh+14,bx+bw+aug,by+bh+14,'#374151',1.5);
+      h+=L(bx,by+bh+14,bx,by+bh+20,'#374151',1.5);
+      h+=L(bx+bw+aug,by+bh+14,bx+bw+aug,by+bh+20,'#374151',1.5);
+      h+=T(bx+(bw+aug)/2,by+bh+28,'108 % = nouvelle population','#374151',10,'middle');
+
+      // Calcul augmentation
+      h+=R(20,120,440,74,10,'#9d174d');
+      h+=T(240,138,'8 % de 15 000 habitants','white',12,'middle',true);
+      h+=T(150,160,'15 000 ÷ 100 × 8','#f9a8d4',12,'middle');
+      h+=T(150,175,'= 150 × 8 = 1 200','#fde68a',13,'middle',true);
+      h+=L(240,140,240,180,'white',1,'4,3');
+      h+=T(355,160,'15 000 × 8 ÷ 100','#f9a8d4',12,'middle');
+      h+=T(355,175,'= 1 200','#fde68a',13,'middle',true);
+
+      // Nouvelle population
+      h+=R(20,202,440,78,10,'#14532d');
+      h+=T(240,222,'Augmentation : + 1 200 hab.','white',12,'middle',true);
+      h+=T(240,244,'Nouvelle population :','white',11,'middle');
+      h+=T(240,262,'15 000 + 1 200 = 16 200 habitants','#86efac',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Population de 15 000 hab. + 8 %</div>'
+      +'<div class="ligne">8 % de 15 000 = 15 000 × 8 ÷ 100 = <span class="hl-r">1 200</span> nouveaux habitants</div>'
+      +'<div class="conclusion-ok">Nouvelle population = 15 000 + 1 200 = <span class="hl-g">16 200 hab.</span></div>'
+      +'<div class="attention">💡 On peut aussi calculer : 108 % de 15 000 = 15 000 × 1,08 = 16 200.</div>'
+  },
+
+  // Étape 4 : bilan et astuce 10%
+  {
+    explic:"Astuce rapide : pour calculer n'importe quel pourcentage, on part de 10 % (÷ 10) puis on combine. Par exemple : 30 % = 3 × 10 % ; 15 % = 10 % + 5 % ; 5 % = 10 % ÷ 2.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Astuce : tout calculer depuis 10 %','#4c1d95',13,'middle',true);
+      h+=T(240,33,'Exemple : calculer des % de 240','#374151',10,'middle');
+
+      var steps=[
+        {lbl:'10 % de 240',  calc:'240 ÷ 10',        res:'24',  col:'#6d28d9'},
+        {lbl:'1 % de 240',   calc:'24 ÷ 10',          res:'2,4', col:'#dc2626'},
+        {lbl:'5 % de 240',   calc:'10 % ÷ 2 = 24÷2', res:'12',  col:'#b45309'},
+        {lbl:'20 % de 240',  calc:'2 × 10 % = 2×24',  res:'48',  col:'#15803d'},
+        {lbl:'30 % de 240',  calc:'3 × 10 % = 3×24',  res:'72',  col:'#1d4ed8'},
+        {lbl:'15 % de 240',  calc:'10 %+5 % = 24+12', res:'36',  col:'#9d174d'},
+      ];
+
+      steps.forEach(function(s,i){
+        var row=Math.floor(i/2), col2=i%2;
+        var rx=18+col2*232, ry=48+row*76, rw=224, rh=68;
+        h+=R(rx,ry,rw,rh,8,'white',s.col,1.5);
+        h+=T(rx+rw/2,ry+20,s.lbl,s.col,12,'middle',true);
+        h+=T(rx+rw/2,ry+38,s.calc,'#374151',10,'middle');
+        h+=T(rx+rw/2,ry+56,'= '+s.res,s.col,14,'middle',true);
+      });
+
+      h+=R(18,274,444,14,4,'#4c1d95');
+      h+=T(240,284,'10 % = ÷10  ·  1 % = ÷100  ·  5 % = ÷20  ·  25 % = ÷4  ·  50 % = ÷2','white',8,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Astuce : tout depuis 10 % de 240 = 24</div>'
+      +'<div class="ligne">• 1 % = <span class="hl-r">2,4</span>  (÷ 10 de plus)</div>'
+      +'<div class="ligne">• 5 % = <span class="hl-o">12</span>  (10 % ÷ 2)</div>'
+      +'<div class="ligne">• 20 % = <span class="hl-g">48</span>  (2 × 10 %)</div>'
+      +'<div class="ligne">• 30 % = <span class="hl-b">72</span>  (3 × 10 %)</div>'
+      +'<div class="ligne">• 15 % = <span class="hl-p">36</span>  (10 % + 5 %)</div>'
+      +'<div class="conclusion-ok">On part de 10 % puis on combine. Rapide et sans calculatrice ! ✓</div>'
+  }
+];
+
+// ─── Moteur ────────────────────────────────────────────────
+var ETAPES=[e0,e1];
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active',i===m); });
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){ etape--; render(); } }
+function next(){ if(etape<ETAPES[mode].length-1){ etape++; render(); } }
+function render(){
+  var e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length;
+}
+render();
+</script>
+</body>
+</html>

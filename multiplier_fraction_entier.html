@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiplier une fraction par un entier</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fff7ed; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #92400e; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #b45309; color: white; border-color: #b45309; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #b45309; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #fef3c7; color: #78350f; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 4px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 6px; font-size: 1em; }
+  .fr .d { padding: 0 6px; font-size: 1em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #b45309; color: white; }
+</style>
+</head>
+<body>
+<h1>✖️ Multiplier une fraction par un entier</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Sens et méthode</button>
+  <button class="tab tab2" onclick="setMode(1)">Simplifier le résultat</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+var mode=0, etape=0;
+var COLS=['#b45309','#15803d'];
+
+// ─── Helpers SVG ───────────────────────────────────────────
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc
+    +'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')
+    +'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){
+  stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h
+    +'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>';
+}
+function L(x1,y1,x2,y2,col,w,dash){
+  w=w||1.5; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2
+    +'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>';
+}
+
+// ─── Barre fractionnaire dessinée en SVG ──────────────────
+// Dessine une barre divisée en "den" parts, "num" coloriées, à (x,y), taille (w,h)
+function barreFrac(x,y,w,h,den,num,colFill,colEmpty,colStroke){
+  colFill=colFill||'#fcd34d'; colEmpty=colEmpty||'#fef3c7'; colStroke=colStroke||'#92400e';
+  var pw=w/den;
+  var svg='';
+  for(var i=0;i<den;i++){
+    var fill=i<num?colFill:colEmpty;
+    svg+=R(x+i*pw,y,pw,h,0,fill,colStroke,1.5);
+  }
+  return svg;
+}
+
+// Dessine plusieurs barres empilées (pour illustrer k × p/q)
+function barresMultiples(x,y,w,h,gap,den,num,nb,colFill,colEmpty,colStroke){
+  var svg='';
+  for(var b=0;b<nb;b++){
+    svg+=barreFrac(x,y+b*(h+gap),w,h,den,num,colFill,colEmpty,colStroke);
+    // accolade + fraction à gauche
+    svg+=T(x-8,y+b*(h+gap)+h/2+4,'×'+(b+1),'#94a3b8',8,'end');
+  }
+  return svg;
+}
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 0 — SENS ET MÉTHODE
+// ════════════════════════════════════════════════════════════
+var e0=[
+
+  // Étape 1 : sens — fraction comme addition répétée
+  {
+    explic:"Multiplier 3 × (2/5) signifie prendre 3 fois la fraction 2/5, comme une addition répétée : 2/5 + 2/5 + 2/5. On colorie 2 parts sur 5 à chaque fois.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'3 × ','#92400e',15,'middle',true);
+      // Fraction 2/5 dans le titre
+      h+=T(268,14,'2','#dc2626',14,'middle',true);
+      h+=L(258,18,278,18,'#dc2626',2);
+      h+=T(268,28,'5','#dc2626',14,'middle',true);
+      h+=T(240,20,'= ?','#92400e',15,'middle',true);
+
+      // Titre corrigé propre
+      h='';
+      h+=T(120,22,'3  ×','#92400e',16,'middle',true);
+      // Fraction
+      h+=T(172,15,'2','#dc2626',16,'middle',true);
+      h+=L(160,20,184,20,'#dc2626',2);
+      h+=T(172,31,'5','#dc2626',16,'middle',true);
+      h+=T(210,22,'=','#92400e',16,'middle',true);
+      h+=T(240,15,'2','#b45309',16,'middle',true);
+      h+=L(228,20,252,20,'#b45309',2);
+      h+=T(240,31,'5','#b45309',16,'middle',true);
+      h+=T(266,22,'+','#b45309',16,'middle',true);
+      h+=T(296,15,'2','#b45309',16,'middle',true);
+      h+=L(284,20,308,20,'#b45309',2);
+      h+=T(296,31,'5','#b45309',16,'middle',true);
+      h+=T(322,22,'+','#b45309',16,'middle',true);
+      h+=T(352,15,'2','#b45309',16,'middle',true);
+      h+=L(340,20,364,20,'#b45309',2);
+      h+=T(352,31,'5','#b45309',16,'middle',true);
+
+      // 3 barres empilées
+      var bx=50,by=55,bw=340,bh=46,gap=10;
+      var cols=['#fcd34d','#f97316','#fb923c'];
+      for(var i=0;i<3;i++){
+        h+=barreFrac(bx,by+i*(bh+gap),bw,bh,5,2,cols[i],'#fef3c7','#92400e');
+        h+=T(bx-6,by+i*(bh+gap)+bh/2+4,'×'+(i+1),'#92400e',10,'end',true);
+      }
+
+      // Accolade globale
+      h+=L(bx+bw+10,by,bx+bw+10,by+3*(bh+gap)-gap,'#92400e',2);
+      h+=L(bx+bw+10,by,bx+bw+16,by,'#92400e',2);
+      h+=L(bx+bw+10,by+3*(bh+gap)-gap,bx+bw+16,by+3*(bh+gap)-gap,'#92400e',2);
+      // Total colorié
+      h+=T(bx+bw+22,by+1.5*(bh+gap)-gap/2,'6 parts','#92400e',10,'start',true);
+      h+=T(bx+bw+22,by+1.5*(bh+gap)-gap/2+14,'coloriées','#92400e',10,'start');
+
+      // Résultat
+      h+=R(80,238,320,42,10,'#92400e');
+      h+=T(240,254,'3  ×','white',14,'middle',true);
+      h+=T(282,248,'2','white',14,'middle',true);
+      h+=L(271,252,293,252,'white',1.5);
+      h+=T(282,264,'5','white',14,'middle',true);
+      h+=T(308,254,'=','white',14,'middle',true);
+      h+=T(338,248,'6','#fde68a',16,'middle',true);
+      h+=L(326,252,350,252,'white',1.5);
+      h+=T(338,264,'5','#fde68a',16,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Sens : 3 × <span class="fr hl-r"><span class="n">2</span><span class="d">5</span></span> = ?</div>'
+      +'<div class="ligne"><span class="hl-o">Multiplier</span> par un entier = addition répétée :</div>'
+      +'<div class="ligne">3 × <span class="fr hl-r"><span class="n">2</span><span class="d">5</span></span> = <span class="fr hl-r"><span class="n">2</span><span class="d">5</span></span> + <span class="fr hl-r"><span class="n">2</span><span class="d">5</span></span> + <span class="fr hl-r"><span class="n">2</span><span class="d">5</span></span></div>'
+      +'<div class="ligne">= <span class="fr hl-o"><span class="n">2+2+2</span><span class="d">5</span></span> = <span class="fr hl-o"><span class="n">6</span><span class="d">5</span></span></div>'
+      +'<div class="attention">💡 On répète le numérateur, le dénominateur ne change pas !</div>'
+  },
+
+  // Étape 2 : règle — on multiplie seulement le numérateur
+  {
+    explic:"La règle est simple : pour multiplier une fraction par un entier, on multiplie uniquement le numérateur par cet entier. Le dénominateur reste identique.",
+    draw:function(){
+      var h='';
+      h+=T(240,22,'Règle : multiplier le numérateur','#92400e',13,'middle',true);
+
+      // Schéma de la règle
+      h+=R(60,40,360,80,12,'#92400e');
+      // Calcul en grand
+      h+=T(120,75,'n','white',22,'middle',true);
+      h+=T(140,75,'×  k','white',22,'middle',true); // affichage simplifié
+      // fraction propre
+      h+=T(100,65,'n','white',20,'middle',true);
+      h+=L(85,70,115,70,'white',2);
+      h+=T(100,86,'d','white',20,'middle',true);
+      h+=T(138,75,'× k','white',16,'middle',true);
+      h+=T(172,75,'=','white',18,'middle',true);
+      h+=T(210,65,'n × k','#fde68a',18,'middle',true);
+      h+=L(185,70,235,70,'white',2);
+      h+=T(210,86,'d','white',18,'middle',true);
+
+      // Flèche "entier multiplie le numérateur"
+      h+='<path d="M138,60 Q175,38 210,58" fill="none" stroke="#fde68a" stroke-width="1.5" stroke-dasharray="4,3"/>';
+      h+='<polygon points="210,58 202,52 206,62" fill="#fde68a"/>';
+      h+=T(175,34,'l\'entier multiplie','#fde68a',9,'middle');
+      h+=T(175,46,'le numérateur','#fde68a',9,'middle');
+
+      // Flèche "dénominateur inchangé"
+      h+='<path d="M138,88 Q175,108 185,90" fill="none" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4,3"/>';
+      h+=T(160,112,'dénominateur','#93c5fd',9,'middle');
+      h+=T(160,124,'inchangé','#93c5fd',9,'middle');
+
+      // 3 exemples
+      var exs=[
+        {calc:'4 ×', n:3, d:7, res_n:12, res_d:7, col:'#dc2626'},
+        {calc:'5 ×', n:2, d:9, res_n:10, res_d:9, col:'#1d4ed8'},
+        {calc:'6 ×', n:1, d:4, res_n:6,  res_d:4, col:'#15803d'}
+      ];
+      var ey=148, gap2=46;
+      exs.forEach(function(ex,i){
+        var ey2=ey+i*gap2;
+        h+=R(30,ey2,420,38,8,'white',ex.col,1.5);
+        // calcul
+        h+=T(60,ey2+14,ex.calc,ex.col,13,'middle',true);
+        h+=T(88,ey2+10,''+ex.n,ex.col,14,'middle',true);
+        h+=L(76,ey2+14,100,ey2+14,ex.col,1.5);
+        h+=T(88,ey2+26,''+ex.d,ex.col,14,'middle',true);
+        h+=T(116,ey2+18,'=',ex.col,14,'middle',true);
+        // numérateur multiplié
+        h+=T(150,ey2+10,ex.calc.replace('×','').trim()+'×'+ex.n,'#b45309',12,'middle',true);
+        h+=L(130,ey2+14,170,ey2+14,ex.col,1.5);
+        h+=T(150,ey2+26,''+ex.d,ex.col,14,'middle',true);
+        h+=T(188,ey2+18,'=',ex.col,14,'middle',true);
+        h+=T(220,ey2+10,''+ex.res_n,'#14532d',16,'middle',true);
+        h+=L(205,ey2+14,235,ey2+14,ex.col,2);
+        h+=T(220,ey2+26,''+ex.res_d,'#14532d',16,'middle',true);
+      });
+      return h;
+    },
+    calc:'<div class="enonce en1">Règle</div>'
+      +'<div class="ligne"><span class="hl-o">k</span> × <span class="fr"><span class="n">n</span><span class="d">d</span></span> = <span class="fr"><span class="n"><span class="hl-o">k</span> × n</span><span class="d">d</span></span></div>'
+      +'<div class="ligne">On multiplie <span class="hl-o">uniquement le numérateur</span> par k.</div>'
+      +'<div class="ligne">Le dénominateur <b>ne change pas</b>.</div>'
+      +'<div class="ligne">• 4 × <span class="fr hl-r"><span class="n">3</span><span class="d">7</span></span> = <span class="fr hl-r"><span class="n">12</span><span class="d">7</span></span></div>'
+      +'<div class="ligne">• 5 × <span class="fr hl-b"><span class="n">2</span><span class="d">9</span></span> = <span class="fr hl-b"><span class="n">10</span><span class="d">9</span></span></div>'
+      +'<div class="ligne">• 6 × <span class="fr hl-g"><span class="n">1</span><span class="d">4</span></span> = <span class="fr hl-g"><span class="n">6</span><span class="d">4</span></span></div>'
+  },
+
+  // Étape 3 : application visuelle — 4 × 3/8
+  {
+    explic:"Application : calculons 4 × (3/8). On prend 4 fois la fraction 3/8. On colorie 3 cases sur 8 à chaque fois. Au total : 4 × 3 = 12 cases coloriées sur 8.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Application : 4 ×','#92400e',13,'middle',true);
+      h+=T(320,13,'3','#dc2626',14,'middle',true);
+      h+=L(308,17,332,17,'#dc2626',2);
+      h+=T(320,29,'8','#dc2626',14,'middle',true);
+
+      // 4 barres de 8 cases, 3 coloriées
+      var bx=35,by=45,bw=370,bh=38,gap=8;
+      var cols4=['#fcd34d','#fb923c','#f97316','#ea580c'];
+      for(var i=0;i<4;i++){
+        h+=barreFrac(bx,by+i*(bh+gap),bw,bh,8,3,cols4[i],'#fef3c7','#92400e');
+        // étiquette à droite
+        h+=T(bx+bw+12,by+i*(bh+gap)+bh/2+4,'3/8','#92400e',10,'start',true);
+      }
+      // Accolade
+      h+=L(bx+bw+30,by,bx+bw+30,by+4*(bh+gap)-gap,'#92400e',2);
+      h+=L(bx+bw+30,by,bx+bw+36,by,'#92400e',2);
+      h+=L(bx+bw+30,by+4*(bh+gap)-gap,bx+bw+36,by+4*(bh+gap)-gap,'#92400e',2);
+      h+=T(bx+bw+38,by+2*(bh+gap),'4×3=12','#92400e',10,'start',true);
+      h+=T(bx+bw+38,by+2*(bh+gap)+14,'parts','#92400e',10,'start');
+
+      // Résultat
+      h+=R(100,240,280,42,10,'#92400e');
+      h+=T(180,256,'4  ×','white',14,'middle',true);
+      h+=T(215,250,'3','white',14,'middle',true);
+      h+=L(203,254,227,254,'white',2);
+      h+=T(215,266,'8','white',14,'middle',true);
+      h+=T(242,256,'=','white',14,'middle',true);
+      h+=T(272,250,'12','#fde68a',16,'middle',true);
+      h+=L(260,254,284,254,'white',2);
+      h+=T(272,266,'8','#fde68a',16,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">4 × <span class="fr hl-r"><span class="n">3</span><span class="d">8</span></span> = ?</div>'
+      +'<div class="ligne">On prend <span class="hl-o">4 fois</span> la fraction <span class="fr hl-r"><span class="n">3</span><span class="d">8</span></span></div>'
+      +'<div class="ligne">= 4 × 3 cases coloriées sur 8 = <span class="hl-o">12 cases</span></div>'
+      +'<div class="ligne">4 × <span class="fr hl-r"><span class="n">3</span><span class="d">8</span></span> = <span class="fr hl-o"><span class="n">4 × 3</span><span class="d">8</span></span> = <span class="fr hl-o"><span class="n">12</span><span class="d">8</span></span></div>'
+      +'<div class="attention">💡 12/8 > 1 : c\'est une fraction supérieure à 1, ce n\'est pas un problème !</div>'
+  },
+
+  // Étape 4 : cas où le résultat est un entier
+  {
+    explic:"Parfois le résultat est un nombre entier. C'est le cas quand le numérateur du résultat est un multiple du dénominateur. Exemple : 4 × (3/4) = 12/4 = 3.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Cas particulier : résultat entier','#92400e',13,'middle',true);
+
+      // 4 barres de 4 cases, 3 coloriées
+      var bx=50,by=42,bw=320,bh=42,gap=10;
+      for(var i=0;i<4;i++){
+        h+=barreFrac(bx,by+i*(bh+gap),bw,bh,4,3,'#fcd34d','#fef3c7','#92400e');
+      }
+      // 3 barres complètes = 3 entiers (regroupement)
+      // Lignes verticales de regroupement
+      var pw=bw/4;
+      for(var j=1;j<=3;j++){
+        h+=L(bx+j*pw,by-4,bx+j*pw,by+4*(bh+gap)-gap+4,'#dc2626',1.5,'5,3');
+      }
+      h+=T(bx+0.5*pw,by-10,'1 entier','#dc2626',9,'middle');
+      h+=T(bx+1.5*pw,by-10,'1 entier','#dc2626',9,'middle');
+      h+=T(bx+2.5*pw,by-10,'1 entier','#dc2626',9,'middle');
+
+      // Calcul détaillé
+      h+=R(30,220,420,60,10,'#92400e');
+      h+=T(130,242,'4 ×','white',14,'middle',true);
+      h+=T(164,236,'3','white',15,'middle',true);
+      h+=L(152,240,176,240,'white',2);
+      h+=T(164,252,'4','white',15,'middle',true);
+      h+=T(192,242,'=','white',14,'middle',true);
+      h+=T(222,236,'4×3','white',14,'middle',true);
+      h+=L(210,240,234,240,'white',1.5);
+      h+=T(222,252,'4','white',15,'middle',true);
+      h+=T(252,242,'=','white',14,'middle',true);
+      h+=T(282,236,'12','white',15,'middle',true);
+      h+=L(270,240,294,240,'white',1.5);
+      h+=T(282,252,'4','white',15,'middle',true);
+      h+=T(312,242,'=','white',14,'middle',true);
+      h+=T(355,242,'3','#fde68a',22,'middle',true);
+      h+=T(390,242,'✓','#fde68a',18,'middle',true);
+
+      h+=T(240,272,'12 ÷ 4 = 3  →  le résultat est un entier','white',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Cas particulier : 4 × <span class="fr hl-o"><span class="n">3</span><span class="d">4</span></span></div>'
+      +'<div class="ligne">4 × <span class="fr hl-o"><span class="n">3</span><span class="d">4</span></span> = <span class="fr hl-o"><span class="n">4 × 3</span><span class="d">4</span></span> = <span class="fr hl-o"><span class="n">12</span><span class="d">4</span></span> = <span class="hl-o">3</span></div>'
+      +'<div class="ligne">Quand <b>le numérateur est divisible par le dénominateur</b>, le résultat est un entier.</div>'
+      +'<div class="conclusion-ok">4 barres de 3/4 = 3 barres entières = 3  ✓</div>'
+  }
+];
+
+// ════════════════════════════════════════════════════════════
+// ONGLET 1 — SIMPLIFIER LE RÉSULTAT
+// ════════════════════════════════════════════════════════════
+var e1=[
+
+  // Étape 1 : rappel simplification
+  {
+    explic:"Après avoir multiplié, on simplifie toujours si possible. Simplifier une fraction, c'est diviser le numérateur et le dénominateur par un même nombre (leur diviseur commun).",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Simplifier une fraction','#14532d',13,'middle',true);
+      h+=T(240,36,'Diviser numérateur et dénominateur par le même nombre','#374151',10);
+
+      // Exemple 6/4 → 3/2
+      h+=R(30,50,420,105,12,'#14532d');
+      h+=T(240,70,'Exemple :','white',12,'middle',true);
+      // 6/4
+      h+=T(120,88,'6','white',26,'middle',true);
+      h+=L(100,94,140,94,'white',2.5);
+      h+=T(120,110,'4','white',26,'middle',true);
+      // ÷2 flèches
+      h+='<path d="M145,88 Q175,75 200,88" fill="none" stroke="#fde68a" stroke-width="2"/>';
+      h+='<polygon points="200,88 193,82 195,92" fill="#fde68a"/>';
+      h+='<path d="M145,110 Q175,123 200,110" fill="none" stroke="#fde68a" stroke-width="2"/>';
+      h+='<polygon points="200,110 193,106 195,116" fill="#fde68a"/>';
+      h+=T(175,72,'÷ 2','#fde68a',12,'middle',true);
+      h+=T(175,128,'÷ 2','#fde68a',12,'middle',true);
+      // =
+      h+=T(215,100,'=','white',20,'middle',true);
+      // 3/2
+      h+=T(260,88,'3','#86efac',26,'middle',true);
+      h+=L(240,94,280,94,'white',2.5);
+      h+=T(260,110,'2','#86efac',26,'middle',true);
+      h+=T(310,100,'← fraction irréductible','#fde68a',10,'start');
+
+      // 3 exemples
+      var exs2=[
+        {num:6, den:8, gcd:2, rn:3, rd:4, col:'#dc2626'},
+        {num:10,den:6, gcd:2, rn:5, rd:3, col:'#1d4ed8'},
+        {num:12,den:9, gcd:3, rn:4, rd:3, col:'#b45309'}
+      ];
+      h+=T(240,170,'Exercices de simplification :','#14532d',11,'middle',true);
+      exs2.forEach(function(ex,i){
+        var ex2=175+i*38;
+        h+=R(20,ex2,440,34,7,'white',ex.col,1.5);
+        h+=T(75,ex2+12,''+ex.num,ex.col,15,'middle',true);
+        h+=L(58,ex2+16,92,ex2+16,ex.col,1.5);
+        h+=T(75,ex2+28,''+ex.den,ex.col,15,'middle',true);
+        h+=T(110,ex2+20,'÷ '+ex.gcd,'#64748b',11,'middle',true);
+        h+=T(145,ex2+20,'=',ex.col,14,'middle',true);
+        h+=T(185,ex2+12,''+ex.rn,'#15803d',15,'middle',true);
+        h+=L(168,ex2+16,202,ex2+16,ex.col,1.5);
+        h+=T(185,ex2+28,''+ex.rd,'#15803d',15,'middle',true);
+        h+=T(280,ex2+20,'Diviseur commun : '+ex.gcd,'#64748b',10,'middle');
+      });
+      return h;
+    },
+    calc:'<div class="enonce en2">Rappel : simplifier une fraction</div>'
+      +'<div class="ligne">On divise numérateur <b>et</b> dénominateur par le même nombre.</div>'
+      +'<div class="ligne"><span class="fr hl-r"><span class="n">6</span><span class="d">4</span></span> = <span class="fr hl-g"><span class="n">3</span><span class="d">2</span></span> (÷ 2)</div>'
+      +'<div class="ligne"><span class="fr hl-b"><span class="n">10</span><span class="d">6</span></span> = <span class="fr hl-g"><span class="n">5</span><span class="d">3</span></span> (÷ 2)</div>'
+      +'<div class="ligne"><span class="fr hl-o"><span class="n">12</span><span class="d">9</span></span> = <span class="fr hl-g"><span class="n">4</span><span class="d">3</span></span> (÷ 3)</div>'
+      +'<div class="attention">⚠️ On simplifie jusqu\'à ce que le numérateur et le dénominateur n\'aient plus de diviseur commun.</div>'
+  },
+
+  // Étape 2 : calcul complet avec simplification — 6 × (5/9)
+  {
+    explic:"Calculons 6 × (5/9). On multiplie le numérateur : 6 × 5 = 30, le dénominateur reste 9. On obtient 30/9, puis on simplifie en divisant par 3 : 30/9 = 10/3.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Exemple complet : 6 ×','#14532d',13,'middle',true);
+      h+=T(330,13,'5','#dc2626',14,'middle',true);
+      h+=L(318,17,342,17,'#dc2626',2);
+      h+=T(330,29,'9','#dc2626',14,'middle',true);
+
+      // Étape par étape dans un grand encadré
+      var steps=[
+        {label:'Étape 1 : multiplier le numérateur', color:'#14532d'},
+        {label:'Étape 2 : simplifier',               color:'#b45309'},
+        {label:'Résultat',                            color:'#1d4ed8'}
+      ];
+
+      // Étape 1
+      h+=R(20,42,440,68,10,'#f0fdf4','#6ee7b7',2);
+      h+=T(50,60,'6 ×','#14532d',16,'start',true);
+      h+=T(102,54,'5','#dc2626',17,'middle',true);
+      h+=L(89,59,115,59,'#dc2626',2);
+      h+=T(102,71,'9','#dc2626',17,'middle',true);
+      h+=T(130,62,'=','#374151',16,'middle');
+      h+=T(167,54,'6 × 5','#b45309',14,'middle',true);
+      h+=L(148,59,186,59,'#374151',2);
+      h+=T(167,71,'9','#374151',17,'middle',true);
+      h+=T(205,62,'=','#374151',16,'middle');
+      h+=T(238,54,'30','#b45309',17,'middle',true);
+      h+=L(222,59,254,59,'#374151',2);
+      h+=T(238,71,'9','#374151',17,'middle',true);
+      h+=T(280,62,'← à simplifier','#b45309',10,'start');
+
+      // Étape 2 : simplification 30/9 ÷3 = 10/3
+      h+=R(20,120,440,72,10,'#fef9c3','#fcd34d',2);
+      h+=T(240,138,'Simplification de','#78350f',11,'middle',true);
+      h+=T(306,132,'30','#b45309',17,'middle',true);
+      h+=T(306,135,'  ','#b45309',17,'middle',true);
+      h+=L(290,137,322,137,'#b45309',2);
+      h+=T(306,149,'9','#b45309',17,'middle',true);
+      // flèches ÷3
+      h+='<path d="M328,132 Q358,118 383,132" fill="none" stroke="#dc2626" stroke-width="1.5"/>';
+      h+='<polygon points="383,132 376,126 378,136" fill="#dc2626"/>';
+      h+='<path d="M328,149 Q358,163 383,149" fill="none" stroke="#dc2626" stroke-width="1.5"/>';
+      h+='<polygon points="383,149 376,145 378,155" fill="#dc2626"/>';
+      h+=T(358,118,'÷ 3','#dc2626',11,'middle',true);
+      h+=T(358,165,'÷ 3','#dc2626',11,'middle',true);
+      h+=T(403,132,'10','#15803d',17,'middle',true);
+      h+=L(390,137,416,137,'#15803d',2);
+      h+=T(403,149,'3','#15803d',17,'middle',true);
+
+      // Résultat final
+      h+=R(20,202,440,72,10,'#15803d');
+      h+=T(130,230,'6 ×','white',16,'middle',true);
+      h+=T(175,224,'5','white',16,'middle',true);
+      h+=L(163,229,187,229,'white',2);
+      h+=T(175,241,'9','white',16,'middle',true);
+      h+=T(210,231,'=','white',16,'middle',true);
+      h+=T(250,224,'30','white',16,'middle',true);
+      h+=L(236,229,264,229,'white',2);
+      h+=T(250,241,'9','white',16,'middle',true);
+      h+=T(282,231,'=','white',16,'middle',true);
+      h+=T(322,224,'10','#fde68a',20,'middle',true);
+      h+=L(306,229,338,229,'white',2.5);
+      h+=T(322,243,'3','#fde68a',20,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">6 × <span class="fr hl-r"><span class="n">5</span><span class="d">9</span></span> = ?</div>'
+      +'<div class="ligne">Étape 1 : 6 × <span class="fr hl-r"><span class="n">5</span><span class="d">9</span></span> = <span class="fr hl-o"><span class="n">6 × 5</span><span class="d">9</span></span> = <span class="fr hl-o"><span class="n">30</span><span class="d">9</span></span></div>'
+      +'<div class="ligne">Étape 2 : simplifier par 3 → <span class="fr hl-g"><span class="n">10</span><span class="d">3</span></span></div>'
+      +'<div class="conclusion-ok">6 × <span class="fr"><span class="n">5</span><span class="d">9</span></span> = <span class="fr"><span class="n">10</span><span class="d">3</span></span></div>'
+  },
+
+  // Étape 3 : astuce — simplifier AVANT de multiplier
+  {
+    explic:"Astuce : on peut simplifier avant de multiplier, en cherchant un diviseur commun entre l'entier et le dénominateur. Cela évite de manipuler de grands nombres.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Astuce : simplifier avant de multiplier','#14532d',13,'middle',true);
+      h+=T(240,33,'Même exemple : 6 ×','#374151',11,'middle');
+      h+=T(330,28,'5','#dc2626',12,'middle',true);
+      h+=L(320,32,340,32,'#dc2626',1.5);
+      h+=T(330,40,'9','#dc2626',12,'middle',true);
+
+      // Méthode 1 : classique
+      h+=R(15,50,215,130,10,'#fee2e2','#dc2626',2);
+      h+=T(122,67,'Méthode classique','#dc2626',11,'middle',true);
+      h+=T(122,83,'6 ×','#374151',13,'middle',true);
+      h+=T(155,77,'5','#dc2626',13,'middle',true);
+      h+=L(144,81,166,81,'#dc2626',1.5);
+      h+=T(155,91,'9','#dc2626',13,'middle',true);
+      h+=T(175,84,'=','#374151',13,'middle');
+      h+=T(200,77,'30','#b45309',14,'middle',true);
+      h+=L(188,81,212,81,'#dc2626',1.5);
+      h+=T(200,91,'9','#dc2626',14,'middle',true);
+      h+=T(122,108,'Puis simplifier 30/9 ÷ 3','#374151',10,'middle');
+      h+=T(122,122,'=','#374151',10,'middle');
+      h+=T(145,117,'10','#15803d',14,'middle',true);
+      h+=L(133,121,157,121,'#dc2626',1.5);
+      h+=T(145,131,'3','#15803d',14,'middle',true);
+      h+=T(122,157,'Grands nombres','#dc2626',10,'middle');
+      h+=T(122,170,'→ plus difficile','#dc2626',10,'middle');
+
+      // Méthode 2 : astuce
+      h+=R(250,50,215,130,10,'#dcfce7','#15803d',2);
+      h+=T(357,67,'Astuce ✨','#14532d',11,'middle',true);
+      h+=T(357,83,'6 et 9 ont','#374151',10,'middle');
+      h+=T(357,97,'3 en commun','#15803d',11,'middle',true);
+      // Simplification de 6 et 9 avant
+      h+=T(280,117,'6','#b45309',20,'middle',true);
+      h+=T(300,117,'×','#374151',16,'middle');
+      h+=T(330,111,'5','#dc2626',16,'middle',true);
+      h+=L(318,115,342,115,'#dc2626',1.5);
+      h+=T(330,125,'9','#dc2626',16,'middle',true);
+      // barres de simplification
+      h+='<line x1="278" y1="108" x2="284" y2="128" stroke="#dc2626" stroke-width="2"/>';
+      h+='<line x1="328" y1="120" x2="334" y2="130" stroke="#dc2626" stroke-width="2"/>';
+      h+=T(268,102,'÷3','#dc2626',10,'middle');
+      h+=T(355,135,'÷3','#dc2626',10,'middle');
+      h+=T(360,117,'→','#374151',14,'middle');
+      h+=T(400,111,'2','#15803d',16,'middle',true);
+      h+=T(413,117,'×','#374151',13,'middle');
+      h+=T(432,111,'5','#15803d',16,'middle',true);
+      h+=L(425,115,439,115,'#15803d',1.5);
+      h+=T(432,125,'3','#15803d',16,'middle',true);
+      h+=T(357,157,'Petits nombres','#15803d',10,'middle');
+      h+=T(357,170,'→ plus simple','#15803d',10,'middle');
+
+      // Conclusion = même résultat
+      h+=R(15,190,450,44,8,'#14532d');
+      h+=T(240,208,'Les deux méthodes donnent le même résultat :','white',11,'middle');
+      h+=T(240,224,'2 × 5/3 = 10/3','#fde68a',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Astuce : simplifier AVANT de multiplier</div>'
+      +'<div class="ligne">On cherche un diviseur commun entre <b>l\'entier</b> et <b>le dénominateur</b>.</div>'
+      +'<div class="ligne">6 et 9 sont tous les deux divisibles par <span class="hl-r">3</span> :</div>'
+      +'<div class="ligne">6 ÷ 3 = <span class="hl-g">2</span> &nbsp;&nbsp; 9 ÷ 3 = <span class="hl-g">3</span></div>'
+      +'<div class="ligne">Donc : <span class="hl-g">2</span> × <span class="fr hl-r"><span class="n">5</span><span class="d">3</span></span> = <span class="fr hl-g"><span class="n">10</span><span class="d">3</span></span></div>'
+      +'<div class="conclusion-ok">Même résultat, calculs plus simples ! ✨</div>'
+  },
+
+  // Étape 4 : exercice bilan
+  {
+    explic:"Bilan : pour multiplier une fraction par un entier, on multiplie le numérateur et on simplifie si possible. On peut aussi simplifier avant. Voici deux exercices récapitulatifs.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Exercices bilan','#14532d',13,'middle',true);
+
+      // Exercice 1 : 8 × 3/4
+      h+=R(20,34,440,114,10,'#f0fdf4','#6ee7b7',2);
+      h+=T(50,52,'Exercice 1 :  8 ×','#14532d',12,'start',true);
+      h+=T(176,46,'3','#dc2626',14,'middle',true);
+      h+=L(164,50,188,50,'#dc2626',2);
+      h+=T(176,62,'4','#dc2626',14,'middle',true);
+      // Solution
+      h+=T(55,80,'= ?','#374151',12,'start');
+      h+=T(55,98,'8 × 3 = 24   →   24/4   →   ÷4   →','#374151',10,'start');
+      h+=T(55,112,'Astuce : 8÷4=2  →  2×3 =','#374151',10,'start');
+      h+=R(300,88,120,36,8,'#14532d');
+      h+=T(336,100,'24','white',18,'middle',true);
+      h+=L(320,106,352,106,'white',2);
+      h+=T(336,120,'4','white',18,'middle',true);
+      h+=T(365,106,'=','white',14,'middle');
+      h+=T(395,106,'6','#fde68a',22,'middle',true);
+
+      // Exercice 2 : 9 × 2/6
+      h+=R(20,158,440,122,10,'#fef9c3','#fcd34d',2);
+      h+=T(50,176,'Exercice 2 :  9 ×','#78350f',12,'start',true);
+      h+=T(176,170,'2','#b45309',14,'middle',true);
+      h+=L(164,174,188,174,'#b45309',2);
+      h+=T(176,186,'6','#b45309',14,'middle',true);
+      h+=T(55,198,'9×2=18  →  18/6','#374151',10,'start');
+      h+=T(55,212,'Astuce : 9÷3=3, 6÷3=2  →  3×','#374151',10,'start');
+      h+=T(185,207,'2','#b45309',12,'middle');
+      h+=L(179,211,191,211,'#b45309',1.5);
+      h+=T(185,219,'2','#b45309',12,'middle');
+      h+=T(200,213,'=','#374151',10,'middle');
+      h+=T(55,227,'→ simplifier 18/6 par 6','#374151',10,'start');
+      h+=R(300,198,120,50,8,'#b45309');
+      h+=T(336,214,'18','white',18,'middle',true);
+      h+=L(320,220,352,220,'white',2);
+      h+=T(336,234,'6','white',18,'middle',true);
+      h+=T(365,220,'=','white',14,'middle');
+      h+=T(395,220,'3','#fde68a',22,'middle',true);
+
+      h+=R(20,288,440,0,0,'none','none',0);
+      return h;
+    },
+    calc:'<div class="enonce en2">Bilan — deux méthodes</div>'
+      +'<div class="ligne"><b>Ex 1 :</b> 8 × <span class="fr hl-r"><span class="n">3</span><span class="d">4</span></span> = <span class="fr"><span class="n">24</span><span class="d">4</span></span> = <span class="hl-g">6</span>  (ou 8÷4=2, 2×3=6)</div>'
+      +'<div class="ligne"><b>Ex 2 :</b> 9 × <span class="fr hl-o"><span class="n">2</span><span class="d">6</span></span> = <span class="fr"><span class="n">18</span><span class="d">6</span></span> = <span class="hl-g">3</span>  (ou 9÷3=3, 3×<sup>2</sup>/<sub>2</sub>=3)</div>'
+      +'<div class="conclusion-ok">k × <span class="fr"><span class="n">n</span><span class="d">d</span></span> = <span class="fr"><span class="n">k×n</span><span class="d">d</span></span>  →  on simplifie si possible ✓</div>'
+  }
+];
+
+// ─── Moteur ────────────────────────────────────────────────
+var ETAPES=[e0,e1];
+function setMode(m){
+  mode=m; etape=0;
+  document.querySelectorAll('.tab').forEach(function(tab,i){ tab.classList.toggle('active',i===m); });
+  document.querySelector('.btn-next').style.background=COLS[m];
+  document.getElementById('calc-box').style.borderLeftColor=COLS[m];
+  render();
+}
+function prev(){ if(etape>0){ etape--; render(); } }
+function next(){ if(etape<ETAPES[mode].length-1){ etape++; render(); } }
+function render(){
+  var e=ETAPES[mode][etape];
+  document.getElementById('fig').innerHTML=e.draw();
+  document.getElementById('calc-box').innerHTML=e.calc;
+  document.getElementById('explication').textContent=e.explic;
+  document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length;
+}
+render();
+</script>
+</body>
+</html>
