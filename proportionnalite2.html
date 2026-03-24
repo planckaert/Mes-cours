@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proportionnalité – 4ème</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a5f; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 5px; padding: 9px 6px; flex-wrap: wrap; }
+  .tab { padding: 8px 12px; border-radius: 16px; border: none; font-size: 0.78em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab3 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab4 { background: #fef3c7; color: #78350f; border: 2px solid #fcd34d; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .tab3.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .tab4.active { background: #b45309; color: white; border-color: #b45309; }
+
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .en3 { background: #fce7f3; color: #831843; }
+  .en4 { background: #fef3c7; color: #78350f; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-p { color: #7c3aed; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 4px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; font-size: 0.95em; }
+  .fr .d { padding: 0 5px; font-size: 0.95em; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>📊 Proportionnalité — 4ème</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">4ème proportionnelle</button>
+  <button class="tab tab2" onclick="setMode(1)">Échelle</button>
+  <button class="tab tab3" onclick="setMode(2)">Pourcentage</button>
+  <button class="tab tab4" onclick="setMode(3)">Ratio</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+
+<script>
+var mode=0, etape=0;
+var COLS=['#1d4ed8','#15803d','#9d174d','#b45309'];
+
+// ─── Helpers SVG ───────────────────────────────────────────
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc+'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')+'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){ stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>'; }
+function L(x1,y1,x2,y2,col,w,dash){ w=w||1.5; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>'; }
+function frac(cx,cy,num,den,col,sz){
+  sz=sz||15; var half=sz*0.72;
+  return T(cx,cy,''+num,col,sz,'middle',true)+L(cx-half,cy+4,cx+half,cy+4,col,1.5)+T(cx,cy+sz+2,''+den,col,sz,'middle',true);
+}
+
+// Tableau de proportionnalité 2 lignes × 4 colonnes
+function tableau(r1,r2,cols,colHL){
+  // r1 = [{val,col}], r2 = [{val,col}], cols = noms colonnes
+  var tw=96, tx=28, ty=50, th=44;
+  var h='';
+  // En-têtes
+  r1.forEach(function(c,i){
+    var bg=(i===colHL)?'#fef3c7':'#f0f9ff';
+    h+=R(tx+i*tw,ty,tw,th,0,bg,'#93c5fd',1.5);
+    h+=T(tx+i*tw+tw/2,ty+th/2-6,cols?cols[i]:'','#64748b',9,'middle');
+    h+=T(tx+i*tw+tw/2,ty+th/2+10,c.val,c.val==='?'?'#dc2626':c.col,15,'middle',true);
+  });
+  r2.forEach(function(c,i){
+    var bg=(i===colHL)?'#fef3c7':'#f0fdf4';
+    h+=R(tx+i*tw,ty+th,tw,th,0,bg,'#6ee7b7',1.5);
+    h+=T(tx+i*tw+tw/2,ty+th+th/2-6,cols?'':'','#64748b',9,'middle');
+    h+=T(tx+i*tw+tw/2,ty+th+th/2+10,c.val,c.val==='?'?'#dc2626':c.col,15,'middle',true);
+  });
+  return h;
+}
+
+// ══════════════════════════════════════════════
+// ONGLET 0 — QUATRIÈME PROPORTIONNELLE
+// ══════════════════════════════════════════════
+var e0=[
+  {
+    explic:"Deux grandeurs sont proportionnelles quand leur rapport est constant. Dans un tableau de proportionnalité, les valeurs d'une ligne sont toutes multipliées par le même nombre k (coefficient de proportionnalité).",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Tableau de proportionnalité','#1e3a8a',13,'middle',true);
+      // Tableau prix/quantité
+      var tw=96, tx=28, ty=50, th=44;
+      var r1=[{v:'1',c:'#1d4ed8'},{v:'3',c:'#1d4ed8'},{v:'5',c:'#1d4ed8'},{v:'8',c:'#1d4ed8'}];
+      var r2=[{v:'2,5',c:'#15803d'},{v:'7,5',c:'#15803d'},{v:'12,5',c:'#15803d'},{v:'20',c:'#15803d'}];
+      var labs=['Nb de kg','3 kg','5 kg','8 kg'];
+      // en-têtes
+      h+=R(tx,ty-18,4*tw,18,0,'#1e3a8a','none');
+      h+=T(tx+2*tw,ty-8,'Quantité (kg)','white',9,'middle',true);
+      h+=R(tx,ty+th-18,4*tw,18,0,'#14532d','none');
+      h+=T(tx+2*tw,ty+th-8,'Prix (€)','white',9,'middle',true);
+      r1.forEach(function(c,i){
+        h+=R(tx+i*tw,ty,tw,th,0,'#dbeafe','#93c5fd',1.5);
+        h+=T(tx+i*tw+tw/2,ty+th/2+6,''+[1,3,5,8][i],c.c,16,'middle',true);
+      });
+      r2.forEach(function(c,i){
+        h+=R(tx+i*tw,ty+th,tw,th,0,'#dcfce7','#6ee7b7',1.5);
+        h+=T(tx+i*tw+tw/2,ty+th+th/2+6,''+[2.5,7.5,12.5,20][i],c.c,14,'middle',true);
+      });
+      // Flèches ×2,5
+      for(var i=0;i<4;i++){
+        h+=L(tx+i*tw+tw/2,ty+th,tx+i*tw+tw/2,ty+th+8,'#b45309',1,'4,2');
+        h+=T(tx+i*tw+tw/2,ty+th+22,'×2,5','#b45309',9,'middle',true);
+      }
+      // Coefficient
+      h+=R(20,210,440,68,10,'#1e3a8a');
+      h+=T(240,228,'Coefficient de proportionnalité k = 2,5','white',12,'middle',true);
+      h+=T(240,248,'Prix = Quantité × 2,5','#93c5fd',13,'middle',true);
+      h+=T(240,265,'(toujours le même rapport : 2,5/1 = 7,5/3 = 12,5/5 = 20/8)','#bfdbfe',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Tableau de proportionnalité</div>'
+      +'<div class="ligne">Deux grandeurs sont <span class="hl-b">proportionnelles</span> si leur rapport est constant.</div>'
+      +'<div class="ligne">Coefficient k = <span class="fr hl-b"><span class="n">Prix</span><span class="d">Quantité</span></span> = <span class="fr hl-b"><span class="n">2,5</span><span class="d">1</span></span> = <span class="fr hl-b"><span class="n">7,5</span><span class="d">3</span></span> = <span class="hl-b">2,5</span></div>'
+      +'<div class="conclusion-ok">Prix = Quantité × k</div>'
+  },
+  {
+    explic:"La quatrième proportionnelle : on connaît trois valeurs a, b, c d'un tableau de proportionnalité et on cherche la quatrième x. On utilise le fait que a/b = c/x, donc x = b × c ÷ a.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Trouver la quatrième proportionnelle','#1e3a8a',13,'middle',true);
+      var tw=114, tx=14, ty=52, th=46;
+      // Ligne 1
+      ['6 L','4 L','?'].forEach(function(v,i){
+        var hl=(i===2);
+        h+=R(tx+i*tw,ty,tw,th,0,hl?'#fef3c7':'#dbeafe',hl?'#f59e0b':'#93c5fd',hl?2.5:1.5);
+        h+=T(tx+i*tw+tw/2,ty+th/2+6,v,hl?'#dc2626':'#1d4ed8',hl?20:16,'middle',true);
+      });
+      // Ligne 2
+      ['9 €','','15 €'].forEach(function(v,i){
+        h+=R(tx+i*tw,ty+th,tw,th,0,'#dcfce7','#6ee7b7',1.5);
+        h+=T(tx+i*tw+tw/2,ty+th+th/2+6,v,'#15803d',16,'middle',true);
+      });
+      // Labels
+      h+=T(tx+tw/2,ty-10,'Exemple','#64748b',9,'middle');
+      h+=T(tx+tw/2,ty+th-10,'Prix','#64748b',9,'middle');
+      h+=T(tx+tw/2+tw,ty-10,'Autre exemple','#64748b',9,'middle');
+      h+=T(tx+tw/2+tw*2,ty-10,'Cherché x','#dc2626',9,'middle');
+      // Calcul
+      h+=R(14,162,452,118,10,'#1e3a8a');
+      h+=T(240,182,'Méthode :','white',12,'middle',true);
+      // Fraction égalité
+      h+=T(80,210,'6','white',16,'middle',true); h+=L(56,215,104,215,'white',1.5); h+=T(80,230,'9','white',16,'middle',true);
+      h+=T(116,218,'=','white',16,'middle');
+      h+=T(152,210,'4','white',16,'middle',true); h+=L(128,215,176,215,'white',1.5); h+=T(152,230,'x','white',16,'middle',true);
+      h+=T(200,218,'donc','white',11,'middle');
+      h+=T(252,210,'x =','white',14,'middle',true);
+      h+=T(320,204,'4 × 9','#fde68a',14,'middle',true); h+=L(294,210,346,210,'white',1.5); h+=T(320,224,'6','#fde68a',14,'middle',true);
+      h+=T(370,218,'=','white',14,'middle');
+      h+=T(424,218,'6 €','#86efac',16,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Quatrième proportionnelle</div>'
+      +'<div class="ligne">Si <span class="fr hl-b"><span class="n">a</span><span class="d">b</span></span> = <span class="fr hl-b"><span class="n">c</span><span class="d">x</span></span> alors <span class="hl-b">x = b × c ÷ a</span></div>'
+      +'<div class="ligne">Exemple : <span class="fr hl-b"><span class="n">6</span><span class="d">9</span></span> = <span class="fr hl-b"><span class="n">4</span><span class="d">x</span></span></div>'
+      +'<div class="ligne">x = 4 × 9 ÷ 6 = 36 ÷ 6 = <span class="hl-g">6 €</span></div>'
+      +'<div class="conclusion-ok">x = (b × c) ÷ a</div>'
+  },
+  {
+    explic:"Méthode par le coefficient de proportionnalité : on calcule k = a ÷ b, puis x = k × c. C'est équivalent à la règle de trois.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Méthode par le coefficient k','#1e3a8a',13,'middle',true);
+      // Tableau
+      var tw=160, tx=14, ty=50, th=46;
+      [['3 stylos','8 stylos'],['4,50 €','? €']].forEach(function(row,ri){
+        row.forEach(function(v,ci){
+          var isQ=(v[0]==='?');
+          h+=R(tx+ci*tw,ty+ri*th,tw,th,0,isQ?'#fef3c7':(ri===0?'#dbeafe':'#dcfce7'),isQ?'#f59e0b':(ri===0?'#93c5fd':'#6ee7b7'),isQ?2.5:1.5);
+          h+=T(tx+ci*tw+tw/2,ty+ri*th+th/2+6,v,isQ?'#dc2626':(ri===0?'#1d4ed8':'#15803d'),isQ?22:14,'middle',true);
+        });
+      });
+      // Étapes
+      h+=R(14,158,452,124,10,'#1e3a8a');
+      h+=T(240,176,'Calcul par coefficient','white',12,'middle',true);
+      // k
+      h+=T(60,202,'k =','white',13,'middle');
+      h+=T(118,196,'4,50','white',14,'middle',true); h+=L(94,202,142,202,'white',1.5); h+=T(118,216,'3','white',14,'middle',true);
+      h+=T(156,202,'= 1,5 €/stylo','#93c5fd',12,'middle');
+      // x
+      h+=T(60,240,'x = k × 8 =','white',12,'middle');
+      h+=T(188,240,'1,5 × 8','#fde68a',13,'middle',true);
+      h+=T(275,240,'= 12 €','#86efac',16,'middle',true);
+      // Vérif
+      h+=T(240,272,'Vérif : 4,50/3 = 12/8 = 1,5  ✓','#bfdbfe',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">3 stylos coûtent 4,50 € → 8 stylos coûtent ?</div>'
+      +'<div class="ligne">k = 4,50 ÷ 3 = <span class="hl-b">1,5 €</span> par stylo</div>'
+      +'<div class="ligne">x = 1,5 × 8 = <span class="hl-g">12 €</span></div>'
+      +'<div class="conclusion-ok">k = prix unitaire · x = k × quantité</div>'
+      +'<div class="attention">💡 Toujours vérifier : 4,50/3 = 12/8 = 1,5 ✓</div>'
+  }
+];
+
+// ══════════════════════════════════════════════
+// ONGLET 1 — ÉCHELLE
+// ══════════════════════════════════════════════
+var e1=[
+  {
+    explic:"Une échelle est un rapport de proportionnalité entre une mesure sur un plan (ou une carte) et la mesure réelle correspondante. Échelle 1/50 signifie que 1 cm sur le plan = 50 cm dans la réalité.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'L\'échelle — définition','#14532d',13,'middle',true);
+      // Plan de salle
+      h+=R(30,42,180,120,4,'#f0fdf4','#15803d',2);
+      h+=T(120,40,'Plan (échelle 1/50)','#14532d',10,'middle',true);
+      // Cote sur plan
+      h+=L(40,100,200,100,'#dc2626',2);
+      h+=L(40,95,40,105,'#dc2626',2); h+=L(200,95,200,105,'#dc2626',2);
+      h+=T(120,118,'3 cm sur le plan','#dc2626',10,'middle',true);
+      // Flèche "×50"
+      h+=L(224,102,254,102,'#374151',2);
+      h+='<polygon points="254,96 266,102 254,108" fill="#374151"/>';
+      h+=T(240,92,'× 50','#374151',10,'middle',true);
+      // Réalité
+      h+=R(270,42,180,120,4,'#dcfce7','#15803d',2);
+      h+=T(360,40,'Réalité','#14532d',10,'middle',true);
+      h+=L(280,100,440,100,'#15803d',2.5);
+      h+=L(280,94,280,106,'#15803d',2); h+=L(440,94,440,106,'#15803d',2);
+      h+=T(360,118,'150 cm = 1,5 m','#15803d',10,'middle',true);
+      // Formule
+      h+=R(20,178,440,100,10,'#14532d');
+      h+=T(240,197,'Échelle','white',13,'middle',true);
+      h+=frac(120,200,'mesure plan','mesure réelle','#86efac',11);
+      h+=T(196,215,'=','white',14,'middle');
+      h+=frac(256,200,'1','50','#fde68a',14);
+      h+=T(300,215,'(constante)','white',10,'middle');
+      h+=T(240,250,'3 cm × 50 = 150 cm = 1,5 m','#86efac',12,'middle',true);
+      h+=T(240,268,'(ou 3 ÷ (1/50) = 3 × 50)','#bfdbfe',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Définition : Échelle 1/50</div>'
+      +'<div class="ligne">Échelle = <span class="fr hl-g"><span class="n">mesure plan</span><span class="d">mesure réelle</span></span> = <span class="fr hl-g"><span class="n">1</span><span class="d">50</span></span></div>'
+      +'<div class="ligne">1 cm sur le plan = <span class="hl-g">50 cm</span> en réalité</div>'
+      +'<div class="conclusion-ok">mesure réelle = mesure plan × 50</div>'
+      +'<div class="attention">⚠️ On dit « échelle au 1/50 », pas « échelle 1/50 ».</div>'
+  },
+  {
+    explic:"Pour trouver la mesure réelle à partir de la mesure sur le plan : mesure réelle = mesure plan ÷ échelle. Pour trouver la mesure sur le plan : mesure plan = mesure réelle × échelle.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Calculs avec l\'échelle','#14532d',13,'middle',true);
+      // 2 tableaux
+      // Tableau 1 : plan → réalité
+      h+=R(14,40,220,100,8,'#f0fdf4','#15803d',2);
+      h+=T(124,56,'Plan → Réalité','#14532d',11,'middle',true);
+      h+=R(24,62,200,32,4,'#dbeafe','#93c5fd',1.5);
+      h+=T(124,83,'4,5 cm (plan)','#1d4ed8',11,'middle',true);
+      h+=T(124,100,'× 200  (é. 1/200)','#b45309',10,'middle');
+      h+=R(24,102,200,32,4,'#dcfce7','#6ee7b7',1.5);
+      h+=T(124,123,'= 900 cm = 9 m','#14532d',12,'middle',true);
+      // Tableau 2 : réalité → plan
+      h+=R(246,40,220,100,8,'#f0fdf4','#15803d',2);
+      h+=T(356,56,'Réalité → Plan','#14532d',11,'middle',true);
+      h+=R(256,62,200,32,4,'#dcfce7','#6ee7b7',1.5);
+      h+=T(356,83,'12 m = 1200 cm','#14532d',11,'middle',true);
+      h+=T(356,100,'÷ 200  (é. 1/200)','#b45309',10,'middle');
+      h+=R(256,102,200,32,4,'#dbeafe','#93c5fd',1.5);
+      h+=T(356,123,'= 6 cm (plan)','#1d4ed8',12,'middle',true);
+      // Formules
+      h+=R(14,152,220,60,8,'#14532d');
+      h+=T(124,170,'mesure réelle','#86efac',10,'middle',true);
+      h+=T(124,186,'= mesure plan × dénominateur','white',10,'middle',true);
+      h+=R(246,152,220,60,8,'#14532d');
+      h+=T(356,170,'mesure plan','#86efac',10,'middle',true);
+      h+=T(356,186,'= mesure réelle ÷ dénominateur','white',10,'middle',true);
+      // Attention unités
+      h+=R(14,222,452,60,8,'#fff7ed','#f97316',2);
+      h+=T(240,238,'⚠️ Attention aux unités !','#7c2d12',11,'middle',true);
+      h+=T(240,256,'Convertir en cm avant de calculer : 1 m = 100 cm','#7c2d12',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Formules (échelle 1/200)</div>'
+      +'<div class="ligne"><b>Plan → Réalité :</b> 4,5 cm × 200 = <span class="hl-g">900 cm = 9 m</span></div>'
+      +'<div class="ligne"><b>Réalité → Plan :</b> 1200 cm ÷ 200 = <span class="hl-b">6 cm</span></div>'
+      +'<div class="attention">⚠️ Toujours travailler dans la même unité (tout en cm) avant de calculer !</div>'
+  },
+  {
+    explic:"On peut utiliser un tableau de proportionnalité pour les calculs d'échelle. La mesure plan et la mesure réelle sont deux grandeurs proportionnelles, de coefficient l'inverse de l'échelle.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Tableau : échelle au 1/25 000','#14532d',13,'middle',true);
+      // Tableau carte/réalité
+      var tw=142, tx=14, ty=52, th=48;
+      var vals1=['2 cm','5 cm','? cm'];
+      var vals2=['500 m','1250 m','3 km = 300 000 cm'];
+      vals1.forEach(function(v,i){
+        var isQ=(v[0]==='?');
+        h+=R(tx+i*tw,ty,tw,th,0,isQ?'#fef3c7':'#dbeafe',isQ?'#f59e0b':'#93c5fd',isQ?2:1.5);
+        h+=T(tx+i*tw+tw/2,ty+th/2-6,'Carte','#64748b',8,'middle');
+        h+=T(tx+i*tw+tw/2,ty+th/2+12,v,isQ?'#dc2626':'#1d4ed8',isQ?18:13,'middle',true);
+      });
+      vals2.forEach(function(v,i){
+        h+=R(tx+i*tw,ty+th,tw,th,0,'#dcfce7','#6ee7b7',1.5);
+        h+=T(tx+i*tw+tw/2,ty+th+th/2-6,'Réalité','#64748b',8,'middle');
+        h+=T(tx+i*tw+tw/2,ty+th+th/2+12,v,'#15803d',i===2?9:13,'middle',true);
+      });
+      // Résolution
+      h+=R(14,162,452,118,10,'#14532d');
+      h+=T(240,180,'Trouver la mesure sur la carte pour 3 km','white',11,'middle',true);
+      h+=T(60,204,'3 km = 300 000 cm','#bfdbfe',11,'start');
+      h+=T(60,224,'Échelle : 1 cm → 25 000 cm','#bfdbfe',11,'start');
+      h+=T(60,244,'x = 300 000 ÷ 25 000','#fde68a',12,'start',true);
+      h+=T(60,264,'x = 12 cm','#86efac',16,'start',true);
+      h+=L(280,180,280,275,'white',1,'4,3');
+      h+=T(360,204,'Vérif :','white',10,'middle',true);
+      h+=frac(360,212,'2','500 m',  '#bfdbfe',10);
+      h+=T(360,235,'=','white',10,'middle');
+      h+=frac(360,240,'12','3 km','#86efac',10);
+      h+=T(360,264,'= 1/25 000 ✓','#86efac',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Échelle au 1/25 000</div>'
+      +'<div class="ligne">3 km = 300 000 cm</div>'
+      +'<div class="ligne">x = 300 000 ÷ 25 000 = <span class="hl-g">12 cm</span> sur la carte</div>'
+      +'<div class="conclusion-ok">Vérif : 2/500 000 = 12/300 000 = 1/25 000 ✓</div>'
+  }
+];
+
+// ══════════════════════════════════════════════
+// ONGLET 2 — POURCENTAGE
+// ══════════════════════════════════════════════
+var e2=[
+  {
+    explic:"Le pourcentage est un cas particulier de proportionnalité : p % = p/100. Un taux de p % appliqué à une quantité n donne n × p/100. Le tableau de proportionnalité aide à calculer.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Pourcentage et proportionnalité','#831843',13,'middle',true);
+      // Barre de pourcentage
+      var bx=30,by=50,bw=420,bh=46;
+      h+=R(bx,by,bw,bh,6,'#fce7f3','#f9a8d4',1.5);
+      h+=R(bx,by,bw*0.35,bh,6,'#f472b6','none');
+      h+=T(bx+bw*0.175,by+bh/2+5,'35 %','white',13,'middle',true);
+      h+=T(bx+bw*0.675,by+bh/2+5,'65 %','#f9a8d4',11,'middle');
+      h+=T(bx,by+bh+14,'0','#9d174d',9,'middle');
+      h+=T(bx+bw*0.35,by+bh+14,'35','#9d174d',9,'middle');
+      h+=T(bx+bw,by+bh+14,'100','#9d174d',9,'middle');
+      h+=L(bx+bw*0.35,by+bh+2,bx+bw*0.35,by+bh+8,'#9d174d',1.5);
+      // Tableau
+      var tw=210, tx=14, ty=96, th=44;
+      [['','100','200','?'],['Référence','100 %','35 %','x = ?']].forEach(function(row,ri){
+        // ne pas afficher cette partie, juste formules
+      });
+      h+=R(14,100,452,80,10,'#9d174d');
+      h+=T(240,120,'p % de n  =  n ×','white',13,'middle',true);
+      h+=frac(360,108,'p','100','#f9a8d4',14);
+      h+=T(240,148,'35 % de 200  =  200 ×','white',12,'middle');
+      h+=frac(382,137,'35','100','#fde68a',13);
+      h+=T(430,148,'= 70','#fde68a',14,'middle',true);
+      // Barre 200
+      var bx2=30,by2=196,bw2=420,bh2=40;
+      h+=R(bx2,by2,bw2,bh2,6,'#fce7f3','#f9a8d4',1.5);
+      h+=R(bx2,by2,bw2*0.35,bh2,6,'#f472b6','none');
+      h+=T(bx2+bw2*0.175,by2+bh2/2+5,'70','white',14,'middle',true);
+      h+=T(bx2+bw2*0.675,by2+bh2/2+5,'130','#f9a8d4',11,'middle');
+      h+=T(bx2,by2+bh2+14,'0','#9d174d',9,'middle');
+      h+=T(bx2+bw2*0.35,by2+bh2+14,'70','#9d174d',9,'middle');
+      h+=T(bx2+bw2,by2+bh2+14,'200','#9d174d',9,'middle');
+      h+=L(bx2+bw2*0.35,by2+bh2+2,bx2+bw2*0.35,by2+bh2+8,'#9d174d',1.5);
+      return h;
+    },
+    calc:'<div class="enonce en3">35 % de 200</div>'
+      +'<div class="ligne">p % de n = n × <span class="fr hl-r"><span class="n">p</span><span class="d">100</span></span></div>'
+      +'<div class="ligne">35 % de 200 = 200 × <span class="fr hl-r"><span class="n">35</span><span class="d">100</span></span> = <span class="hl-r">70</span></div>'
+      +'<div class="conclusion-ok">p % de n = n × p ÷ 100</div>'
+  },
+  {
+    explic:"Pour calculer le taux de pourcentage correspondant à une partie connue, on calcule (partie ÷ total) × 100. Exemple : 15 élèves sur 25 sont présents → 15/25 × 100 = 60 %.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Calculer un taux de pourcentage','#831843',13,'middle',true);
+      // Tableau de proportionnalité
+      var tw=160, tx=14, ty=52, th=46;
+      [['15 élèves','x %'],['25 élèves','100 %']].forEach(function(row,ri){
+        row.forEach(function(v,ci){
+          var isQ=(v[0]==='x');
+          h+=R(tx+ci*tw,ty+ri*th,tw,th,0,isQ?'#fef3c7':(ri===0?'#fce7f3':'#dcfce7'),isQ?'#f59e0b':(ri===0?'#f9a8d4':'#6ee7b7'),isQ?2:1.5);
+          h+=T(tx+ci*tw+tw/2,ty+ri*th+th/2+6,v,isQ?'#dc2626':(ri===0?'#9d174d':'#14532d'),isQ?20:13,'middle',true);
+        });
+      });
+      h+=T(tx+tw/2,ty-10,'Partie','#9d174d',9,'middle',true);
+      h+=T(tx+tw*1.5,ty-10,'Pourcentage','#9d174d',9,'middle',true);
+      // Résolution
+      h+=R(14,160,452,120,10,'#9d174d');
+      h+=T(240,178,'Règle de trois :','white',12,'middle',true);
+      h+=T(60,202,'15','white',16,'middle',true); h+=L(40,208,80,208,'white',1.5); h+=T(60,222,'25','white',16,'middle',true);
+      h+=T(100,210,'=','white',14,'middle');
+      h+=T(140,202,'x','#fde68a',16,'middle',true); h+=L(120,208,160,208,'white',1.5); h+=T(140,222,'100','#fde68a',16,'middle',true);
+      h+=T(185,210,'→','white',12,'middle');
+      h+=T(240,202,'x =','white',13,'middle');
+      h+=T(310,196,'15 × 100','#fde68a',13,'middle',true); h+=L(286,202,334,202,'white',1.5); h+=T(310,216,'25','#fde68a',13,'middle',true);
+      h+=T(356,202,'=','white',13,'middle');
+      h+=T(410,202,'60 %','#86efac',18,'middle',true);
+      h+=T(240,258,'60 % des élèves sont présents','#bfdbfe',11,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en3">15 élèves présents sur 25</div>'
+      +'<div class="ligne">Taux = <span class="fr hl-r"><span class="n">15</span><span class="d">25</span></span> × 100 = <span class="hl-r">60 %</span></div>'
+      +'<div class="conclusion-ok">Taux (%) = (partie ÷ total) × 100</div>'
+  },
+  {
+    explic:"Augmentation ou réduction en pourcentage. Une augmentation de p % donne une nouvelle valeur = ancienne × (1 + p/100). Une réduction de p % donne valeur × (1 − p/100).",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Augmentation et réduction en %','#831843',13,'middle',true);
+      // Augmentation
+      h+=R(14,40,214,112,10,'#f0fdf4','#15803d',2);
+      h+=T(121,58,'Augmentation + 20 %','#14532d',10,'middle',true);
+      h+=T(121,80,'Prix : 150 €','#374151',11,'middle');
+      h+=T(121,96,'+20% de 150 = 30 €','#374151',10,'middle');
+      h+=T(121,112,'150 + 30 = 180 €','#14532d',12,'middle',true);
+      h+=T(121,130,'ou : 150 × 1,2 = 180 €','#1d4ed8',10,'middle',true);
+      // Réduction
+      h+=R(252,40,214,112,10,'#fce7f3','#9d174d',2);
+      h+=T(359,58,'Réduction − 15 %','#831843',10,'middle',true);
+      h+=T(359,80,'Prix : 80 €','#374151',11,'middle');
+      h+=T(359,96,'−15% de 80 = 12 €','#374151',10,'middle');
+      h+=T(359,112,'80 − 12 = 68 €','#9d174d',12,'middle',true);
+      h+=T(359,130,'ou : 80 × 0,85 = 68 €','#1d4ed8',10,'middle',true);
+      // Formule générale
+      h+=R(14,166,452,114,10,'#1e3a5f');
+      h+=T(240,184,'Coefficient multiplicateur','white',12,'middle',true);
+      h+=T(100,208,'Augmentation +p%','#93c5fd',11,'middle');
+      h+=T(100,226,'× (1 + p/100)','#fde68a',13,'middle',true);
+      h+=T(100,244,'+20% → ×1,20','#86efac',10,'middle');
+      h+=L(240,172,240,278,'white',1,'4,3');
+      h+=T(360,208,'Réduction −p%','#f9a8d4',11,'middle');
+      h+=T(360,226,'× (1 − p/100)','#fde68a',13,'middle',true);
+      h+=T(360,244,'−15% → ×0,85','#86efac',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en3">Coefficients multiplicateurs</div>'
+      +'<div class="ligne">Augmentation de p % : <span class="hl-g">× (1 + p/100)</span></div>'
+      +'<div class="ligne">+20 % → × 1,2 · ex : 150 × 1,2 = <span class="hl-g">180 €</span></div>'
+      +'<div class="ligne">Réduction de p % : <span class="hl-r">× (1 − p/100)</span></div>'
+      +'<div class="ligne">−15 % → × 0,85 · ex : 80 × 0,85 = <span class="hl-r">68 €</span></div>'
+      +'<div class="conclusion-ok">Coefficient mult. = 1 ± p/100</div>'
+  }
+];
+
+// ══════════════════════════════════════════════
+// ONGLET 3 — RATIO
+// ══════════════════════════════════════════════
+var e3=[
+  {
+    explic:"Un ratio exprime la répartition d'une quantité en plusieurs parts. Le ratio 2:3 signifie que la quantité est partagée en 2+3=5 parts égales. La première part représente 2/5 du total, la deuxième 3/5.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Le ratio — définition','#78350f',13,'middle',true);
+      // Barre ratio 2:3
+      var bx=40,by=55,bw=400,bh=54;
+      h+=R(bx,by,bw*2/5,bh,0,'#fcd34d','#b45309',2);
+      h+=R(bx+bw*2/5,by,bw*3/5,bh,0,'#fdba74','#b45309',2);
+      h+=T(bx+bw/5,by+bh/2+5,'2 parts','#92400e',12,'middle',true);
+      h+=T(bx+bw*2/5+bw*3/10,by+bh/2+5,'3 parts','#92400e',12,'middle',true);
+      h+=L(bx,by+bh+14,bx+bw,by+bh+14,'#b45309',1.5);
+      h+=T(bx+bw/2,by+bh+26,'5 parts au total','#b45309',11,'middle',true);
+      // Fraction de chaque part
+      h+=T(bx+bw/5,by-10,'2/5 du total','#fcd34d',9,'middle',true);
+      h+=T(bx+bw*2/5+bw*3/10,by-10,'3/5 du total','#fdba74',9,'middle',true);
+      // Exemple : 40 billes ratio 2:3
+      h+=R(14,130,452,90,10,'#78350f');
+      h+=T(240,150,'40 billes partagées selon le ratio 2:3','white',12,'middle',true);
+      h+=T(240,172,'Total des parts : 2 + 3 = 5 parts','white',11,'middle');
+      h+=T(120,192,'1 part = 40 ÷ 5 = 8','#fde68a',12,'middle',true);
+      h+=L(240,152,240,208,'white',1,'4,3');
+      h+=T(360,182,'Parts : 2×8 = 16','#fcd34d',12,'middle',true);
+      h+=T(360,198,'       3×8 = 24','#fdba74',12,'middle',true);
+      // Vérif
+      h+=R(14,228,452,32,6,'#fef3c7','#fcd34d',2);
+      h+=T(240,250,'Vérif : 16 + 24 = 40 ✓   et   16/24 = 2/3 ✓','#78350f',11,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en4">40 billes partagées selon le ratio 2:3</div>'
+      +'<div class="ligne">Total des parts : 2 + 3 = <span class="hl-o">5 parts</span></div>'
+      +'<div class="ligne">1 part = 40 ÷ 5 = <span class="hl-o">8</span></div>'
+      +'<div class="ligne">Première part : 2 × 8 = <span class="hl-o">16</span></div>'
+      +'<div class="ligne">Deuxième part : 3 × 8 = <span class="hl-o">24</span></div>'
+      +'<div class="conclusion-ok">Vérif : 16+24=40 ✓ et 16/24=2/3 ✓</div>'
+  },
+  {
+    explic:"Un ratio peut aussi exprimer la comparaison entre deux grandeurs, comme la vitesse (distance/temps) ou le rapport longueur/largeur. On peut simplifier un ratio comme une fraction.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Simplifier et comparer des ratios','#78350f',13,'middle',true);
+      // Simplification
+      h+=R(14,38,220,100,8,'#fef3c7','#fcd34d',2);
+      h+=T(124,56,'Simplifier 12:18','#78350f',11,'middle',true);
+      h+=T(124,76,'12:18 = 12/18','#374151',11,'middle');
+      h+=T(124,94,'÷6 : 2/3','#b45309',12,'middle',true);
+      h+=T(124,112,'Ratio simplifié : 2:3','#78350f',11,'middle',true);
+      // Comparaison deux ratios
+      h+=R(252,38,214,100,8,'#fff7ed','#f97316',2);
+      h+=T(359,56,'Comparer 3:4 et 5:6','#78350f',11,'middle',true);
+      h+=T(359,76,'3/4 = 0,75','#374151',11,'middle');
+      h+=T(359,94,'5/6 ≈ 0,833','#374151',11,'middle');
+      h+=T(359,112,'5:6 > 3:4','#dc2626',12,'middle',true);
+      // Problème mélange
+      h+=R(14,148,452,130,10,'#78350f');
+      h+=T(240,166,'Mélange peinture : bleu:jaune:rouge = 3:1:2','white',11,'middle',true);
+      h+=T(240,184,'Pour obtenir 600 mL de peinture :','white',11,'middle');
+      h+=T(240,202,'Total des parts : 3+1+2 = 6','#fde68a',11,'middle',true);
+      h+=T(240,220,'1 part = 600 ÷ 6 = 100 mL','white',11,'middle');
+      h+=T(80,242,'Bleu : 3×100','#93c5fd',11,'middle',true); h+=T(80,256,'= 300 mL','#93c5fd',13,'middle',true);
+      h+=T(240,242,'Jaune : 1×100','#fde68a',11,'middle',true); h+=T(240,256,'= 100 mL','#fde68a',13,'middle',true);
+      h+=T(400,242,'Rouge : 2×100','#f9a8d4',11,'middle',true); h+=T(400,256,'= 200 mL','#f9a8d4',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en4">Ratio 3:1:2 → 600 mL de peinture</div>'
+      +'<div class="ligne">Total des parts : 3+1+2 = <span class="hl-o">6</span></div>'
+      +'<div class="ligne">1 part = 600 ÷ 6 = <span class="hl-o">100 mL</span></div>'
+      +'<div class="ligne">Bleu : 3×100 = <span class="hl-b">300 mL</span></div>'
+      +'<div class="ligne">Jaune : 1×100 = <span class="hl-o">100 mL</span></div>'
+      +'<div class="ligne">Rouge : 2×100 = <span class="hl-r">200 mL</span></div>'
+      +'<div class="conclusion-ok">Vérif : 300+100+200 = 600 mL ✓</div>'
+  },
+  {
+    explic:"Lien entre ratio et pourcentage : un ratio a:b correspond à a/(a+b) × 100 % pour la première grandeur et b/(a+b) × 100 % pour la seconde. On passe facilement de l'un à l'autre.",
+    draw:function(){
+      var h='';
+      h+=T(240,20,'Ratio ↔ Pourcentage','#78350f',13,'middle',true);
+      // Barre ratio 3:2 = 60%:40%
+      var bx=30,by=48,bw=420,bh=48;
+      h+=R(bx,by,bw*0.6,bh,0,'#fcd34d','#b45309',2);
+      h+=R(bx+bw*0.6,by,bw*0.4,bh,0,'#fdba74','#b45309',2);
+      h+=T(bx+bw*0.3,by+bh/2+5,'3 parts = 60 %','#92400e',12,'middle',true);
+      h+=T(bx+bw*0.8,by+bh/2+5,'2 parts = 40 %','#92400e',12,'middle',true);
+      // Tableau de conversion
+      h+=R(14,112,452,168,10,'#78350f');
+      h+=T(240,130,'Ratio 3:2  ↔  Pourcentages','white',12,'middle',true);
+      // Table
+      var cols3=['','Ratio','Fraction','Pourcentage'];
+      var rows3=[['Part 1','3','3/5','60 %'],['Part 2','2','2/5','40 %'],['Total','5','5/5','100 %']];
+      var tw3=90, tx3=24, ty3=138;
+      cols3.forEach(function(c,i){ h+=R(tx3+i*tw3,ty3,tw3,20,0,'#9d174d','#f9a8d4',1); h+=T(tx3+i*tw3+tw3/2,ty3+14,c,'white',8,'middle',true); });
+      rows3.forEach(function(row,ri){
+        row.forEach(function(v,ci){
+          var bg=['#fef3c7','#fef3c7','#fff7ed','#dcfce7'][ci];
+          h+=R(tx3+ci*tw3,ty3+20+ri*28,tw3,28,0,bg,'#fcd34d',1);
+          h+=T(tx3+ci*tw3+tw3/2,ty3+34+ri*28,v,'#374151',10,'middle',true);
+        });
+      });
+      // Formule
+      h+=T(240,252,'Ratio a:b  →  a/(a+b)×100% et b/(a+b)×100%','#fde68a',9,'middle',true);
+      h+=T(240,270,'3:2 → 3/5×100=60%  et  2/5×100=40%','#86efac',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en4">Ratio 3:2 ↔ Pourcentages</div>'
+      +'<div class="ligne">Total des parts : 3+2 = 5</div>'
+      +'<div class="ligne">Part 1 : <span class="fr hl-o"><span class="n">3</span><span class="d">5</span></span> × 100 = <span class="hl-o">60 %</span></div>'
+      +'<div class="ligne">Part 2 : <span class="fr hl-o"><span class="n">2</span><span class="d">5</span></span> × 100 = <span class="hl-o">40 %</span></div>'
+      +'<div class="conclusion-ok">Ratio a:b → a/(a+b)×100 % et b/(a+b)×100 %</div>'
+  }
+];
+
+var ETAPES=[e0,e1,e2,e3];
+function setMode(m){ mode=m; etape=0; document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',i===m);}); document.querySelector('.btn-next').style.background=COLS[m]; document.getElementById('calc-box').style.borderLeftColor=COLS[m]; render(); }
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+function render(){ var e=ETAPES[mode][etape]; document.getElementById('fig').innerHTML=e.draw(); document.getElementById('calc-box').innerHTML=e.calc; document.getElementById('explication').textContent=e.explic; document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length; }
+render();
+</script>
+</body>
+</html>
