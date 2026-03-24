@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Périmètre – 6ème</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #fdf4ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #4c1d95; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #ede9fe; color: #4c1d95; border: 2px solid #c4b5fd; }
+  .tab2 { background: #fce7f3; color: #831843; border: 2px solid #f9a8d4; }
+  .tab1.active { background: #6d28d9; color: white; border-color: #6d28d9; }
+  .tab2.active { background: #9d174d; color: white; border-color: #9d174d; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #6d28d9; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #ede9fe; color: #4c1d95; }
+  .en2 { background: #fce7f3; color: #831843; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-v { color: #6d28d9; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #6d28d9; color: white; }
+</style>
+</head>
+<body>
+<h1>📏 Périmètre</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Figures usuelles</button>
+  <button class="tab tab2" onclick="setMode(1)">Figures composées</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+<script>
+var mode=0, etape=0;
+var COLS=['#6d28d9','#9d174d'];
+
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc+'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')+'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){ stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>'; }
+function L(x1,y1,x2,y2,col,w,dash){ w=w||2; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>'; }
+function Pt(x,y,col){ return '<circle cx="'+x+'" cy="'+y+'" r="4" fill="'+col+'" stroke="white" stroke-width="1.5"/>'; }
+
+// Étiquette centrée sur un côté avec décalage perpendiculaire
+function lblSide(ax,ay,bx,by,lbl,col,off){
+  off=off||16;
+  var mx=(ax+bx)/2, my=(ay+by)/2;
+  var dx=bx-ax, dy=by-ay, len=Math.sqrt(dx*dx+dy*dy);
+  if(len===0) return '';
+  var nx=-dy/len, ny=dx/len;
+  return T(mx+nx*off, my+ny*off, lbl, col, 11, 'middle', true);
+}
+
+// Marque de côté égal
+function marque(ax,ay,bx,by,n,col){
+  var mx=(ax+bx)/2, my=(ay+by)/2;
+  var dx=bx-ax, dy=by-ay, len=Math.sqrt(dx*dx+dy*dy);
+  var nx=-dy/len*6, ny=dx/len*6;
+  var ux=dx/len, uy=dy/len, h='';
+  for(var i=0;i<n;i++){
+    var o=(i-(n-1)/2)*5;
+    h+=L(mx+ux*o-nx,my+uy*o-ny, mx+ux*o+nx,my+uy*o+ny, col,2);
+  }
+  return h;
+}
+
+// Angle droit
+function angleD(px,py,dx,dy,sz){
+  sz=sz||8;
+  var len=Math.sqrt(dx*dx+dy*dy), ux=dx/len, uy=dy/len, vx=-uy, vy=ux;
+  var p1x=px+ux*sz,p1y=py+uy*sz, p2x=p1x+vx*sz,p2y=p1y+vy*sz, p3x=px+vx*sz,p3y=py+vy*sz;
+  return '<polyline points="'+p1x.toFixed(1)+','+p1y.toFixed(1)+' '+p2x.toFixed(1)+','+p2y.toFixed(1)+' '+p3x.toFixed(1)+','+p3y.toFixed(1)+'" fill="none" stroke="#374151" stroke-width="1.5"/>';
+}
+
+// ══════════════════════════════════════════════
+// ONGLET 0 — FIGURES USUELLES
+// ══════════════════════════════════════════════
+var e0=[
+
+  // Étape 1 : définition + carré
+  {
+    explic:"Le périmètre d'une figure est la longueur totale de son contour. Pour un carré de côté c, on additionne 4 fois le côté : P = 4 × c.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Périmètre = longueur du contour','#4c1d95',13,'middle',true);
+      // Carré côté 90, centré à (240,165)
+      var cx=195, cy=120, c=90;
+      var cols2=['#dc2626','#1d4ed8','#15803d','#b45309'];
+      // 4 côtés colorés séparément
+      h+=L(cx,cy,cx+c,cy,cols2[0],3.5);
+      h+=L(cx+c,cy,cx+c,cy+c,cols2[1],3.5);
+      h+=L(cx+c,cy+c,cx,cy+c,cols2[2],3.5);
+      h+=L(cx,cy+c,cx,cy,cols2[3],3.5);
+      // Remplissage léger
+      h+=R(cx,cy,c,c,0,'#ede9fe','none');
+      h+=L(cx,cy,cx+c,cy,cols2[0],3.5);
+      h+=L(cx+c,cy,cx+c,cy+c,cols2[1],3.5);
+      h+=L(cx+c,cy+c,cx,cy+c,cols2[2],3.5);
+      h+=L(cx,cy+c,cx,cy,cols2[3],3.5);
+      // Angle droit
+      h+=angleD(cx,cy+c,1,0,9);
+      // Labels côtés
+      h+=T(cx+c/2,cy-12,'c = 6 cm',cols2[0],11,'middle',true);
+      h+=T(cx+c+18,cy+c/2,'c',cols2[1],11,'middle',true);
+      h+=T(cx+c/2,cy+c+16,'c',cols2[2],11,'middle',true);
+      h+=T(cx-16,cy+c/2,'c',cols2[3],11,'middle',true);
+      // Formule
+      h+=R(20,232,440,52,10,'#4c1d95');
+      h+=T(240,249,'P = c + c + c + c = 4 × c','white',12,'middle',true);
+      h+=T(240,268,'P = 4 × 6 = 24 cm','#c4b5fd',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Carré de côté c = 6 cm</div>'
+      +'<div class="ligne">P = <span class="hl-r">c</span> + <span class="hl-b">c</span> + <span class="hl-g">c</span> + <span class="hl-o">c</span> = 4 × c</div>'
+      +'<div class="ligne">P = 4 × 6 = <span class="hl-v">24 cm</span></div>'
+      +'<div class="attention">💡 Le périmètre s\'exprime en unités de longueur : cm, m, mm…</div>'
+  },
+
+  // Étape 2 : rectangle
+  {
+    explic:"Pour un rectangle de longueur L et largeur l, le périmètre est P = 2 × (L + l). Les deux longueurs sont égales entre elles, et les deux largeurs aussi.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Rectangle  L = 8 cm,  l = 5 cm','#4c1d95',13,'middle',true);
+      var rx=80,ry=70,rw=200,rh=125;
+      h+=R(rx,ry,rw,rh,0,'#ede9fe','#6d28d9',2.5);
+      // Marques d'égalité
+      h+=marque(rx,ry,rx+rw,ry,1,'#dc2626');
+      h+=marque(rx,ry+rh,rx+rw,ry+rh,1,'#dc2626');
+      h+=marque(rx+rw,ry,rx+rw,ry+rh,2,'#1d4ed8');
+      h+=marque(rx,ry,rx,ry+rh,2,'#1d4ed8');
+      // Angle droit
+      h+=angleD(rx,ry+rh,1,0,9);
+      // Labels
+      h+=T(rx+rw/2,ry-12,'L = 8 cm','#dc2626',11,'middle',true);
+      h+=T(rx+rw/2,ry+rh+16,'L = 8 cm','#dc2626',11,'middle',true);
+      h+=T(rx+rw+22,ry+rh/2,'l = 5','#1d4ed8',11,'middle',true);
+      h+=T(rx-22,ry+rh/2,'l = 5','#1d4ed8',11,'middle',true);
+      // Formule à droite
+      h+=R(308,70,162,160,10,'#f5f3ff','#c4b5fd',2);
+      h+=T(389,90,'Formule','#4c1d95',11,'middle',true);
+      h+=T(389,112,'P = 2×(L+l)','#6d28d9',12,'middle',true);
+      h+=T(389,134,'= 2×(8+5)','#374151',11,'middle');
+      h+=T(389,152,'= 2 × 13','#374151',11,'middle');
+      h+=T(389,175,'= 26 cm','#6d28d9',16,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Rectangle  L = 8 cm,  l = 5 cm</div>'
+      +'<div class="ligne">P = <span class="hl-r">L</span> + <span class="hl-b">l</span> + <span class="hl-r">L</span> + <span class="hl-b">l</span> = 2 × (L + l)</div>'
+      +'<div class="ligne">P = 2 × (8 + 5) = 2 × 13 = <span class="hl-v">26 cm</span></div>'
+      +'<div class="conclusion-ok">P = 2 × (L + l)</div>'
+  },
+
+  // Étape 3 : triangle
+  {
+    explic:"Le périmètre d'un triangle est la somme de ses trois côtés. Pour un triangle quelconque : P = a + b + c. Pour un triangle équilatéral : P = 3 × c.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Triangle — somme des 3 côtés','#4c1d95',13,'middle',true);
+      // Triangle quelconque
+      var A={x:80,y:240}, B={x:250,y:240}, C={x:165,y:80};
+      var cols3=['#dc2626','#1d4ed8','#15803d'];
+      h+=L(A.x,A.y,B.x,B.y,cols3[0],3);
+      h+=L(B.x,B.y,C.x,C.y,cols3[1],3);
+      h+=L(A.x,A.y,C.x,C.y,cols3[2],3);
+      h+='<polygon points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'" fill="#ede9fe" fill-opacity="0.5" stroke="none"/>';
+      h+=L(A.x,A.y,B.x,B.y,cols3[0],3);
+      h+=L(B.x,B.y,C.x,C.y,cols3[1],3);
+      h+=L(A.x,A.y,C.x,C.y,cols3[2],3);
+      h+=Pt(A.x,A.y,'#6d28d9'); h+=T(A.x-12,A.y+4,'A','#6d28d9',12,'middle',true);
+      h+=Pt(B.x,B.y,'#6d28d9'); h+=T(B.x+12,B.y+4,'B','#6d28d9',12,'middle',true);
+      h+=Pt(C.x,C.y,'#6d28d9'); h+=T(C.x,C.y-10,'C','#6d28d9',12,'middle',true);
+      h+=lblSide(A.x,A.y,B.x,B.y,'a = 7 cm',cols3[0],14);
+      h+=lblSide(B.x,B.y,C.x,C.y,'b = 9 cm',cols3[1],14);
+      h+=lblSide(A.x,A.y,C.x,C.y,'c = 6 cm',cols3[2],-14);
+      // Triangle équilatéral
+      var ex=330, ey=110, ec=75;
+      var Ea={x:ex,y:ey+ec*0.866}, Eb={x:ex+ec,y:ey+ec*0.866}, Ec={x:ex+ec/2,y:ey};
+      h+='<polygon points="'+Ea.x.toFixed(0)+','+Ea.y.toFixed(0)+' '+Eb.x.toFixed(0)+','+Eb.y.toFixed(0)+' '+Ec.x.toFixed(0)+','+Ec.y.toFixed(0)+'" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2.5"/>';
+      h+=marque(Ea.x,Ea.y,Eb.x,Eb.y,1,'#1d4ed8');
+      h+=marque(Eb.x,Eb.y,Ec.x,Ec.y,1,'#1d4ed8');
+      h+=marque(Ea.x,Ea.y,Ec.x,Ec.y,1,'#1d4ed8');
+      h+=T(ex+ec/2,ey+ec*0.866+14,'4 cm','#1d4ed8',10,'middle',true);
+      h+=T(ex+ec/2,ey-10,'Équilatéral','#1d4ed8',9,'middle',true);
+      h+=T(ex+ec/2,ey+ec*0.4,'P=3×4=12','#1d4ed8',10,'middle',true);
+      // Formule
+      h+=R(20,252,300,32,8,'#4c1d95');
+      h+=T(170,264,'P = a + b + c = 7+9+6 =','white',11,'middle',true);
+      h+=T(300,264,'22 cm','#c4b5fd',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Triangle — P = a + b + c</div>'
+      +'<div class="ligne">P = <span class="hl-r">7</span> + <span class="hl-b">9</span> + <span class="hl-g">6</span> = <span class="hl-v">22 cm</span></div>'
+      +'<div class="ligne">Triangle équilatéral (3 côtés égaux) : P = 3 × c</div>'
+      +'<div class="conclusion-ok">P quelconque = a+b+c · P équilatéral = 3×c</div>'
+  },
+
+  // Étape 4 : cercle / demi-cercle
+  {
+    explic:"Le périmètre d'un cercle s'appelle la circonférence. C = 2πr = πd. Pour un demi-cercle, on additionne la demi-circonférence et le diamètre : P = πr + d.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Cercle — Circonférence','#4c1d95',13,'middle',true);
+      // Cercle complet r=70
+      var cx1=130, cy1=155, r1=70;
+      h+='<circle cx="'+cx1+'" cy="'+cy1+'" r="'+r1+'" fill="#ede9fe" stroke="#6d28d9" stroke-width="3"/>';
+      h+=L(cx1,cy1,cx1+r1,cy1,'#dc2626',2,'4,3');
+      h+=Pt(cx1,cy1,'#6d28d9',4);
+      h+=T(cx1+(r1/2),cy1-10,'r = 5 cm','#dc2626',10,'middle',true);
+      h+=T(cx1,cy1+4,'O','#6d28d9',11,'middle',true);
+      h+=T(cx1,cy1+r1+18,'Cercle','#4c1d95',11,'middle',true);
+      h+=T(cx1,cy1+r1+32,'C = 2πr ≈ 31,4 cm','#6d28d9',10,'middle',true);
+      // Demi-cercle r=55
+      var cx2=350, cy2=180, r2=55;
+      h+='<path d="M'+(cx2-r2)+','+cy2+' A'+r2+','+r2+' 0 0,0 '+(cx2+r2)+','+cy2+'" fill="#fce7f3" stroke="#9d174d" stroke-width="3"/>';
+      h+=L(cx2-r2,cy2,cx2+r2,cy2,'#1d4ed8',2.5);
+      h+=Pt(cx2,cy2,'#9d174d',4);
+      h+=T(cx2,cy2+10,'O','#9d174d',11,'middle',true);
+      h+=T(cx2,cy2-r2-12,'r = 4 cm','#9d174d',10,'middle',true);
+      h+=T(cx2-r2+5,cy2+14,'d=2r=8','#1d4ed8',10,'start');
+      h+=T(cx2,cy2+r2+22,'Demi-cercle','#9d174d',11,'middle',true);
+      h+=T(cx2,cy2+r2+36,'P = πr + d ≈ 20,6 cm','#9d174d',10,'middle',true);
+      // Formule
+      h+=R(20,252,440,34,8,'#4c1d95');
+      h+=T(240,264,'Cercle : C = 2πr = πd','white',12,'middle',true);
+      h+=T(240,278,'π ≈ 3,14','#c4b5fd',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Cercle r = 5 cm</div>'
+      +'<div class="ligne">C = 2 × π × r = 2 × 3,14 × 5 = <span class="hl-v">31,4 cm</span></div>'
+      +'<div class="ligne"><b>Demi-cercle r = 4 cm :</b></div>'
+      +'<div class="ligne">P = π × r + d = 3,14×4 + 8 ≈ <span class="hl-v">20,6 cm</span></div>'
+      +'<div class="conclusion-ok">C = 2πr = πd   (π ≈ 3,14)</div>'
+  }
+];
+
+// ══════════════════════════════════════════════
+// ONGLET 1 — FIGURES COMPOSÉES
+// ══════════════════════════════════════════════
+var e1=[
+
+  // Étape 1 : définition — que mesure-t-on ?
+  {
+    explic:"Une figure composée est formée de plusieurs figures simples. Son périmètre est uniquement la longueur du contour extérieur. Les côtés intérieurs (là où les figures se touchent) ne comptent PAS.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Figure composée — contour extérieur','#831843',13,'middle',true);
+      // L-shape : rectangle 200×120 minus coin bas-droit 80×60
+      var x=80,y=50,W=220,H=140,wx=80,hy=60;
+      var pts=[[x,y],[x+W,y],[x+W,y+H-hy],[x+W-wx,y+H-hy],[x+W-wx,y+H],[x,y+H]];
+      var ptstr=pts.map(function(p){return p[0]+','+p[1];}).join(' ');
+      h+='<polygon points="'+ptstr+'" fill="#fce7f3" stroke="none"/>';
+      // Côtés extérieurs en rouge
+      h+='<polygon points="'+ptstr+'" fill="none" stroke="#9d174d" stroke-width="3"/>';
+      // Côté intérieur simulé (en pointillé gris pour montrer ce qu'on NE compte PAS)
+      h+=L(x+W-wx,y,x+W-wx,y+H-hy,'#94a3b8',1.5,'6,4');
+      h+=L(x,y+H-hy,x+W,y+H-hy,'#94a3b8',1.5,'6,4');
+      h+=T(x+W-wx+20,y+40,'pas dans','#94a3b8',9,'start');
+      h+=T(x+W-wx+20,y+54,'le périm.','#94a3b8',9,'start');
+      // Labels côtés extérieurs
+      h+=T(x+W/2,y-12,'10 cm','#9d174d',10,'middle',true);
+      h+=T(x+W+16,y+(H-hy)/2,'4 cm','#9d174d',10,'middle',true);
+      h+=T(x+W-wx/2,y+H-hy-12,'4 cm','#9d174d',10,'middle',true);
+      h+=T(x+W-wx+16,y+H-hy+(hy)/2,'3 cm','#9d174d',10,'middle',true);
+      h+=T(x+(W-wx)/2,y+H+14,'6 cm','#9d174d',10,'middle',true);
+      h+=T(x-18,y+H/2,'7 cm','#9d174d',10,'middle',true);
+      // Résultat
+      h+=R(20,252,440,34,8,'#9d174d');
+      h+=T(240,264,'P = 10+4+4+3+6+7 =','white',12,'middle',true);
+      h+=T(390,264,'34 cm','#f9a8d4',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Figure en L — contour extérieur seulement</div>'
+      +'<div class="ligne">On additionne uniquement les côtés <span class="hl-r">extérieurs</span>.</div>'
+      +'<div class="ligne">Les traits intérieurs <span class="hl-b">(pointillés)</span> ne comptent pas.</div>'
+      +'<div class="ligne">P = 10+4+4+3+6+7 = <span class="hl-r">34 cm</span></div>'
+      +'<div class="attention">⚠️ Seul le contour extérieur compte dans le périmètre !</div>'
+  },
+
+  // Étape 2 : rectangle + demi-cercle
+  {
+    explic:"Figure composée d'un rectangle et d'un demi-cercle. Le périmètre comprend 3 côtés du rectangle (le côté qui coïncide avec le diamètre ne compte pas) et la demi-circonférence.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Rectangle + demi-cercle','#831843',13,'middle',true);
+      var rx=120,ry=80,rw=160,rh=110,r=rw/2;
+      // Demi-cercle en haut
+      h+='<path d="M'+rx+','+(ry)+' A'+r+','+r+' 0 0,1 '+(rx+rw)+','+ry+'" fill="#fce7f3" stroke="none"/>';
+      h+=R(rx,ry,rw,rh,0,'#fce7f3','none');
+      // Contour extérieur : bas, gauche, bas-rect, demi-cercle (haut), droite
+      // 3 côtés rectangle (sauf le haut qui est remplacé par le demi-cercle)
+      h+=L(rx,ry+rh,rx+rw,ry+rh,'#dc2626',3); // bas
+      h+=L(rx,ry,rx,ry+rh,'#1d4ed8',3);       // gauche
+      h+=L(rx+rw,ry,rx+rw,ry+rh,'#15803d',3); // droite
+      h+='<path d="M'+rx+','+ry+' A'+r+','+r+' 0 0,1 '+(rx+rw)+','+ry+'" fill="none" stroke="#b45309" stroke-width="3"/>';
+      // Côté intérieur (diamètre) en pointillé
+      h+=L(rx,ry,rx+rw,ry,'#94a3b8',1.5,'6,4');
+      h+=T(rx+rw/2,ry-6,'(diamètre intérieur)','#94a3b8',8,'middle');
+      // Labels
+      h+=T(rx+rw/2,ry+rh+14,'L = 8 cm','#dc2626',10,'middle',true);
+      h+=T(rx-20,ry+rh/2,'h = 6 cm','#1d4ed8',10,'middle',true);
+      h+=T(rx+rw+20,ry+rh/2,'h = 6 cm','#15803d',10,'middle',true);
+      h+=T(rx+rw/2,ry-r-8,'½C = πr','#b45309',10,'middle',true);
+      // Calcul
+      h+=R(20,238,440,48,8,'#9d174d');
+      h+=T(240,254,'P = L + 2h + πr = 8 + 2×6 + 3,14×4','white',11,'middle',true);
+      h+=T(240,270,'= 8 + 12 + 12,6 = 32,6 cm','#f9a8d4',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Rectangle (8×6) + demi-cercle (r=4)</div>'
+      +'<div class="ligne">P = <span class="hl-r">L</span> + <span class="hl-b">2×h</span> + <span class="hl-o">πr</span></div>'
+      +'<div class="ligne">= 8 + 2×6 + 3,14×4</div>'
+      +'<div class="ligne">= 8 + 12 + 12,56 = <span class="hl-r">32,56 cm</span></div>'
+      +'<div class="attention">💡 Le diamètre (côté commun) n\'est pas dans le périmètre !</div>'
+  },
+
+  // Étape 3 : piste d'athlétisme (deux demi-cercles + deux lignes droites)
+  {
+    explic:"La piste d'athlétisme est un rectangle dont les deux petits côtés sont remplacés par des demi-cercles. Le périmètre = 2 droites + 2 demi-cercles = 2L + 2πr.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Piste d\'athlétisme : 2×50m + 2 virages r=25m','#831843',13,'middle',true);
+      // Piste centrée
+      var cx=240, cy=155, L2=130, r2=55;
+      // Rectangle intérieur pour le fond
+      h+=R(cx-L2/2,cy-r2,L2,2*r2,r2,'#fce7f3','#9d174d',2.5);
+      // Droites
+      h+=L(cx-L2/2,cy-r2,cx+L2/2,cy-r2,'#dc2626',3);
+      h+=L(cx-L2/2,cy+r2,cx+L2/2,cy+r2,'#dc2626',3);
+      // Virages
+      h+='<path d="M'+(cx+L2/2)+','+(cy-r2)+' A'+r2+','+r2+' 0 0,1 '+(cx+L2/2)+','+(cy+r2)+'" fill="none" stroke="#1d4ed8" stroke-width="3"/>';
+      h+='<path d="M'+(cx-L2/2)+','+(cy+r2)+' A'+r2+','+r2+' 0 0,1 '+(cx-L2/2)+','+(cy-r2)+'" fill="none" stroke="#1d4ed8" stroke-width="3"/>';
+      // Labels
+      h+=T(cx,cy-r2-14,'L = 50 m','#dc2626',11,'middle',true);
+      h+=T(cx,cy+r2+16,'L = 50 m','#dc2626',11,'middle',true);
+      h+=T(cx+L2/2+r2+16,cy,'r = 25 m','#1d4ed8',10,'middle',true);
+      // Rayon
+      h+=L(cx+L2/2,cy,cx+L2/2+r2,cy,'#1d4ed8',1.5,'4,3');
+      // Calcul
+      h+=R(20,244,440,42,8,'#9d174d');
+      h+=T(240,259,'P = 2L + 2πr = 2×50 + 2×3,14×25','white',11,'middle',true);
+      h+=T(240,275,'= 100 + 157 = 257 m','#f9a8d4',13,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Piste : L = 50 m, r = 25 m</div>'
+      +'<div class="ligne">P = 2 × <span class="hl-r">L</span> + 2 × <span class="hl-b">πr</span></div>'
+      +'<div class="ligne">= 2×50 + 2×3,14×25</div>'
+      +'<div class="ligne">= 100 + 157 = <span class="hl-r">257 m</span></div>'
+      +'<div class="conclusion-ok">P = 2L + 2πr = 2L + πd</div>'
+  },
+
+  // Étape 4 : méthode générale
+  {
+    explic:"Méthode pour calculer le périmètre d'une figure composée : identifier tous les côtés extérieurs, les mesurer ou les calculer (parfois un côté manquant se déduit), puis tout additionner.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Méthode générale','#831843',13,'middle',true);
+      // Figure en T (maison sans toit pointu)
+      var pts2=[[130,240],[350,240],[350,170],[290,170],[290,100],[190,100],[190,170],[130,170]];
+      var ptstr2=pts2.map(function(p){return p[0]+','+p[1];}).join(' ');
+      h+='<polygon points="'+ptstr2+'" fill="#fce7f3" stroke="#9d174d" stroke-width="2.5"/>';
+      // Labels + flèches
+      h+=T(240,256,'12 cm','#9d174d',10,'middle',true); // bas
+      h+=T(360,205,'4 cm','#9d174d',10,'start',true);  // droite basse
+      h+=T(323,185,'3 cm','#9d174d',10,'middle',true);  // palier dr
+      h+=T(242,92,'5 cm','#9d174d',10,'middle',true);  // haut
+      h+=T(177,135,'4 cm','#9d174d',10,'end',true);    // palier g
+      h+=T(120,205,'4 cm','#9d174d',10,'end',true);   // gauche
+      // Côté manquant en rouge
+      h+=L(190,170,290,170,'#dc2626',2,'5,3');
+      h+=T(240,185,'? (calculé)','#dc2626',9,'middle',true);
+      // Encadré méthode
+      h+=R(20,252,440,36,8,'#9d174d');
+      h+=T(240,265,'1. Repérer les côtés extérieurs','white',10,'middle',true);
+      h+=T(240,279,'2. Calculer les manquants  3. Additionner','white',10,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en2">Méthode — Figure en T</div>'
+      +'<div class="ligne">1. <span class="hl-r">Repérer</span> tous les côtés extérieurs</div>'
+      +'<div class="ligne">2. <span class="hl-b">Calculer</span> les côtés manquants par soustraction</div>'
+      +'<div class="ligne">3. <span class="hl-g">Additionner</span> tous les côtés extérieurs</div>'
+      +'<div class="attention">💡 Un côté manquant = différence entre deux côtés parallèles.</div>'
+  }
+];
+
+var ETAPES=[e0,e1];
+function setMode(m){ mode=m; etape=0; document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',i===m);}); document.querySelector('.btn-next').style.background=COLS[m]; document.getElementById('calc-box').style.borderLeftColor=COLS[m]; render(); }
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+function render(){ var e=ETAPES[mode][etape]; document.getElementById('fig').innerHTML=e.draw(); document.getElementById('calc-box').innerHTML=e.calc; document.getElementById('explication').textContent=e.explic; document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length; }
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aires – 6ème</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f9ff; min-height: 100vh; }
+  h1 { text-align: center; padding: 14px; background: #1e3a5f; color: white; font-size: 1.2em; }
+  .tabs { display: flex; justify-content: center; gap: 8px; padding: 10px 8px; flex-wrap: wrap; }
+  .tab { padding: 9px 18px; border-radius: 20px; border: none; font-size: 0.82em; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+  .tab1 { background: #dbeafe; color: #1e3a8a; border: 2px solid #93c5fd; }
+  .tab2 { background: #dcfce7; color: #14532d; border: 2px solid #6ee7b7; }
+  .tab1.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+  .tab2.active { background: #15803d; color: white; border-color: #15803d; }
+  .scene { display: flex; flex-direction: column; align-items: center; padding: 8px; }
+  svg#fig { width: 100%; max-width: 480px; height: 290px; background: white; border-radius: 14px; box-shadow: 0 2px 10px #0002; display: block; }
+  .calc-box { background: white; border-radius: 14px; padding: 13px 18px; margin: 6px auto; max-width: 480px; width: 95%; box-shadow: 0 2px 8px #0002; border-left: 5px solid #1d4ed8; font-size: 0.97em; line-height: 2.1; }
+  .enonce { font-weight: bold; border-radius: 8px; padding: 6px 12px; margin-bottom: 8px; font-size: 0.92em; }
+  .en1 { background: #dbeafe; color: #1e3a8a; }
+  .en2 { background: #dcfce7; color: #14532d; }
+  .ligne { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+  .hl-b { color: #1d4ed8; font-weight: bold; }
+  .hl-r { color: #dc2626; font-weight: bold; }
+  .hl-g { color: #15803d; font-weight: bold; }
+  .hl-o { color: #b45309; font-weight: bold; }
+  .hl-p { color: #7c3aed; font-weight: bold; }
+  .fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 3px; line-height: 1.2; }
+  .fr .n { border-bottom: 2px solid currentColor; padding: 0 5px; }
+  .fr .d { padding: 0 5px; }
+  .conclusion-ok { background: #dcfce7; border-left: 4px solid #22c55e; padding: 7px 14px; border-radius: 8px; font-weight: bold; color: #14532d; margin-top: 6px; }
+  .attention { background: #fff7ed; border-left: 4px solid #f97316; padding: 6px 12px; border-radius: 7px; margin-top: 6px; color: #7c2d12; font-size: 0.91em; }
+  .explication { background: white; border-radius: 14px; padding: 10px 16px; margin: 6px auto; max-width: 480px; width: 95%; font-size: 0.95em; color: #333; box-shadow: 0 2px 8px #0001; border-left: 5px solid #ccc; }
+  .etape-ind { text-align: center; color: #999; font-size: 0.86em; margin-bottom: 3px; }
+  .btns { display: flex; gap: 12px; justify-content: center; margin: 8px; }
+  button.nav { padding: 10px 28px; border-radius: 22px; border: none; font-size: 1em; cursor: pointer; font-weight: bold; }
+  .btn-prev { background: #e9ecef; color: #555; }
+  .btn-next { background: #1d4ed8; color: white; }
+</style>
+</head>
+<body>
+<h1>📐 Aires et conversions</h1>
+<div class="tabs">
+  <button class="tab tab1 active" onclick="setMode(0)">Aires des figures</button>
+  <button class="tab tab2" onclick="setMode(1)">Conversions d'aires</button>
+</div>
+<div class="scene">
+  <svg id="fig" viewBox="0 0 480 290"></svg>
+  <div class="calc-box" id="calc-box"></div>
+  <div class="explication" id="explication"></div>
+  <div class="etape-ind" id="etape-ind"></div>
+  <div class="btns">
+    <button class="nav btn-prev" onclick="prev()">◀ Précédent</button>
+    <button class="nav btn-next" onclick="next()">Suivant ▶</button>
+  </div>
+</div>
+<script>
+var mode=0, etape=0;
+var COLS=['#1d4ed8','#15803d'];
+
+function T(x,y,s,col,sz,anc,bold){
+  sz=sz||12; anc=anc||'middle'; bold=bold||false;
+  return '<text x="'+x+'" y="'+y+'" font-size="'+sz+'" text-anchor="'+anc+'" fill="'+col+'" font-weight="'+(bold?'bold':'normal')+'" font-family="Segoe UI,sans-serif">'+s+'</text>';
+}
+function R(x,y,w,h,rx,fill,stroke,sw){ stroke=stroke||'none'; sw=sw||1;
+  return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'"/>'; }
+function L(x1,y1,x2,y2,col,w,dash){ w=w||1.5; dash=dash||'';
+  return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="'+dash+'" stroke-linecap="round"/>'; }
+
+function angleD(px,py,dx,dy,sz){
+  sz=sz||8;
+  var len=Math.sqrt(dx*dx+dy*dy), ux=dx/len, uy=dy/len, vx=-uy, vy=ux;
+  var p1x=px+ux*sz,p1y=py+uy*sz, p2x=p1x+vx*sz,p2y=p1y+vy*sz, p3x=px+vx*sz,p3y=py+vy*sz;
+  return '<polyline points="'+p1x.toFixed(1)+','+p1y.toFixed(1)+' '+p2x.toFixed(1)+','+p2y.toFixed(1)+' '+p3x.toFixed(1)+','+p3y.toFixed(1)+'" fill="none" stroke="#374151" stroke-width="1.5"/>';
+}
+
+// Grille de carrés 1cm² (w×h unités)
+function grille(x,y,uw,uh,u,col,fill){
+  u=u||24; col=col||'#93c5fd'; fill=fill||'#dbeafe';
+  var h='';
+  h+=R(x,y,uw*u,uh*u,0,fill,col,1);
+  for(var i=1;i<uw;i++) h+=L(x+i*u,y,x+i*u,y+uh*u,col,0.7);
+  for(var j=1;j<uh;j++) h+=L(x,y+j*u,x+uw*u,y+j*u,col,0.7);
+  return h;
+}
+
+// ══════════════════════════════════════════════
+// ONGLET 0 — AIRES DES FIGURES
+// ══════════════════════════════════════════════
+var e0=[
+
+  // Étape 1 : définition + carré/rectangle
+  {
+    explic:"L'aire d'une figure est la mesure de la surface qu'elle occupe. On la mesure en unités carrées (cm², m², …). Pour le carré : A = c². Pour le rectangle : A = L × l.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Aire = surface occupée','#1e3a8a',13,'middle',true);
+      // Grille rectangle 5×3
+      var gx=40, gy=45, u=30;
+      h+=grille(gx,gy,5,3,u,'#93c5fd','#dbeafe');
+      h+=T(gx+5*u/2,gy+3*u+16,'L = 5 cm','#1d4ed8',11,'middle',true);
+      h+=T(gx-22,gy+3*u/2,'l = 3 cm','#1d4ed8',11,'middle',true);
+      h+=T(gx+5*u/2,gy+3*u/2+5,'15 cm²','#1e3a8a',14,'middle',true);
+      h+=T(gx+5*u/2,gy+3*u/2+20,'(15 cases)','#64748b',9,'middle');
+      // Carré 4×4
+      var sx=250, sy=45, su=28;
+      h+=grille(sx,sy,4,4,su,'#86efac','#dcfce7');
+      h+=T(sx+4*su/2,sy+4*su+16,'c = 4 cm','#15803d',11,'middle',true);
+      h+=T(sx+4*su/2,sy+4*su/2+5,'16 cm²','#14532d',14,'middle',true);
+      h+=T(sx+4*su/2,sy+4*su/2+20,'= 4²','#64748b',9,'middle');
+      // Formules
+      h+=R(20,208,220,72,10,'#1e3a8a');
+      h+=T(130,226,'Rectangle','white',11,'middle',true);
+      h+=T(130,244,'A = L × l','#93c5fd',13,'middle',true);
+      h+=T(130,262,'A = 5×3 = 15 cm²','white',11,'middle');
+      h+=R(248,208,212,72,10,'#14532d');
+      h+=T(354,226,'Carré','white',11,'middle',true);
+      h+=T(354,244,'A = c × c = c²','#86efac',13,'middle',true);
+      h+=T(354,262,'A = 4² = 16 cm²','white',11,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Carré c = 4 cm · Rectangle L=5, l=3 cm</div>'
+      +'<div class="ligne"><b>Rectangle :</b> A = L × l = 5 × 3 = <span class="hl-b">15 cm²</span></div>'
+      +'<div class="ligne"><b>Carré :</b> A = c² = 4² = <span class="hl-g">16 cm²</span></div>'
+      +'<div class="attention">💡 L\'aire s\'exprime en unités carrées : cm², m², mm²…</div>'
+  },
+
+  // Étape 2 : triangle
+  {
+    explic:"L'aire d'un triangle est la moitié de celle du rectangle qui l'encadre : A = (base × hauteur) ÷ 2. La hauteur est perpendiculaire à la base.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Aire du triangle','#1e3a8a',13,'middle',true);
+      // Rectangle englobant
+      var rx=60,ry=60,rw=160,rh=130;
+      h+=R(rx,ry,rw,rh,0,'#fef3c7','#fcd34d',1.5);
+      // Moitié hachurée
+      h+='<polygon points="'+rx+','+(ry+rh)+' '+(rx+rw)+','+(ry+rh)+' '+(rx+rw*0.6)+','+ry+'" fill="#fcd34d" fill-opacity="0.35" stroke="none"/>';
+      // Triangle
+      var A={x:rx,y:ry+rh}, B={x:rx+rw,y:ry+rh}, C={x:rx+rw*0.6,y:ry};
+      h+='<polygon points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'" fill="#fde68a" stroke="#b45309" stroke-width="2.5"/>';
+      // Hauteur
+      h+=L(C.x,C.y,C.x,B.y,'#dc2626',1.5,'5,3');
+      h+=angleD(C.x,ry+rh,1,0,8);
+      h+=T(C.x+18,ry+rh/2,'h = 6,5 cm','#dc2626',10,'start',true);
+      // Base
+      h+=T((A.x+B.x)/2,A.y+14,'b = 8 cm','#b45309',11,'middle',true);
+      // Formule à droite
+      h+=R(258,60,192,190,10,'#1e3a8a');
+      h+=T(354,82,'Formule','white',11,'middle',true);
+      h+=T(354,104,'A =','white',13,'middle');
+      h+=T(354,98,'b × h','#93c5fd',13,'middle');
+      h+=L(320,104,388,104,'white',1.5);
+      h+=T(354,118,'2','white',13,'middle');
+      h+=T(354,140,'A =','white',11,'middle');
+      h+=T(354,136,'8 × 6,5','#fde68a',12,'middle');
+      h+=L(322,140,386,140,'white',1);
+      h+=T(354,150,'2','white',12,'middle');
+      h+=T(354,170,'=','white',12,'middle');
+      h+=T(354,165,'52','#fde68a',12,'middle');
+      h+=L(322,170,386,170,'white',1);
+      h+=T(354,180,'2','white',12,'middle');
+      h+=T(354,200,'= 26 cm²','#86efac',14,'middle',true);
+      h+=T(354,222,'Le triangle = ½','white',9,'middle');
+      h+=T(354,234,'du rectangle','white',9,'middle');
+      return h;
+    },
+    calc:'<div class="enonce en1">Triangle b = 8 cm, h = 6,5 cm</div>'
+      +'<div class="ligne">A = <span class="fr hl-b"><span class="n">b × h</span><span class="d">2</span></span> = <span class="fr hl-b"><span class="n">8 × 6,5</span><span class="d">2</span></span> = <span class="fr hl-b"><span class="n">52</span><span class="d">2</span></span> = <span class="hl-b">26 cm²</span></div>'
+      +'<div class="ligne">La <span class="hl-r">hauteur h</span> est perpendiculaire à la base.</div>'
+      +'<div class="conclusion-ok">A = (b × h) ÷ 2</div>'
+  },
+
+  // Étape 3 : disque
+  {
+    explic:"L'aire d'un disque de rayon r est A = π × r². La valeur de π est environ 3,14. Plus le rayon est grand, plus l'aire grandit au carré.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Aire du disque','#1e3a8a',13,'middle',true);
+      var cx=150, cy=155, r=95;
+      // Carré r² en encart
+      var sqx=280, sqy=55, squ=22;
+      h+=R(sqx,sqy,4*squ,4*squ,0,'#bfdbfe','#1d4ed8',1.5);
+      for(var i=1;i<4;i++) h+=L(sqx+i*squ,sqy,sqx+i*squ,sqy+4*squ,'#93c5fd',0.6);
+      for(var j=1;j<4;j++) h+=L(sqx,sqy+j*squ,sqx+4*squ,sqy+j*squ,'#93c5fd',0.6);
+      h+=T(sqx+4*squ/2,sqy-10,'r² = 4×4 = 16','#1d4ed8',9,'middle',true);
+      h+=T(sqx+4*squ/2,sqy+4*squ+14,'r = 4 cm','#1d4ed8',9,'middle');
+      // Disque
+      h+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2.5"/>';
+      // π fois r²
+      h+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r*0.7)+'" fill="#93c5fd" fill-opacity="0.4" stroke="none"/>';
+      h+=L(cx,cy,cx+r*Math.cos(-0.4),cy+r*Math.sin(-0.4),'#dc2626',2,'4,3');
+      h+=T(cx+r*0.5*Math.cos(-0.4)+8,cy+r*0.5*Math.sin(-0.4)-8,'r','#dc2626',13,'middle',true);
+      h+=T(cx,cy+5,'O','#1e3a8a',12,'middle',true);
+      // Formule
+      h+=R(260,175,200,100,10,'#1e3a8a');
+      h+=T(360,195,'Formule','white',11,'middle',true);
+      h+=T(360,215,'A = π × r²','#93c5fd',14,'middle',true);
+      h+=T(360,235,'= 3,14 × 4²','white',11,'middle');
+      h+=T(360,253,'= 3,14 × 16','white',11,'middle');
+      h+=T(360,273,'= 50,24 cm²','#86efac',14,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en1">Disque r = 4 cm</div>'
+      +'<div class="ligne">A = π × r² = 3,14 × 4² = 3,14 × 16</div>'
+      +'<div class="ligne">A = <span class="hl-b">50,24 cm²</span></div>'
+      +'<div class="attention">💡 r² = r × r (pas r × 2 !). Ex : 4² = 16, pas 8.</div>'
+      +'<div class="conclusion-ok">A(disque) = π × r²</div>'
+  },
+
+  // Étape 4 : tableau récapitulatif
+  {
+    explic:"Voici le tableau récapitulatif des formules d'aire pour les figures usuelles du programme de 6ème.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Récapitulatif des formules d\'aire','#1e3a8a',13,'middle',true);
+      var figs=[
+        {nom:'Carré',      form:'c²',          ex:'c=5 → A=25 cm²', col:'#1d4ed8'},
+        {nom:'Rectangle',  form:'L × l',        ex:'5×3 → A=15 cm²', col:'#15803d'},
+        {nom:'Triangle',   form:'(b × h) ÷ 2',  ex:'8×6÷2=24 cm²',   col:'#b45309'},
+        {nom:'Disque',     form:'π × r²',        ex:'r=3 → 28,3 cm²', col:'#dc2626'},
+        {nom:'Losange',    form:'(d × D) ÷ 2',  ex:'d=4,D=6→12 cm²', col:'#7c3aed'},
+        {nom:'Trapèze',    form:'(a+b) ÷ 2 × h',ex:'(3+7)÷2×4=20',   col:'#9d174d'},
+      ];
+      figs.forEach(function(f,i){
+        var col2=i%2, row=Math.floor(i/2);
+        var rx=16+col2*236, ry=36+row*80, rw=228, rh=72;
+        h+=R(rx,ry,rw,rh,8,'white',f.col,2);
+        h+=R(rx,ry,rw,24,8,f.col,'none');
+        h+=T(rx+rw/2,ry+16,f.nom,'white',12,'middle',true);
+        h+=T(rx+rw/2,ry+44,'A = '+f.form,f.col,12,'middle',true);
+        h+=T(rx+rw/2,ry+62,f.ex,'#64748b',9,'middle');
+      });
+      return h;
+    },
+    calc:'<div class="enonce en1">Formules à retenir</div>'
+      +'<div class="ligne"><b>Carré :</b> A = <span class="hl-b">c²</span></div>'
+      +'<div class="ligne"><b>Rectangle :</b> A = <span class="hl-g">L × l</span></div>'
+      +'<div class="ligne"><b>Triangle :</b> A = <span class="hl-o">(b × h) ÷ 2</span></div>'
+      +'<div class="ligne"><b>Disque :</b> A = <span class="hl-r">π × r²</span></div>'
+      +'<div class="ligne"><b>Losange :</b> A = (d × D) ÷ 2</div>'
+      +'<div class="ligne"><b>Trapèze :</b> A = (a+b) ÷ 2 × h</div>'
+  }
+];
+
+// ══════════════════════════════════════════════
+// HELPER TABLEAU DE CONVERSION
+// ══════════════════════════════════════════════
+var TUNITS=['km²','hm²','dam²','m²','dm²','cm²','mm²'];
+var TW=29, TOX=31, TOY=36; // sub-col width, origin x, y
+
+// tab(digits, srcUnit, dstUnit, phase)
+// digits : 14 valeurs (null=vide, 0=zéro gris, '1'-'9'=chiffre coloré)
+// srcUnit, dstUnit : 0-6 (index dans TUNITS)
+// phase : 0=virgule initiale seule  1=virgule déplacée + flèche
+function tab(digits,srcUnit,dstUnit,phase){
+  var sc=srcUnit*2+1, dc=dstUnit*2+1; // positions virgule (après ces sous-colonnes)
+  var h='';
+  // ── En-têtes unités ──
+  for(var i=0;i<7;i++){
+    var iS=(i===srcUnit), iD=(phase===1&&i===dstUnit&&i!==srcUnit);
+    var bg=iS?'#14532d':iD?'#9d174d':'#f0fdf4';
+    var tc=(iS||iD)?'white':'#15803d';
+    h+=R(TOX+i*2*TW,TOY,2*TW,22,0,bg,'#6ee7b7',(iS||iD)?2:1.5);
+    h+=T(TOX+i*2*TW+TW,TOY+15,TUNITS[i],tc,(iS||iD)?10:9,'middle',true);
+  }
+  // ── Sous-en-têtes d / u ──
+  for(var i=0;i<14;i++){
+    var ui=Math.floor(i/2);
+    var isHL=(ui===srcUnit)||(phase===1&&ui===dstUnit);
+    h+=R(TOX+i*TW,TOY+22,TW,16,0,'#f8fafc','#d1fae5',1);
+    h+=T(TOX+i*TW+TW/2,TOY+33,i%2===0?'d':'u',isHL?'#15803d':'#b0bec5',7,'middle',true);
+  }
+  // ── Cases chiffres ──
+  for(var i=0;i<14;i++){
+    var ui=Math.floor(i/2);
+    var iS2=(ui===srcUnit), iD2=(phase===1&&ui===dstUnit&&dstUnit!==srcUnit);
+    var bg=iS2?'#dcfce7':iD2?'#fef3c7':'#f8fafc';
+    h+=R(TOX+i*TW,TOY+38,TW,34,0,bg,'#e5e7eb',1.2);
+    var d=digits[i];
+    if(d!==null&&d!==undefined){
+      var isZ=(d===0||d==='0');
+      h+=T(TOX+i*TW+TW/2,TOY+60,''+d,isZ?'#cbd5e1':'#14532d',isZ?11:16,'middle',true);
+    }
+  }
+  // ── Séparateurs entre unités ──
+  for(var i=1;i<7;i++) h+=L(TOX+i*2*TW,TOY,TOX+i*2*TW,TOY+72,'#9ca3af',1.5);
+  // ── Virgule initiale ──
+  var cx1=TOX+(sc+1)*TW-2;
+  var colVirgule1=(phase===0)?'#dc2626':'#cbd5e1';
+  h+=T(cx1,TOY+60,',',colVirgule1,22,'middle',true);
+  // ── Virgule déplacée + flèche (phase 1) ──
+  if(phase===1){
+    var cx2=TOX+(dc+1)*TW-2;
+    h+=T(cx2,TOY+60,',','#dc2626',22,'middle',true);
+    var ay=TOY+84;
+    h+=L(cx1+(dc>sc?6:-6),ay,cx2+(dc>sc?-6:6),ay,'#b45309',2,'4,3');
+    if(dc>sc){
+      h+='<polygon points="'+(cx2-7)+','+(ay-5)+' '+(cx2-7)+','+(ay+5)+' '+(cx2-1)+','+ay+'" fill="#b45309"/>';
+    } else {
+      h+='<polygon points="'+(cx2+7)+','+(ay-5)+' '+(cx2+7)+','+(ay+5)+' '+(cx2+1)+','+ay+'" fill="#b45309"/>';
+    }
+    var n=Math.abs(dc-sc);
+    var dir=dc>sc?'droite ▶':'◀ gauche';
+    h+=T((cx1+cx2)/2,ay-10,n+' cases vers '+dir,'#b45309',9,'middle',true);
+  }
+  return h;
+}
+
+// Ligne résultat sous le tableau
+function resLigne(txt,col){
+  return R(TOX,TOY+100,14*TW,30,6,'white','#6ee7b7',1.5)
+    +T(TOX+14*TW/2,TOY+119,txt,col,12,'middle',true);
+}
+
+// ══════════════════════════════════════════════
+// ONGLET 1 — CONVERSIONS D'AIRES
+// ══════════════════════════════════════════════
+var e1=[
+
+  // Étape 1 : pourquoi ×100 ≠ ×10 000 ?
+  {
+    explic:"Attention : pour les aires, on ne multiplie pas par 10, mais par 100 (pour cm→mm) ou par 10 000 (pour m→cm). C'est parce que 1 cm² = un carré de 1 cm × 1 cm = 10 mm × 10 mm = 100 mm².",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'Pourquoi les conversions d\'aires sont-elles différentes ?','#14532d',11,'middle',true);
+      // 1 cm² = 10×10 mm²
+      var gx=50, gy=50, u=18;
+      h+=R(gx,gy,10*u,10*u,0,'#dcfce7','#15803d',2);
+      for(var i=0;i<10;i++)
+        for(var j=0;j<10;j++)
+          h+=R(gx+i*u,gy+j*u,u,u,0,((i+j)%2===0)?'#bbf7d0':'#dcfce7','#15803d',0.5);
+      h+=T(gx+10*u/2,gy-12,'1 cm = 10 mm','#15803d',10,'middle',true);
+      h+=L(gx,gy+10*u+8,gx+10*u,gy+10*u+8,'#15803d',1.5);
+      h+=T(gx+10*u/2,gy+10*u+20,'10 mm','#15803d',10,'middle',true);
+      h+=L(gx-10,gy,gx-10,gy+10*u,'#15803d',1.5);
+      h+=T(gx-22,gy+5*u,'10 mm','#15803d',10,'middle',true);
+      h+=T(gx+10*u/2,gy+5*u+4,'1 cm²','#14532d',14,'middle',true);
+      h+=T(gx+10*u/2,gy+5*u+20,'= 100 mm²','#14532d',11,'middle',true);
+      // Explication à droite
+      h+=R(250,45,210,220,10,'#f0fdf4','#6ee7b7',2);
+      h+=T(355,66,'1 cm = 10 mm','#15803d',11,'middle',true);
+      h+=T(355,86,'1 cm² = ?','#374151',11,'middle');
+      h+=T(355,106,'1 cm² =','#374151',11,'middle');
+      h+=T(355,122,'1 cm × 1 cm','#374151',11,'middle');
+      h+=T(355,138,'= 10 mm × 10 mm','#374151',11,'middle');
+      h+=T(355,156,'= 100 mm²','#15803d',14,'middle',true);
+      h+=L(265,168,445,168,'#6ee7b7',1);
+      h+=T(355,184,'1 m = 100 cm','#1d4ed8',11,'middle',true);
+      h+=T(355,202,'1 m² = 100×100','#374151',11,'middle');
+      h+=T(355,220,'= 10 000 cm²','#1d4ed8',14,'middle',true);
+      h+=T(355,240,'→ ×100 pour longueurs','#64748b',9,'middle');
+      h+=T(355,254,'→ ×10 000 pour aires !','#dc2626',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">Pourquoi les conversions d\'aires sont ×100 ?</div>'
+      +'<div class="ligne">1 cm = 10 mm → 1 cm² = <span class="hl-g">100 mm²</span> (10×10)</div>'
+      +'<div class="ligne">1 m = 100 cm → 1 m² = <span class="hl-b">10 000 cm²</span> (100×100)</div>'
+      +'<div class="attention">⚠️ Pour les aires : chaque changement d\'unité de longueur × 100 pour l\'aire !</div>'
+  },
+
+  // Étape 2 : 5 m² → cm² (virgule avance de 4 cases)
+  {
+    explic:"On écrit 5 dans la case 'u' de m². La virgule se place après cette case. Pour convertir en cm², la virgule avance de 4 cases vers la droite. On ajoute des zéros dans les cases vides : 50 000 cm².",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'5 m²  →  cm²  (virgule avance de 4 cases)','#14532d',12,'middle',true);
+      //       km² hm² dam² m²  dm²  cm²  mm²
+      // pos:  0 1  2 3  4 5  6 7   8 9  10 11  12 13
+      var d=[0,0, 0,0, 0,0, 0,'5', 0,0,  0, 0,   0, 0];
+      // Phase 0 : virgule en m²:u (pos 7)
+      h+=tab(d,3,5,0);
+      h+=T(240,TOY+75,'Virgule après m²:u → on va en cm²','#14532d',10,'middle',true);
+      // Phase 1 (on redessine par-dessus avec flèche)
+      // Pour ne pas alourdir, on montre les deux états dans le même draw
+      // Virgule déplacée + flèche
+      var sc=7, dc=11, ay2=TOY+84;
+      var cx1=TOX+(sc+1)*TW-2, cx2=TOX+(dc+1)*TW-2;
+      h+=L(cx1+6,ay2,cx2-6,ay2,'#b45309',2,'4,3');
+      h+='<polygon points="'+(cx2-7)+','+(ay2-5)+' '+(cx2-7)+','+(ay2+5)+' '+(cx2-1)+','+ay2+'" fill="#b45309"/>';
+      h+=T((cx1+cx2)/2,ay2-8,'4 cases vers la droite','#b45309',9,'middle',true);
+      // Nouvelle virgule
+      h+=T(cx2,TOY+60,',','#dc2626',22,'middle',true);
+      // Résultat avec cases colorées
+      h+=R(TOX,TOY+100,14*TW,30,6,'#dcfce7','#15803d',2);
+      // Lecture du résultat : pos 0→11 = 0,0,0,0,0,0,0,5,0,0,0,0 → 50000
+      h+=T(TOX+14*TW/2,TOY+119,'Résultat = 5 0 0 0 0  →  50 000 cm²','#14532d',12,'middle',true);
+      // Explication des zéros ajoutés
+      h+=R(TOX,TOY+136,14*TW,24,4,'#fef3c7','#fcd34d',1.5);
+      h+=T(TOX+14*TW/2,TOY+151,'Les cases dm² et cm² étaient vides → on écrit des 0','#b45309',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">5 m² → cm²</div>'
+      +'<div class="ligne">1. Écrire <span class="hl-g">5</span> dans la case u de m²</div>'
+      +'<div class="ligne">2. Placer la virgule après m²:u</div>'
+      +'<div class="ligne">3. Avancer la virgule de <span class="hl-o">4 cases</span> vers la droite</div>'
+      +'<div class="ligne">4. Remplir les cases vides avec des <span class="hl-r">0</span></div>'
+      +'<div class="conclusion-ok">5 m² = 5 0 0 0 0 cm² = <span class="hl-g">50 000 cm²</span></div>'
+  },
+
+  // Étape 3 : 32 000 cm² → m² (virgule recule de 4 cases)
+  {
+    explic:"On écrit 32 000 dans le tableau en commençant par la case 'u' de cm² pour le dernier chiffre (0), puis on remonte vers la gauche. La virgule recule de 4 cases vers la gauche pour passer en m².",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'32 000 cm²  →  m²  (virgule recule de 4 cases)','#14532d',12,'middle',true);
+      // 32000 dans cm² : unités=0 pos11, dizaines=0 pos10, centaines=0 pos9, milliers=2 pos8, dizm=3 pos7
+      // pos: 0 1  2 3  4 5  6 7   8 9  10 11  12 13
+      var d=[0,0, 0,0, 0,0, 0,'3','2','0', '0','0',  0, 0];
+      h+=tab(d,5,3,0);
+      h+=T(240,TOY+75,'32 000 en cm² → virgule après cm²:u (pos 11)','#14532d',10,'middle',true);
+      // Flèche gauche
+      var sc=11, dc=7, ay2=TOY+84;
+      var cx1=TOX+(sc+1)*TW-2, cx2=TOX+(dc+1)*TW-2;
+      h+=L(cx1-6,ay2,cx2+6,ay2,'#b45309',2,'4,3');
+      h+='<polygon points="'+(cx2+7)+','+(ay2-5)+' '+(cx2+7)+','+(ay2+5)+' '+(cx2+1)+','+ay2+'" fill="#b45309"/>';
+      h+=T((cx1+cx2)/2,ay2-8,'4 cases vers la gauche','#b45309',9,'middle',true);
+      // Nouvelle virgule
+      h+=T(cx2,TOY+60,',','#dc2626',22,'middle',true);
+      // Résultat
+      h+=R(TOX,TOY+100,14*TW,30,6,'#dcfce7','#15803d',2);
+      h+=T(TOX+14*TW/2,TOY+119,'Lecture : 3 , 2 → résultat = 3,2 m²','#14532d',12,'middle',true);
+      h+=R(TOX,TOY+136,14*TW,24,4,'#fef3c7','#fcd34d',1.5);
+      h+=T(TOX+14*TW/2,TOY+151,'Les chiffres 2 0 0 0 passent après la virgule → partie décimale','#b45309',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">32 000 cm² → m²</div>'
+      +'<div class="ligne">1. Écrire <span class="hl-g">32000</span> : u de cm²=0, puis 0,0,2,3 vers la gauche</div>'
+      +'<div class="ligne">2. Virgule après cm²:u</div>'
+      +'<div class="ligne">3. Reculer la virgule de <span class="hl-o">4 cases</span> vers la gauche</div>'
+      +'<div class="conclusion-ok">32 000 cm² = 3,2 m²</div>'
+      +'<div class="attention">💡 Les chiffres restent en place, seule la virgule se déplace !</div>'
+  },
+
+  // Étape 4 : 0,5 m² → mm² (6 cases, ajout de 0)
+  {
+    explic:"Pour 0,5 m², on écrit 0 dans la case u de m² (partie entière) et 5 dans la case d de dm² (première décimale). La virgule avance de 6 cases vers la droite pour atteindre mm². Les cases vides prennent des zéros.",
+    draw:function(){
+      var h='';
+      h+=T(240,18,'0,5 m²  →  mm²  (virgule avance de 6 cases)','#14532d',12,'middle',true);
+      // 0,5 m² : m²:u=0 (pos 7), dm²:d=5 (pos 8), reste=0
+      // pos: 0 1  2 3  4 5  6 7   8  9  10 11  12 13
+      var d=[0,0, 0,0, 0,0, 0,'0','5','0','0','0','0','0'];
+      h+=tab(d,3,6,0);
+      h+=T(240,TOY+75,'0 dans m²:u (entier), 5 dans dm²:d (décimale)','#14532d',10,'middle',true);
+      // Flèche droite de sc=7 à dc=13
+      var sc=7, dc=13, ay2=TOY+84;
+      var cx1=TOX+(sc+1)*TW-2, cx2=TOX+(dc+1)*TW-2;
+      h+=L(cx1+6,ay2,cx2-6,ay2,'#b45309',2,'4,3');
+      h+='<polygon points="'+(cx2-7)+','+(ay2-5)+' '+(cx2-7)+','+(ay2+5)+' '+(cx2-1)+','+ay2+'" fill="#b45309"/>';
+      h+=T((cx1+cx2)/2,ay2-8,'6 cases vers la droite','#b45309',9,'middle',true);
+      // Nouvelle virgule après mm²:u (pos 13) = virgule à la fin
+      h+=T(cx2,TOY+60,',','#dc2626',22,'middle',true);
+      // Résultat
+      h+=R(TOX,TOY+100,14*TW,30,6,'#dcfce7','#15803d',2);
+      h+=T(TOX+14*TW/2,TOY+119,'Lecture : 5 0 0 0 0 0 → résultat = 500 000 mm²','#14532d',12,'middle',true);
+      h+=R(TOX,TOY+136,14*TW,24,4,'#fef3c7','#fcd34d',1.5);
+      h+=T(TOX+14*TW/2,TOY+151,'cm²:d, cm²:u, mm²:d, mm²:u vides → on ajoute des 0','#b45309',10,'middle',true);
+      return h;
+    },
+    calc:'<div class="enonce en2">0,5 m² → mm²</div>'
+      +'<div class="ligne">0 dans m²:u, 5 dans dm²:d (1ère décimale de m²)</div>'
+      +'<div class="ligne">Virgule avance de <span class="hl-o">6 cases</span> jusqu\'à mm²:u</div>'
+      +'<div class="ligne">Cases cm² et mm² vides → on y écrit des <span class="hl-r">0</span></div>'
+      +'<div class="conclusion-ok">0,5 m² = 500 000 mm²</div>'
+      +'<div class="attention">💡 Vérif : 1 m² = 1 000 000 mm² → 0,5 × 1 000 000 = 500 000 ✓</div>'
+  }
+];
+
+var ETAPES=[e0,e1];
+function setMode(m){ mode=m; etape=0; document.querySelectorAll('.tab').forEach(function(t,i){t.classList.toggle('active',i===m);}); document.querySelector('.btn-next').style.background=COLS[m]; document.getElementById('calc-box').style.borderLeftColor=COLS[m]; render(); }
+function prev(){ if(etape>0){etape--;render();} }
+function next(){ if(etape<ETAPES[mode].length-1){etape++;render();} }
+function render(){ var e=ETAPES[mode][etape]; document.getElementById('fig').innerHTML=e.draw(); document.getElementById('calc-box').innerHTML=e.calc; document.getElementById('explication').textContent=e.explic; document.getElementById('etape-ind').textContent='Étape '+(etape+1)+' / '+ETAPES[mode].length; }
+render();
+</script>
+</body>
+</html>
