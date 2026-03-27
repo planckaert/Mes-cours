@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Statistiques – 4ème</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #222; max-width: 600px; margin: 0 auto; }
+
+.hdr { background: #2980b9; color: #fff; padding: 12px 16px; text-align: center; transition: background 0.3s; }
+.hdr h1 { font-size: 1.3em; }
+.hdr p  { font-size: 0.85em; opacity: 0.85; margin-top: 2px; }
+
+.tab-bar { display: flex; background: #ddd; overflow-x: auto; }
+.tb { flex: 1; min-width: 0; padding: 9px 4px; border: none; background: transparent; cursor: pointer; font-size: 0.75em; color: #555; border-bottom: 3px solid transparent; text-align: center; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+.tb.on { color: #fff; }
+
+.sec { display: none; padding: 12px; }
+.sec.on { display: block; }
+
+.fig { background: #fff; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+.fig svg { display: block; width: 100%; }
+
+.cb { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid var(--c); font-size: 0.9em; }
+.enonce { color: #666; margin-bottom: 8px; }
+.ligne { margin: 3px 0; line-height: 1.6; }
+.hl  { color: var(--c); font-weight: 700; }
+.hl2 { color: var(--cd); font-weight: 700; }
+
+.fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; margin: 0 2px; }
+.fr .n { border-bottom: 1.5px solid #222; padding: 0 4px; font-size: 0.9em; }
+.fr .d { padding: 0 4px; font-size: 0.9em; }
+
+.ok  { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 6px; padding: 8px 10px; margin-top: 8px; font-weight: 700; color: #2e7d32; }
+.att { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 6px; padding: 8px 10px; margin-top: 8px; color: #bf360c; font-size: 0.88em; }
+
+.exp { background: #fff8e1; border-radius: 8px; padding: 9px 12px; margin-bottom: 10px; font-size: 0.88em; color: #555; min-height: 36px; }
+
+.nav { display: flex; align-items: center; justify-content: space-between; }
+.nav button { padding: 10px 20px; border: none; border-radius: 6px; background: var(--c); color: #fff; font-size: 0.95em; cursor: pointer; transition: opacity 0.2s; }
+.nav button:disabled { opacity: 0.3; cursor: default; }
+.step-ind { font-size: 0.82em; color: #888; }
+
+.tbl { width: 100%; border-collapse: collapse; font-size: 0.83em; margin: 6px 0; }
+.tbl th { background: var(--c); color: #fff; padding: 5px 6px; text-align: center; }
+.tbl td { padding: 4px 6px; text-align: center; border: 1px solid #ddd; }
+.tbl tr:nth-child(even) td { background: #f9f9f9; }
+.tbl tr.tot td { background: #eee; font-weight: 700; }
+.tbl .hi { background: #fff9c4; font-weight: 700; color: #333; }
+</style>
+</head>
+<body>
+<div class="hdr"><h1>Statistiques</h1><p>4ème</p></div>
+<div class="tab-bar" id="tabBar"></div>
+<div id="sections"></div>
+
+<script>
+// ── Données ──────────────────────────────────────────────────
+const SPORTS = [
+  { nom:'Football',   eff:10, freq:10/28 },
+  { nom:'Basketball', eff:7,  freq:7/28  },
+  { nom:'Natation',   eff:5,  freq:5/28  },
+  { nom:'Tennis',     eff:4,  freq:4/28  },
+  { nom:'Autre',      eff:2,  freq:2/28  },
+];
+const TOTAL = 28;
+const COLORS = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6'];
+const NOTES  = [12,15,9,14,11,16,13];
+const LIVRES = [{val:0,eff:4},{val:1,eff:7},{val:2,eff:9},{val:3,eff:3},{val:4,eff:2}];
+const TOTAL_L = 25, SUM_L = 42, MOY_L = 42/25;
+const TRI7   = [3,5,7,9,11,14,17];
+const TRI8   = [3,5,7,9,11,14,17,20];
+
+function fmt(v,d=3){ return v.toFixed(d).replace('.',','); }
+function pct(v){ return (v*100).toFixed(1).replace('.',',')+'&nbsp;%'; }
+
+// ── Tabs config ───────────────────────────────────────────────
+const TABS = [
+  { label:'Vocabulaire',    color:'#2980b9', dark:'#1a5276' },
+  { label:'Diagramme circ.',color:'#e67e22', dark:'#a04000' },
+  { label:'Moyenne',        color:'#27ae60', dark:'#1a6b3c' },
+  { label:'Médiane',        color:'#8e44ad', dark:'#5b2c6f' },
+];
+
+let curTab = 0;
+let curStep = [0,0,0,0];
+
+// ── SVG helpers ───────────────────────────────────────────────
+function svgEl(tag,a={}){
+  const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const[k,v]of Object.entries(a))e.setAttribute(k,v);
+  return e;
+}
+function svgText(s,x,y,str,a={}){
+  const e=svgEl('text',{x,y,'text-anchor':'middle','dominant-baseline':'central',...a});
+  e.textContent=str; s.appendChild(e); return e;
+}
+function svgLine(s,x1,y1,x2,y2,a={}){
+  const e=svgEl('line',{x1,y1,x2,y2,...a}); s.appendChild(e); return e;
+}
+function svgRect(s,x,y,w,h,a={}){
+  const e=svgEl('rect',{x,y,width:w,height:h,...a}); s.appendChild(e); return e;
+}
+function svgBg(s,w,h){ svgRect(s,0,0,w,h,{fill:'#fff'}); }
+
+// ── Tab 0 : Vocabulaire (bar chart) ──────────────────────────
+function drawBar(svg, phase){
+  svg.setAttribute('viewBox','0 0 400 220'); svg.innerHTML='';
+  const W=400,H=220,ml=95,mb=32,mr=12,mt=22;
+  const cw=W-ml-mr, ch=H-mb-mt, maxEff=12;
+  svgBg(svg,W,H);
+  svgText(svg,W/2,13,'Sports préférés des 28 élèves',{'font-size':'12','fill':'#333','font-weight':'bold'});
+  svgLine(svg,ml,mt,ml,mt+ch,{stroke:'#aaa','stroke-width':'1.5'});
+  svgLine(svg,ml,mt+ch,ml+cw,mt+ch,{stroke:'#aaa','stroke-width':'1.5'});
+  for(let v=0;v<=maxEff;v+=2){
+    const y=mt+ch-(v/maxEff)*ch;
+    svgLine(svg,ml-4,y,ml,y,{stroke:'#aaa'});
+    svgText(svg,ml-10,y,v,{'font-size':'10','fill':'#888','text-anchor':'end'});
+    if(v>0)svgLine(svg,ml,y,ml+cw,y,{stroke:'#f0f0f0'});
+  }
+  const bw=cw/SPORTS.length;
+  SPORTS.forEach((s,i)=>{
+    const cx=ml+i*bw+bw/2;
+    const x=ml+i*bw+bw*0.15, bWidth=bw*0.7;
+    const bh=(s.eff/maxEff)*ch, by=mt+ch-bh;
+    svgText(svg,cx,mt+ch+18,s.nom.length>8?s.nom.slice(0,7)+'…':s.nom,{'font-size':'9','fill':'#555'});
+    if(phase>=1){
+      svgRect(svg,x,by,bWidth,bh,{fill:COLORS[i],opacity:'0.85',rx:'3'});
+      svgText(svg,cx,by-7,s.eff,{'font-size':'11','fill':'#333','font-weight':'bold'});
+    }
+    if(phase>=3){
+      svgText(svg,cx,by+bh/2,pct(s.freq).replace('&nbsp;',''),{'font-size':'8.5','fill':'white','font-weight':'bold'});
+    }
+  });
+}
+
+// ── Tab 1 : Diagramme circulaire ─────────────────────────────
+function arcPath(cx,cy,r,sDeg,eDeg){
+  const s=(sDeg-90)*Math.PI/180, e=(eDeg-90)*Math.PI/180;
+  const x1=cx+r*Math.cos(s),y1=cy+r*Math.sin(s);
+  const x2=cx+r*Math.cos(e),y2=cy+r*Math.sin(e);
+  return `M${cx} ${cy}L${x1.toFixed(1)} ${y1.toFixed(1)}A${r} ${r} 0 ${eDeg-sDeg>180?1:0} 1 ${x2.toFixed(1)} ${y2.toFixed(1)}Z`;
+}
+function drawPie(svg, phase){
+  svg.setAttribute('viewBox','0 0 400 240'); svg.innerHTML='';
+  const W=400,H=240;
+  svgBg(svg,W,H);
+  svgText(svg,W/2,14,'Diagramme circulaire – Sports préférés',{'font-size':'12','fill':'#333','font-weight':'bold'});
+  const cx=145,cy=130,r=100;
+  const max = phase===0||phase===1 ? 0 : phase===2 ? 2 : 5;
+  let cum=0;
+  SPORTS.forEach((s,i)=>{
+    const a=s.freq*360;
+    if(i<max){
+      const p=svgEl('path',{d:arcPath(cx,cy,r,cum,cum+a),fill:COLORS[i],stroke:'white','stroke-width':'1.5'});
+      svg.appendChild(p);
+      if(phase>=4){
+        const mid=(cum+a/2-90)*Math.PI/180;
+        const lx=cx+r*0.62*Math.cos(mid), ly=cy+r*0.62*Math.sin(mid);
+        svgText(svg,lx,ly,Math.round(a)+'°',{'font-size':'9','fill':'white','font-weight':'bold'});
+      }
+    }
+    cum+=a;
+  });
+  if(max>0){
+    const circ=svgEl('circle',{cx,cy,r,fill:'none',stroke:'#ccc','stroke-width':'1'});
+    svg.appendChild(circ);
+  }
+  // Légende
+  const lx=265, ly0=55;
+  SPORTS.forEach((s,i)=>{
+    const ly=ly0+i*34;
+    svgRect(svg,lx,ly-7,14,14,{fill:COLORS[i],rx:'2'});
+    const t=svgEl('text',{x:lx+18,y:ly,'font-size':'10','fill':'#333','dominant-baseline':'central'});
+    t.textContent=`${s.nom} (${s.eff})`; svg.appendChild(t);
+    if(phase>=3){
+      const t2=svgEl('text',{x:lx+18,y:ly+13,'font-size':'9','fill':'#777','dominant-baseline':'central'});
+      t2.textContent=`≈ ${Math.round(s.freq*360)}°`; svg.appendChild(t2);
+    }
+  });
+}
+
+// ── Tab 2 : Moyenne ──────────────────────────────────────────
+function drawMean(svg, phase){
+  svg.setAttribute('viewBox','0 0 400 210'); svg.innerHTML='';
+  svgBg(svg,400,210);
+  if(phase<=2){
+    svgText(svg,200,16,'Notes de l\'élève (7 évaluations)',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    const ay=110, xs=40, xe=370, xScale=v=>xs+(v/20)*(xe-xs);
+    svgLine(svg,xs,ay,xe,ay,{stroke:'#aaa','stroke-width':'1.5'});
+    for(let v=0;v<=20;v+=2){
+      const x=xScale(v);
+      svgLine(svg,x,ay-4,x,ay+4,{stroke:'#aaa'});
+      svgText(svg,x,ay+14,v,{'font-size':'10','fill':'#666'});
+    }
+    NOTES.forEach(n=>{
+      const x=xScale(n);
+      const dot=svgEl('circle',{cx:x,cy:ay-28,r:'12',fill:'#27ae60',opacity:'0.85'});
+      svg.appendChild(dot);
+      svgText(svg,x,ay-28,n,{'font-size':'11','fill':'white','font-weight':'bold'});
+    });
+    if(phase>=1){
+      const sx=NOTES.map(n=>n+' ').join('+ ').trim();
+      svgText(svg,200,170,`Somme = ${NOTES.join(' + ')} = 90`,{'font-size':'10','fill':'#555'});
+    }
+    if(phase>=2){
+      const mx=xScale(90/7);
+      svgLine(svg,mx,ay-55,mx,ay+5,{stroke:'#e74c3c','stroke-width':'2','stroke-dasharray':'4,3'});
+      svgText(svg,mx,ay-63,'≈ 12,86',{'font-size':'11','fill':'#e74c3c','font-weight':'bold'});
+      svgText(svg,mx,ay+25,'Moyenne',{'font-size':'10','fill':'#e74c3c','font-weight':'bold'});
+      svgText(svg,200,190,'Moyenne = 90 ÷ 7 ≈ 12,86',{'font-size':'11','fill':'#27ae60','font-weight':'bold'});
+    }
+  } else {
+    svgText(svg,200,15,'Livres lus pendant les vacances (25 élèves)',{'font-size':'11','fill':'#333','font-weight':'bold'});
+    const ml=40,mt=32,mr=15,mb=38;
+    const cw=400-ml-mr, ch=210-mt-mb, maxEff=10, bw=cw/LIVRES.length;
+    svgLine(svg,ml,mt,ml,mt+ch,{stroke:'#aaa','stroke-width':'1.5'});
+    svgLine(svg,ml,mt+ch,ml+cw,mt+ch,{stroke:'#aaa','stroke-width':'1.5'});
+    for(let v=0;v<=maxEff;v+=2){
+      const y=mt+ch-(v/maxEff)*ch;
+      svgLine(svg,ml-4,y,ml,y,{stroke:'#aaa'});
+      svgText(svg,ml-8,y,v,{'font-size':'10','fill':'#888','text-anchor':'end'});
+      if(v>0)svgLine(svg,ml,y,ml+cw,y,{stroke:'#f0f0f0'});
+    }
+    LIVRES.forEach((l,i)=>{
+      const cx2=ml+i*bw+bw/2, bx=ml+i*bw+bw*0.15, bW=bw*0.7;
+      const bh=(l.eff/maxEff)*ch, by=mt+ch-bh;
+      svgRect(svg,bx,by,bW,bh,{fill:'#27ae60',opacity:'0.8',rx:'3'});
+      svgText(svg,cx2,by-8,l.eff,{'font-size':'11','fill':'#333','font-weight':'bold'});
+      svgText(svg,cx2,mt+ch+16,l.val+(l.val>1?' livres':' livre'),{'font-size':'9','fill':'#555'});
+      if(phase>=4) svgText(svg,cx2,by+bh/2,l.val*l.eff,{'font-size':'10','fill':'white','font-weight':'bold'});
+    });
+    if(phase>=5){
+      svgText(svg,200,195,'Moyenne = 42 ÷ 25 = 1,68 livre',{'font-size':'12','fill':'#e74c3c','font-weight':'bold'});
+    }
+  }
+}
+
+// ── Tab 3 : Médiane ──────────────────────────────────────────
+function drawMedian(svg, phase){
+  svg.setAttribute('viewBox','0 0 400 205'); svg.innerHTML='';
+  svgBg(svg,400,205);
+  const c='#8e44ad';
+
+  function drawBoxes(series, y, highlightFn, labelFn){
+    const bw=42, bh=42, gap=6;
+    const total=(bw+gap)*series.length-gap;
+    const sx=(400-total)/2;
+    series.forEach((v,i)=>{
+      const x=sx+i*(bw+gap);
+      const [bg,fg]=highlightFn(i,v);
+      svgRect(svg,x,y,bw,bh,{fill:bg,rx:'6',stroke:fg==='white'?c:'#ccc','stroke-width':fg==='white'?'2':'1'});
+      svgText(svg,x+bw/2,y+bh/2,v,{'font-size':'15','fill':fg==='white'?'white':'#333','font-weight':'bold'});
+      if(labelFn) svgText(svg,x+bw/2,y+bh+14,labelFn(i),{'font-size':'8','fill':'#888'});
+    });
+    return {sx, bw, gap};
+  }
+
+  if(phase===0){
+    svgText(svg,200,18,'Série brute (n = 7)',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    drawBoxes([14,3,9,5,17,11,7],60,()=>['#e8e8e8','#333'],i=>`val. ${i+1}`);
+    svgText(svg,200,140,'⇒ Il faut d\'abord trier dans l\'ordre croissant !',{'font-size':'11','fill':c});
+
+  } else if(phase===1){
+    svgText(svg,200,18,'Série triée dans l\'ordre croissant',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    drawBoxes(TRI7,60,()=>['#e8e8e8','#333'],i=>`rang ${i+1}`);
+    svgText(svg,200,135,'n = 7 (impair)',{'font-size':'11','fill':c});
+    svgText(svg,200,155,'Rang de la médiane = (7 + 1) ÷ 2 = 4',{'font-size':'12','fill':c,'font-weight':'bold'});
+
+  } else if(phase===2){
+    svgText(svg,200,18,'Valeur de rang 4 = médiane',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    const {sx,bw,gap}=drawBoxes(TRI7,60,(i)=>i===3?[c,'white']:i<3?['#d5e8f8','#333']:['#fde8d8','#333'],i=>`rang ${i+1}`);
+    const mx=sx+3*(bw+gap)+bw/2;
+    svgText(svg,mx,148,'↑',{'font-size':'22','fill':c});
+    svgText(svg,mx,172,'Médiane = 9',{'font-size':'13','fill':c,'font-weight':'bold'});
+    svgText(svg,sx+1.5*(bw+gap),42,'3 valeurs < 9',{'font-size':'9','fill':'#2980b9'});
+    svgText(svg,sx+5*(bw+gap)+8,42,'3 valeurs > 9',{'font-size':'9','fill':'#e67e22','text-anchor':'middle'});
+
+  } else if(phase===3){
+    svgText(svg,200,18,'Série triée (n = 8, effectif pair)',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    drawBoxes(TRI8,60,()=>['#e8e8e8','#333'],i=>`rang ${i+1}`);
+    svgText(svg,200,135,'n = 8 (pair)',{'font-size':'11','fill':c});
+    svgText(svg,200,155,'Rangs centraux : 8÷2 = 4  et  8÷2+1 = 5',{'font-size':'12','fill':c,'font-weight':'bold'});
+
+  } else if(phase===4){
+    svgText(svg,200,18,'Valeurs de rang 4 et 5',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    drawBoxes(TRI8,60,(i)=>(i===3||i===4)?[c,'white']:i<3?['#d5e8f8','#333']:['#fde8d8','#333'],i=>`rang ${i+1}`);
+    svgText(svg,200,140,'Rang 4 → 9   et   rang 5 → 11',{'font-size':'11','fill':c});
+    svgText(svg,200,162,'Médiane = (9 + 11) ÷ 2 = 10',{'font-size':'13','fill':c,'font-weight':'bold'});
+
+  } else {
+    svgText(svg,200,18,'Médiane vs Moyenne — salaires',{'font-size':'12','fill':'#333','font-weight':'bold'});
+    const sal=[1200,1300,1400,1500,10000];
+    drawBoxes(sal,55,(i,v)=>i===4?['#ffccbc','#c0392b']:i===2?[c,'white']:['#e8e8e8','#333'],i=>`rang ${i+1}`);
+    // Annotations
+    const bw2=42,gap2=6,total=(bw2+gap2)*5-gap2, sx=(400-total)/2;
+    const medX=sx+2*(bw2+gap2)+bw2/2;
+    svgText(svg,medX,44,'↓ médiane',{'font-size':'9','fill':c,'font-weight':'bold'});
+    const extX=sx+4*(bw2+gap2)+bw2/2;
+    svgText(svg,extX,44,'⚠ extrême',{'font-size':'9','fill':'#c0392b','font-weight':'bold'});
+    svgText(svg,200,138,'Moyenne = 3 080 €',{'font-size':'12','fill':'#e74c3c','font-weight':'bold'});
+    svgText(svg,200,158,'Médiane = 1 400 €',{'font-size':'12','fill':c,'font-weight':'bold'});
+    svgText(svg,200,182,'La médiane est moins influencée par les valeurs extrêmes.',{'font-size':'10','fill':'#555'});
+  }
+}
+
+// ── Contenu des étapes ────────────────────────────────────────
+
+const STEPS = [
+  // TAB 0 – Vocabulaire
+  [
+    { exp:'Une <strong>série statistique</strong> décrit une population à travers un caractère.',
+      draw:s=>drawBar(s,0),
+      calc:`<div class="enonce">Enquête auprès de <strong>28 élèves</strong> de 4ème sur leur sport préféré.</div>
+      <table class="tbl"><tr><th>Terme</th><th>Définition</th><th>Exemple ici</th></tr>
+      <tr><td><strong>Population</strong></td><td>Ensemble des individus étudiés</td><td>Les 28 élèves</td></tr>
+      <tr><td><strong>Individu</strong></td><td>Chaque élément</td><td>Un élève</td></tr>
+      <tr><td><strong>Caractère</strong></td><td>La propriété observée</td><td>Le sport préféré</td></tr>
+      <tr><td><strong>Valeur</strong></td><td>Chaque résultat possible</td><td>Football, basket…</td></tr>
+      </table>`},
+    { exp:"L'<strong>effectif</strong> d'une valeur = nombre d'individus ayant cette valeur.",
+      draw:s=>drawBar(s,1),
+      calc:`<div class="enonce">On relève les effectifs de chaque sport :</div>
+      <table class="tbl"><tr><th>Sport</th><th>Effectif</th></tr>
+      ${SPORTS.map(s=>`<tr><td>${s.nom}</td><td class="hl">${s.eff}</td></tr>`).join('')}
+      <tr class="tot"><td>Total</td><td>${TOTAL}</td></tr></table>
+      <div class="att">Effectif total = somme de tous les effectifs = <strong>${TOTAL}</strong></div>`},
+    { exp:"La <strong>fréquence</strong> = effectif de la valeur ÷ effectif total.",
+      draw:s=>drawBar(s,2),
+      calc:`<div class="enonce">Calcul de la fréquence du <strong>Football</strong> :</div>
+      <div class="ligne">Fréquence = <span class="fr"><span class="n">effectif</span><span class="d">effectif total</span></span>
+       = <span class="fr"><span class="n">10</span><span class="d">28</span></span> ≈ <span class="hl">0,357</span></div>
+      <div class="ligne">En pourcentage : 0,357 × 100 ≈ <span class="hl">35,7 %</span></div>
+      <div class="att">La fréquence est un nombre entre 0 et 1.<br>× 100 pour obtenir le pourcentage.</div>`},
+    { exp:"On calcule la fréquence de chaque valeur.",
+      draw:s=>drawBar(s,3),
+      calc:`<table class="tbl"><tr><th>Sport</th><th>Effectif</th><th>Fréquence</th><th>%</th></tr>
+      ${SPORTS.map(s=>`<tr><td>${s.nom}</td><td>${s.eff}</td><td class="hl">${fmt(s.freq)}</td><td>${pct(s.freq)}</td></tr>`).join('')}
+      <tr class="tot"><td>Total</td><td>${TOTAL}</td><td>1</td><td>100&nbsp;%</td></tr></table>`},
+    { exp:"La somme de toutes les fréquences est <strong>toujours égale à 1</strong> (= 100 %). C'est un moyen de vérifier !",
+      draw:s=>drawBar(s,4),
+      calc:`<div class="enonce">Vérification :</div>
+      <div class="ligne">${SPORTS.map(s=>fmt(s.freq)).join(' + ')} ≈ <span class="hl">1,000</span> ✓</div>
+      <div class="ok">✔ Somme des fréquences = 1 = 100 %<br>C'est toujours le cas !</div>
+      <div class="att">Formule clé : <strong>fréquence = effectif ÷ effectif total</strong></div>`},
+  ],
+
+  // TAB 1 – Diagramme circulaire
+  [
+    { exp:"Un <strong>diagramme circulaire</strong> (camembert) représente la répartition d'une série par secteurs.",
+      draw:s=>drawPie(s,0),
+      calc:`<div class="enonce">On repart du tableau des fréquences :</div>
+      <table class="tbl"><tr><th>Sport</th><th>Effectif</th><th>Fréquence</th></tr>
+      ${SPORTS.map(s=>`<tr><td>${s.nom}</td><td>${s.eff}</td><td>${fmt(s.freq)}</td></tr>`).join('')}
+      <tr class="tot"><td>Total</td><td>${TOTAL}</td><td>1</td></tr></table>`},
+    { exp:"Chaque secteur a un angle <strong>proportionnel</strong> à la fréquence.",
+      draw:s=>drawPie(s,1),
+      calc:`<div class="enonce">Formule :</div>
+      <div class="ligne" style="font-size:1.05em">Angle (en °) = fréquence × <span class="hl">360°</span></div>
+      <div class="ligne" style="margin-top:6px">ou</div>
+      <div class="ligne">Angle = <span class="fr"><span class="n">effectif</span><span class="d">effectif total</span></span> × 360°</div>
+      <div class="ok">La somme de tous les angles = <strong>360°</strong></div>`},
+    { exp:"Calcul des angles pour les deux premiers sports.",
+      draw:s=>drawPie(s,2),
+      calc:`<div class="ligne"><strong>Football :</strong></div>
+      <div class="ligne"><span class="fr"><span class="n">10</span><span class="d">28</span></span> × 360° ≈ <span class="hl">128°</span></div>
+      <div class="ligne" style="margin-top:6px"><strong>Basketball :</strong></div>
+      <div class="ligne"><span class="fr"><span class="n">7</span><span class="d">28</span></span> × 360° = <span class="hl">90°</span></div>`},
+    { exp:"Tableau complet — leur somme doit faire 360°.",
+      draw:s=>drawPie(s,3),
+      calc:`<table class="tbl"><tr><th>Sport</th><th>Fréquence</th><th>Angle</th></tr>
+      ${SPORTS.map(s=>`<tr><td>${s.nom}</td><td>${fmt(s.freq)}</td><td class="hl">${Math.round(s.freq*360)}°</td></tr>`).join('')}
+      <tr class="tot"><td>Total</td><td>1</td><td>≈ 359° *</td></tr></table>
+      <div class="att">* 359° au lieu de 360° : c'est dû aux <strong>arrondis</strong>. C'est normal !</div>`},
+    { exp:"On trace le diagramme avec le rapporteur, secteur par secteur.",
+      draw:s=>drawPie(s,3),
+      calc:`<div class="enonce">Méthode de construction :</div>
+      <div class="ligne">1. Tracer un cercle et placer un rayon initial.</div>
+      <div class="ligne">2. Reporter chaque angle avec le rapporteur.</div>
+      <div class="ligne">3. Colorier chaque secteur différemment.</div>
+      <div class="ligne">4. Ajouter la <strong>légende</strong>.</div>`},
+    { exp:"Diagramme terminé — chaque secteur représente un sport.",
+      draw:s=>drawPie(s,4),
+      calc:`<div class="enonce">Lecture du diagramme :</div>
+      <div class="ligne">• Identifier le secteur (par la légende).</div>
+      <div class="ligne">• Mesurer son angle si besoin.</div>
+      <div class="ligne">• Fréquence = angle ÷ 360</div>
+      <div class="ligne">• Effectif = fréquence × effectif total</div>
+      <div class="ok">✔ Diagramme circulaire complet !</div>`},
+  ],
+
+  // TAB 2 – Moyenne
+  [
+    { exp:"La <strong>moyenne</strong> = somme de toutes les valeurs ÷ effectif total.",
+      draw:s=>drawMean(s,0),
+      calc:`<div class="enonce">Notes d'un élève lors de 7 évaluations :</div>
+      <div class="ligne" style="font-size:1.1em;letter-spacing:2px">${NOTES.join(' ;  ')}</div>
+      <div class="att">Formule : Moyenne = <span class="fr"><span class="n">somme des valeurs</span><span class="d">effectif total</span></span></div>`},
+    { exp:"On additionne toutes les valeurs.",
+      draw:s=>drawMean(s,1),
+      calc:`<div class="enonce">Calcul de la somme :</div>
+      <div class="ligne">${NOTES.join(' + ')} = <span class="hl">90</span></div>
+      <div class="ligne">Effectif total = <span class="hl">7</span></div>`},
+    { exp:"On divise la somme par le nombre de valeurs.",
+      draw:s=>drawMean(s,2),
+      calc:`<div class="ligne">Moyenne = <span class="fr"><span class="n">90</span><span class="d">7</span></span> ≈ <span class="hl">12,86</span></div>
+      <div class="ok">✔ Moyenne ≈ <strong>12,86</strong></div>
+      <div class="att">La moyenne n'appartient pas forcément à la série !</div>`},
+    { exp:"Quand les données sont dans un tableau, on calcule : valeur × effectif.",
+      draw:s=>drawMean(s,3),
+      calc:`<div class="enonce">Livres lus pendant les vacances (25 élèves) :</div>
+      <table class="tbl"><tr><th>Valeur</th><th>Effectif</th><th>Val × Eff</th></tr>
+      ${LIVRES.map(l=>`<tr><td>${l.val}</td><td>${l.eff}</td><td>?</td></tr>`).join('')}
+      <tr class="tot"><td>Total</td><td>${TOTAL_L}</td><td>?</td></tr></table>`},
+    { exp:"On calcule chaque produit, puis on fait la somme.",
+      draw:s=>drawMean(s,4),
+      calc:`<table class="tbl"><tr><th>Valeur</th><th>Effectif</th><th>Val × Eff</th></tr>
+      ${LIVRES.map(l=>`<tr><td>${l.val}</td><td>${l.eff}</td><td class="hl">${l.val*l.eff}</td></tr>`).join('')}
+      <tr class="tot"><td>Total</td><td>${TOTAL_L}</td><td class="hl">${SUM_L}</td></tr></table>
+      <div class="ligne">Somme = ${LIVRES.map(l=>l.val*l.eff).join(' + ')} = <span class="hl">${SUM_L}</span></div>`},
+    { exp:"On divise la somme par l'effectif total.",
+      draw:s=>drawMean(s,5),
+      calc:`<div class="ligne">Moyenne = <span class="fr"><span class="n">${SUM_L}</span><span class="d">${TOTAL_L}</span></span> = <span class="hl">1,68</span> livre</div>
+      <div class="ok">✔ En moyenne : <strong>1,68 livre</strong> par élève.</div>
+      <div class="att">1,68 n'appartient pas à la série — c'est une valeur <strong>représentative</strong> !</div>`},
+  ],
+
+  // TAB 3 – Médiane
+  [
+    { exp:"La <strong>médiane</strong> partage la série ordonnée en deux groupes de même effectif.",
+      draw:s=>drawMedian(s,0),
+      calc:`<div class="enonce">Exemple 1 — Série brute (n = 7) :</div>
+      <div class="ligne" style="font-size:1.1em;letter-spacing:2px">14 ;  3 ;  9 ;  5 ;  17 ;  11 ;  7</div>
+      <div class="att">⚠️ La médiane ≠ la moyenne.<br>Elle est moins sensible aux valeurs extrêmes.</div>`},
+    { exp:"Étape 1 : on <strong>trie</strong> les valeurs dans l'ordre croissant.",
+      draw:s=>drawMedian(s,1),
+      calc:`<div class="enonce">Série triée :</div>
+      <div class="ligne" style="font-size:1.1em;letter-spacing:2px">3 ;  5 ;  7 ;  9 ;  11 ;  14 ;  17</div>
+      <div class="ligne">n = <span class="hl">7</span> (impair)</div>
+      <div class="ligne">Rang de la médiane = <span class="fr"><span class="n">n + 1</span><span class="d">2</span></span> = <span class="fr"><span class="n">7 + 1</span><span class="d">2</span></span> = <span class="hl">4</span></div>`},
+    { exp:"La valeur de rang 4 dans la série triée est la médiane.",
+      draw:s=>drawMedian(s,2),
+      calc:`<div class="ligne">Série : 3 ; 5 ; 7 ; <span class="hl">9</span> ; 11 ; 14 ; 17</div>
+      <div class="ligne">La valeur de rang 4 est <span class="hl">9</span>.</div>
+      <div class="ok">✔ <strong>Médiane = 9</strong><br>3 valeurs &lt; 9 &nbsp;|&nbsp; 3 valeurs &gt; 9</div>`},
+    { exp:"Cas d'un effectif <strong>pair</strong> : il y a deux valeurs centrales.",
+      draw:s=>drawMedian(s,3),
+      calc:`<div class="enonce">Exemple 2 — Série triée (n = 8) :</div>
+      <div class="ligne" style="font-size:1.05em">3 ;  5 ;  7 ;  9 ;  11 ;  14 ;  17 ;  20</div>
+      <div class="ligne">n = <span class="hl">8</span> (pair)</div>
+      <div class="ligne">Rangs centraux : <span class="fr"><span class="n">8</span><span class="d">2</span></span> = <span class="hl">4</span> et <span class="fr"><span class="n">8</span><span class="d">2</span></span> + 1 = <span class="hl">5</span></div>`},
+    { exp:"On prend la <strong>moyenne</strong> des deux valeurs centrales.",
+      draw:s=>drawMedian(s,4),
+      calc:`<div class="ligne">Valeur de rang 4 : <span class="hl">9</span></div>
+      <div class="ligne">Valeur de rang 5 : <span class="hl">11</span></div>
+      <div class="ligne">Médiane = <span class="fr"><span class="n">9 + 11</span><span class="d">2</span></span> = <span class="fr"><span class="n">20</span><span class="d">2</span></span> = <span class="hl">10</span></div>
+      <div class="ok">✔ <strong>Médiane = 10</strong></div>`},
+    { exp:"La médiane est <strong>moins sensible</strong> aux valeurs extrêmes que la moyenne.",
+      draw:s=>drawMedian(s,5),
+      calc:`<div class="enonce">Salaires de 5 personnes :</div>
+      <div class="ligne" style="font-size:0.9em">1 200 € ; 1 300 € ; 1 400 € ; 1 500 € ; 10 000 €</div>
+      <div class="ligne">Moyenne = <span class="fr"><span class="n">15 400</span><span class="d">5</span></span> = <span class="hl2">3 080 €</span></div>
+      <div class="ligne">Médiane = <span class="hl">1 400 €</span> (valeur de rang 3)</div>
+      <div class="ok">✔ La médiane représente mieux le salaire <strong>typique</strong> ici !</div>`},
+  ],
+];
+
+// ── Construction de l'interface ───────────────────────────────
+function buildUI(){
+  const tabBar=document.getElementById('tabBar');
+  const secs=document.getElementById('sections');
+  TABS.forEach((tab,ti)=>{
+    const btn=document.createElement('button');
+    btn.className='tb'+(ti===0?' on':'');
+    btn.textContent=tab.label;
+    btn.id=`tb${ti}`;
+    if(ti===0) btn.style.background=tab.color;
+    btn.onclick=()=>switchTab(ti);
+    tabBar.appendChild(btn);
+
+    const sec=document.createElement('div');
+    sec.className='sec'+(ti===0?' on':'');
+    sec.id=`sec${ti}`;
+    sec.style.setProperty('--c',tab.color);
+    sec.style.setProperty('--cd',tab.dark);
+    sec.innerHTML=`
+      <div class="fig"><svg id="svg${ti}" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="cb" id="cb${ti}"></div>
+      <div class="exp" id="exp${ti}"></div>
+      <div class="nav">
+        <button id="prev${ti}" onclick="navigate(${ti},-1)">◀ Précédent</button>
+        <span class="step-ind" id="ind${ti}"></span>
+        <button id="next${ti}" onclick="navigate(${ti},1)">Suivant ▶</button>
+      </div>`;
+    secs.appendChild(sec);
+    renderStep(ti);
+  });
+}
+
+function switchTab(ti){
+  curTab=ti;
+  document.querySelectorAll('.tb').forEach((b,i)=>{
+    b.className='tb'+(i===ti?' on':'');
+    b.style.background=i===ti?TABS[i].color:'';
+    b.style.color=i===ti?'#fff':'';
+  });
+  document.querySelectorAll('.sec').forEach((s,i)=>s.className='sec'+(i===ti?' on':''));
+  document.querySelector('.hdr').style.background=TABS[ti].color;
+}
+
+function navigate(ti,dir){
+  const n=STEPS[ti].length;
+  curStep[ti]=Math.max(0,Math.min(n-1,curStep[ti]+dir));
+  renderStep(ti);
+}
+
+function renderStep(ti){
+  const steps=STEPS[ti], si=curStep[ti], step=steps[si];
+  const svg=document.getElementById(`svg${ti}`);
+  step.draw(svg);
+  document.getElementById(`cb${ti}`).innerHTML=step.calc;
+  document.getElementById(`exp${ti}`).innerHTML=step.exp;
+  document.getElementById(`ind${ti}`).textContent=`${si+1} / ${steps.length}`;
+  document.getElementById(`prev${ti}`).disabled=si===0;
+  document.getElementById(`next${ti}`).disabled=si===steps.length-1;
+}
+
+buildUI();
+</script>
+</body>
+</html>
