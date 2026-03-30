@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractions – Comparer, Additionner, Soustraire</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f0f4f8;
+  color: #2c3e50;
+  min-height: 100vh;
+}
+header {
+  background: #2c3e50;
+  color: white;
+  padding: 12px 16px;
+  text-align: center;
+}
+header h1 { font-size: 1em; font-weight: 700; letter-spacing: 0.5px; }
+header p { font-size: 0.76em; opacity: 0.65; margin-top: 2px; }
+
+.tabs { display: flex; background: white; border-bottom: 2px solid #e0e6ed; }
+.tab-btn {
+  flex: 1;
+  padding: 11px 4px;
+  text-align: center;
+  font-size: 0.76em;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: #999;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.2px;
+}
+.tab-btn.active { color: var(--tc); border-bottom-color: var(--tc); background: #fafbfc; }
+
+.page { display: none; padding: 14px 14px 24px; max-width: 560px; margin: 0 auto; }
+.page.active { display: block; }
+
+.fig-box {
+  background: white;
+  border-radius: 10px;
+  padding: 14px 10px 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  text-align: center;
+}
+.fig-box svg { width: 100%; max-width: 340px; height: auto; display: block; margin: 0 auto; }
+
+.calc-box {
+  background: white;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  min-height: 120px;
+}
+
+.enonce { font-weight: 700; font-size: 1em; margin-bottom: 10px; color: #1a252f; }
+.ligne {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 7px 0;
+  font-size: 0.92em;
+  flex-wrap: wrap;
+  line-height: 1.6;
+}
+.fr {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 1px;
+  line-height: 1.1;
+}
+.fr .n { border-bottom: 1.8px solid currentColor; padding: 0 3px; font-size: 0.88em; min-width: 12px; text-align: center; font-weight: 600; }
+.fr .d { padding: 0 3px; font-size: 0.88em; min-width: 12px; text-align: center; font-weight: 600; }
+
+.hl-b { color: #2980b9; font-weight: 700; }
+.hl-o { color: #d35400; font-weight: 700; }
+.hl-g { color: #229954; font-weight: 700; }
+.hl-r { color: #c0392b; font-weight: 700; }
+.hl-p { color: #7d3c98; font-weight: 700; }
+.op { font-size: 1.15em; font-weight: 700; color: #555; }
+
+.conclusion-ok {
+  background: #eafaf1;
+  border-left: 4px solid #27ae60;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-weight: 700;
+  color: #1a7a44;
+  font-size: 1em;
+}
+.attention {
+  background: #fef9e7;
+  border-left: 4px solid #f0b429;
+  padding: 9px 13px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 0.86em;
+  color: #7d6608;
+}
+
+.nav-box {
+  background: white;
+  border-radius: 10px;
+  padding: 13px 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+.expl {
+  font-size: 0.85em;
+  color: #555;
+  min-height: 42px;
+  line-height: 1.55;
+  margin-bottom: 11px;
+}
+.step-ind { font-size: 0.75em; color: #bbb; text-align: right; margin-bottom: 8px; }
+.btns { display: flex; gap: 10px; }
+.btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn-prev { background: #eaecee; color: #666; }
+.btn-next { color: white; }
+.btn:disabled { opacity: 0.3; cursor: default; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Fractions – Dénominateurs différents</h1>
+  <p>6ème</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" style="--tc:#2980b9" onclick="switchTab(1)" id="tbtn1">⚖️ Comparer</button>
+  <button class="tab-btn" style="--tc:#229954" onclick="switchTab(2)" id="tbtn2">➕ Additionner</button>
+  <button class="tab-btn" style="--tc:#d35400" onclick="switchTab(3)" id="tbtn3">➖ Soustraire</button>
+</div>
+
+<!-- TAB 1 -->
+<div class="page active" id="page1">
+  <div class="fig-box"><svg id="svg1" viewBox="0 0 320 175"></svg></div>
+  <div class="calc-box" id="calc1"></div>
+  <div class="nav-box">
+    <div class="step-ind" id="ind1"></div>
+    <div class="expl" id="expl1"></div>
+    <div class="btns">
+      <button class="btn btn-prev" id="prev1" onclick="go(1,-1)">◀ Précédent</button>
+      <button class="btn btn-next" id="next1" onclick="go(1,1)" style="background:#2980b9">Suivant ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 -->
+<div class="page" id="page2">
+  <div class="fig-box"><svg id="svg2" viewBox="0 0 320 185"></svg></div>
+  <div class="calc-box" id="calc2"></div>
+  <div class="nav-box">
+    <div class="step-ind" id="ind2"></div>
+    <div class="expl" id="expl2"></div>
+    <div class="btns">
+      <button class="btn btn-prev" id="prev2" onclick="go(2,-1)">◀ Précédent</button>
+      <button class="btn btn-next" id="next2" onclick="go(2,1)" style="background:#229954">Suivant ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3 -->
+<div class="page" id="page3">
+  <div class="fig-box"><svg id="svg3" viewBox="0 0 320 185"></svg></div>
+  <div class="calc-box" id="calc3"></div>
+  <div class="nav-box">
+    <div class="step-ind" id="ind3"></div>
+    <div class="expl" id="expl3"></div>
+    <div class="btns">
+      <button class="btn btn-prev" id="prev3" onclick="go(3,-1)">◀ Précédent</button>
+      <button class="btn btn-next" id="next3" onclick="go(3,1)" style="background:#d35400">Suivant ▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────────────────────
+//  HELPERS
+// ───────────────────────────────────────────
+
+function fr(n, d) {
+  return `<span class="fr"><span class="n">${n}</span><span class="d">${d}</span></span>`;
+}
+
+// SVG fraction bar: x,y top-left; w,h dimensions; num,denom; fillColor
+function bar(x, y, w, h, num, denom, fillColor, dim=false) {
+  const pw = w / denom;
+  let s = '';
+  for (let i = 0; i < denom; i++) {
+    const fill = i < num ? fillColor : '#ecf0f3';
+    const op = dim ? 0.45 : 1;
+    s += `<rect x="${+(x + i*pw + 0.6).toFixed(1)}" y="${y}" width="${+(pw-1.2).toFixed(1)}" height="${h}" fill="${fill}" opacity="${op}" rx="1.5"/>`;
+  }
+  // dividers
+  for (let i = 1; i < denom; i++) {
+    s += `<line x1="${+(x+i*pw).toFixed(1)}" y1="${y}" x2="${+(x+i*pw).toFixed(1)}" y2="${y+h}" stroke="white" stroke-width="1"/>`;
+  }
+  // border
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#8899aa" stroke-width="1.5" rx="2"/>`;
+  return s;
+}
+
+// SVG fraction label centered at (cx, midY)
+function sfrac(cx, midY, n, d, color='#2c3e50', sz=13) {
+  const gap = 3;
+  return `
+    <text x="${cx}" y="${midY - gap - 1}" text-anchor="middle" font-size="${sz}" fill="${color}" font-weight="700" font-family="Segoe UI,Arial,sans-serif">${n}</text>
+    <line x1="${cx - sz*0.6}" y1="${midY+gap}" x2="${cx + sz*0.6}" y2="${midY+gap}" stroke="${color}" stroke-width="1.8"/>
+    <text x="${cx}" y="${midY + gap + sz + 2}" text-anchor="middle" font-size="${sz}" fill="${color}" font-weight="700" font-family="Segoe UI,Arial,sans-serif">${d}</text>`;
+}
+
+function stxt(x, y, s, color='#444', sz=11, anchor='middle', weight='normal') {
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${sz}" fill="${color}" font-weight="${weight}" font-family="Segoe UI,Arial,sans-serif">${s}</text>`;
+}
+
+function badge(x, y, w, h, fillColor, strokeColor) {
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1.5" rx="5"/>`;
+}
+
+// ───────────────────────────────────────────
+//  TAB 1 SVG — COMPARER 2/3 et 3/4
+// ───────────────────────────────────────────
+// layout: bar1 y=22 h=38; bar2 y=88 h=38; labels x=30; bars x=50 w=258
+
+const BX=50, BW=258, BH=38;
+
+function svgTab1(step) {
+  let s = '';
+
+  if (step === 0) {
+    // Deux barres originales
+    s += bar(BX, 22, BW, BH, 2, 3, '#3498db');
+    s += sfrac(30, 41, 2, 3, '#2980b9');
+    s += bar(BX, 88, BW, BH, 3, 4, '#e67e22');
+    s += sfrac(30, 107, 3, 4, '#d35400');
+    s += stxt(160, 150, 'Dénominateurs différents : 3 et 4', '#666', 11);
+    s += stxt(160, 165, 'Comment comparer ces deux fractions ?', '#666', 11);
+  }
+  else if (step === 1) {
+    // Trouver le dénominateur commun
+    s += bar(BX, 22, BW, BH, 2, 3, '#3498db', true);
+    s += sfrac(30, 41, 2, 3, '#2980b9');
+    s += bar(BX, 88, BW, BH, 3, 4, '#e67e22', true);
+    s += sfrac(30, 107, 3, 4, '#d35400');
+    // multiples annotations
+    s += badge(62, 135, 196, 15, '#f5eef8', '#9b59b6');
+    s += stxt(160, 146, 'Multiples de 3 : 3, 6, 9,  12 ...', '#555', 11);
+    s += badge(62, 153, 196, 15, '#fef5e7', '#e67e22');
+    s += stxt(160, 164, 'Multiples de 4 : 4, 8,  12 ...', '#555', 11);
+    // highlight 12
+    s += stxt(224, 146, '12', '#7d3c98', 12, 'middle', '700');
+    s += stxt(210, 164, '12', '#7d3c98', 12, 'middle', '700');
+    // result
+    s += badge(100, 170, 120, 17, '#f0ebf8', '#7d3c98');
+    s += stxt(160, 181, 'Dénominateur commun = 12', '#7d3c98', 11, 'middle', '700');
+  }
+  else if (step === 2) {
+    // Transformer 2/3 → 8/12
+    s += bar(BX, 22, BW, BH, 8, 12, '#3498db');
+    s += sfrac(30, 41, 8, 12, '#2980b9');
+    s += bar(BX, 88, BW, BH, 3, 4, '#e67e22', true);
+    s += sfrac(30, 107, 3, 4, '#d35400');
+    // transformation badge
+    s += badge(62, 138, 200, 18, '#ebf5fb', '#3498db');
+    s += stxt(162, 150, '2 × 4 = 8  et  3 × 4 = 12', '#2980b9', 11);
+    s += badge(84, 158, 155, 16, '#d6eaf8', '#3498db');
+    s += sfrac(102, 166, 2, 3, '#2980b9', 11);
+    s += stxt(118, 168, '=', '#555', 12, 'middle', '700');
+    s += sfrac(137, 166, 8, 12, '#2980b9', 11);
+    s += stxt(160, 168, '  (×4 en haut et en bas)', '#2980b9', 10.5);
+  }
+  else if (step === 3) {
+    // Transformer 3/4 → 9/12
+    s += bar(BX, 22, BW, BH, 8, 12, '#3498db');
+    s += sfrac(30, 41, 8, 12, '#2980b9');
+    s += bar(BX, 88, BW, BH, 9, 12, '#e67e22');
+    s += sfrac(30, 107, 9, 12, '#d35400');
+    // transformation badge
+    s += badge(62, 138, 200, 18, '#fef5e7', '#e67e22');
+    s += stxt(162, 150, '3 × 3 = 9  et  4 × 3 = 12', '#d35400', 11);
+    s += badge(84, 158, 155, 16, '#fde8d0', '#e67e22');
+    s += sfrac(102, 166, 3, 4, '#d35400', 11);
+    s += stxt(118, 168, '=', '#555', 12, 'middle', '700');
+    s += sfrac(137, 166, 9, 12, '#d35400', 11);
+    s += stxt(160, 168, '  (×3 en haut et en bas)', '#d35400', 10.5);
+  }
+  else if (step === 4) {
+    // Comparer 8/12 et 9/12
+    s += bar(BX, 22, BW, BH, 8, 12, '#3498db');
+    s += sfrac(30, 41, 8, 12, '#2980b9');
+    s += bar(BX, 88, BW, BH, 9, 12, '#e67e22');
+    s += sfrac(30, 107, 9, 12, '#d35400');
+    // vertical dashed line at 8 parts
+    const pw = BW/12;
+    s += `<line x1="${+(BX+8*pw).toFixed(1)}" y1="16" x2="${+(BX+8*pw).toFixed(1)}" y2="134" stroke="#7d3c98" stroke-width="1.8" stroke-dasharray="4,3"/>`;
+    // labels
+    s += stxt(BX + 4*pw, 148, '8 parts', '#2980b9', 11, 'middle', '700');
+    s += stxt(BX + 8.5*pw, 148, '9 parts', '#d35400', 11, 'middle', '700');
+    s += badge(108, 155, 104, 18, '#f0ebf8', '#7d3c98');
+    s += stxt(160, 167, '8 < 9  donc  8/12 < 9/12', '#7d3c98', 11, 'middle', '700');
+  }
+  else if (step === 5) {
+    // Conclusion
+    s += bar(BX, 22, BW, BH, 8, 12, '#3498db');
+    s += sfrac(30, 41, 8, 12, '#2980b9');
+    s += bar(BX, 88, BW, BH, 9, 12, '#e67e22');
+    s += sfrac(30, 107, 9, 12, '#d35400');
+    // conclusion badge
+    s += badge(68, 140, 186, 30, '#eafaf1', '#27ae60');
+    s += sfrac(105, 155, 2, 3, '#2980b9', 13);
+    s += stxt(140, 158, '<', '#27ae60', 18, 'middle', '700');
+    s += sfrac(170, 155, 3, 4, '#d35400', 13);
+    s += stxt(205, 157, '✓', '#27ae60', 16);
+  }
+  return s;
+}
+
+// ───────────────────────────────────────────
+//  TAB 2 SVG — ADDITIONNER 1/3 + 1/4
+// ───────────────────────────────────────────
+
+function svgTab2(step) {
+  let s = '';
+  const bx=50, bw=250, bh=33;
+
+  if (step === 0) {
+    s += bar(bx, 18, bw, bh, 1, 3, '#27ae60');
+    s += sfrac(28, 34, 1, 3, '#229954');
+    s += bar(bx, 75, bw, bh, 1, 4, '#3498db');
+    s += sfrac(28, 91, 1, 4, '#2980b9');
+    // legend
+    s += stxt(175, 136, 'Calculer :', '#555', 11);
+    s += sfrac(220, 138, 1, 3, '#229954', 12);
+    s += stxt(238, 141, '+', '#555', 14, 'middle', '700');
+    s += sfrac(256, 138, 1, 4, '#2980b9', 12);
+    s += stxt(175, 156, 'Dénominateurs différents', '#888', 11);
+    s += stxt(175, 170, '→ chercher un dénominateur commun', '#888', 11);
+  }
+  else if (step === 1) {
+    // dénominateur commun
+    s += bar(bx, 18, bw, bh, 1, 3, '#27ae60', true);
+    s += sfrac(28, 34, 1, 3, '#229954');
+    s += bar(bx, 75, bw, bh, 1, 4, '#3498db', true);
+    s += sfrac(28, 91, 1, 4, '#2980b9');
+    s += badge(60, 123, 205, 18, '#f0ebf8', '#9b59b6');
+    s += stxt(162, 135, 'Multiples de 3 : 3, 6, 9,  12 ...', '#555', 11);
+    s += badge(60, 144, 205, 18, '#eaf4fb', '#3498db');
+    s += stxt(162, 156, 'Multiples de 4 : 4, 8,  12 ...', '#555', 11);
+    s += stxt(221, 135, '12', '#7d3c98', 12, 'middle', '700');
+    s += stxt(207, 156, '12', '#7d3c98', 12, 'middle', '700');
+    s += badge(104, 165, 115, 17, '#f0ebf8', '#7d3c98');
+    s += stxt(162, 176, 'Dénominateur commun = 12', '#7d3c98', 11, 'middle', '700');
+  }
+  else if (step === 2) {
+    // transformer les deux fractions
+    s += bar(bx, 18, bw, bh, 4, 12, '#27ae60');
+    s += sfrac(28, 34, 4, 12, '#229954');
+    s += bar(bx, 75, bw, bh, 3, 12, '#3498db');
+    s += sfrac(28, 91, 3, 12, '#2980b9');
+    s += badge(50, 122, 225, 18, '#eafaf1', '#27ae60');
+    s += sfrac(78, 131, 1, 3, '#229954', 11);
+    s += stxt(94, 133, '=', '#555', 12, 'middle');
+    s += sfrac(115, 131, 4, 12, '#229954', 11);
+    s += stxt(155, 133, '  (×4)', '#229954', 11);
+    s += stxt(195, 133, '   ×3 :', '#2980b9', 11);
+    s += sfrac(220, 131, 1, 4, '#2980b9', 11);
+    s += stxt(237, 133, '=', '#555', 12, 'middle');
+    s += sfrac(258, 131, 3, 12, '#2980b9', 11);
+  }
+  else if (step === 3) {
+    // addition des fractions au même dénominateur
+    const pw = bw/12;
+    // bar 4/12 green
+    s += bar(bx, 12, bw, bh, 4, 12, '#27ae60');
+    s += sfrac(28, 28, 4, 12, '#229954', 11);
+    // bar 3/12 blue
+    s += bar(bx, 60, bw, bh, 3, 12, '#3498db');
+    s += sfrac(28, 76, 3, 12, '#2980b9', 11);
+    // plus sign
+    s += stxt(175, 108, '+', '#555', 20, 'middle', '700');
+    // result bar 7/12 red
+    s += bar(bx, 120, bw, 36, 7, 12, '#e74c3c');
+    s += sfrac(28, 138, 7, 12, '#c0392b', 12);
+    // note
+    s += stxt(175, 173, '4 + 3 = 7  →  même dénominateur : 12', '#555', 11);
+  }
+  else if (step === 4) {
+    // Conclusion
+    s += bar(bx, 30, bw, 40, 7, 12, '#e74c3c');
+    s += sfrac(28, 50, 7, 12, '#c0392b', 13);
+    s += badge(50, 88, 224, 40, '#eafaf1', '#27ae60');
+    s += sfrac(95, 108, 1, 3, '#229954', 13);
+    s += stxt(122, 111, '+', '#555', 16, 'middle', '700');
+    s += sfrac(148, 108, 1, 4, '#2980b9', 13);
+    s += stxt(178, 111, '=', '#555', 16, 'middle', '700');
+    s += sfrac(215, 108, 7, 12, '#c0392b', 15);
+    s += stxt(175, 145, '✓', '#27ae60', 20);
+  }
+  return s;
+}
+
+// ───────────────────────────────────────────
+//  TAB 3 SVG — SOUSTRAIRE 3/4 − 1/3
+// ───────────────────────────────────────────
+
+function svgTab3(step) {
+  let s = '';
+  const bx=50, bw=250, bh=33;
+
+  if (step === 0) {
+    s += bar(bx, 18, bw, bh, 3, 4, '#e67e22');
+    s += sfrac(28, 34, 3, 4, '#d35400');
+    s += bar(bx, 75, bw, bh, 1, 3, '#9b59b6');
+    s += sfrac(28, 91, 1, 3, '#7d3c98');
+    s += stxt(175, 136, 'Calculer :', '#555', 11);
+    s += sfrac(218, 138, 3, 4, '#d35400', 12);
+    s += stxt(238, 141, '−', '#555', 16, 'middle', '700');
+    s += sfrac(258, 138, 1, 3, '#7d3c98', 12);
+    s += stxt(175, 156, 'Dénominateurs différents', '#888', 11);
+    s += stxt(175, 170, '→ chercher un dénominateur commun', '#888', 11);
+  }
+  else if (step === 1) {
+    s += bar(bx, 18, bw, bh, 3, 4, '#e67e22', true);
+    s += sfrac(28, 34, 3, 4, '#d35400');
+    s += bar(bx, 75, bw, bh, 1, 3, '#9b59b6', true);
+    s += sfrac(28, 91, 1, 3, '#7d3c98');
+    s += badge(60, 123, 205, 18, '#fef5e7', '#e67e22');
+    s += stxt(162, 135, 'Multiples de 4 : 4, 8,  12 ...', '#555', 11);
+    s += badge(60, 144, 205, 18, '#f5eef8', '#9b59b6');
+    s += stxt(162, 156, 'Multiples de 3 : 3, 6, 9,  12 ...', '#555', 11);
+    s += stxt(207, 135, '12', '#7d3c98', 12, 'middle', '700');
+    s += stxt(221, 156, '12', '#7d3c98', 12, 'middle', '700');
+    s += badge(104, 165, 115, 17, '#f0ebf8', '#7d3c98');
+    s += stxt(162, 176, 'Dénominateur commun = 12', '#7d3c98', 11, 'middle', '700');
+  }
+  else if (step === 2) {
+    // transformer les deux fractions
+    s += bar(bx, 18, bw, bh, 9, 12, '#e67e22');
+    s += sfrac(28, 34, 9, 12, '#d35400');
+    s += bar(bx, 75, bw, bh, 4, 12, '#9b59b6');
+    s += sfrac(28, 91, 4, 12, '#7d3c98');
+    s += badge(50, 122, 225, 18, '#fef5e7', '#e67e22');
+    s += sfrac(78, 131, 3, 4, '#d35400', 11);
+    s += stxt(94, 133, '=', '#555', 12, 'middle');
+    s += sfrac(115, 131, 9, 12, '#d35400', 11);
+    s += stxt(150, 133, '(×3)', '#d35400', 11);
+    s += stxt(190, 133, '   ×4 :', '#7d3c98', 11);
+    s += sfrac(218, 131, 1, 3, '#7d3c98', 11);
+    s += stxt(235, 133, '=', '#555', 12, 'middle');
+    s += sfrac(256, 131, 4, 12, '#7d3c98', 11);
+  }
+  else if (step === 3) {
+    // soustraction avec visualisation
+    const pw = bw/12;
+    // barre 9/12, mais les 4 dernières parts en rouge
+    s += bar(bx, 12, bw, bh, 9, 12, '#e67e22');
+    // overlay on parts [5..8] (indices 5,6,7,8)
+    for (let i = 5; i < 9; i++) {
+      s += `<rect x="${+(bx+i*pw+0.6).toFixed(1)}" y="12" width="${+(pw-1.2).toFixed(1)}" height="${bh}" fill="#9b59b6" opacity="0.55" rx="1.5"/>`;
+      s += `<line x1="${+(bx+i*pw+3).toFixed(1)}" y1="12" x2="${+(bx+i*pw+pw-3).toFixed(1)}" y2="${12+bh}" stroke="white" stroke-width="1.4"/>`;
+    }
+    s += sfrac(28, 28, 9, 12, '#d35400', 11);
+    s += stxt(bx+7*pw, 58, '− 4 parts retirées', '#7d3c98', 11, 'middle', '700');
+    // résultat
+    s += bar(bx, 75, bw, bh, 5, 12, '#27ae60');
+    s += sfrac(28, 91, 5, 12, '#229954', 12);
+    s += badge(60, 122, 205, 16, '#eafaf1', '#27ae60');
+    s += stxt(162, 133, '9 − 4 = 5  →  même dénominateur : 12', '#229954', 11, 'middle', '700');
+  }
+  else if (step === 4) {
+    // Conclusion
+    s += bar(bx, 30, bw, 40, 5, 12, '#27ae60');
+    s += sfrac(28, 50, 5, 12, '#229954', 13);
+    s += badge(50, 88, 224, 40, '#fef9e7', '#d35400');
+    s += sfrac(90, 108, 3, 4, '#d35400', 13);
+    s += stxt(120, 111, '−', '#555', 18, 'middle', '700');
+    s += sfrac(148, 108, 1, 3, '#7d3c98', 13);
+    s += stxt(178, 111, '=', '#555', 16, 'middle', '700');
+    s += sfrac(215, 108, 5, 12, '#229954', 15);
+    s += stxt(175, 145, '✓', '#d35400', 20);
+  }
+  return s;
+}
+
+// ───────────────────────────────────────────
+//  STEPS DATA
+// ───────────────────────────────────────────
+
+const S1 = [
+  {
+    calc: `<div class="enonce">Comparer ${fr(2,3)} et ${fr(3,4)}</div>
+    <div class="ligne">Ces deux fractions ont des dénominateurs <strong>différents</strong> : <span class="hl-b">3</span> et <span class="hl-o">4</span>.</div>
+    <div class="attention">⚠️ On ne peut pas comparer les numérateurs directement : les parts ne sont pas de la même taille !</div>`,
+    expl: "La barre bleue est partagée en 3 parts, la barre orange en 4 parts. Ce ne sont pas les mêmes tailles de parts, donc 2 parts bleues ≠ 2 parts oranges."
+  },
+  {
+    calc: `<div class="enonce">Étape 1 – Trouver un dénominateur commun</div>
+    <div class="ligne">On cherche un multiple commun à <span class="hl-b">3</span> et à <span class="hl-o">4</span>.</div>
+    <div class="ligne">Multiples de 3 : 3, 6, 9, <span class="hl-p">12</span>…</div>
+    <div class="ligne">Multiples de 4 : 4, 8, <span class="hl-p">12</span>…</div>
+    <div class="ligne">→ Dénominateur commun choisi : <span class="hl-p">12</span></div>`,
+    expl: "12 est un multiple de 3 (car 3×4=12) et un multiple de 4 (car 4×3=12). C'est le plus petit dénominateur commun à 3 et 4."
+  },
+  {
+    calc: `<div class="enonce">Étape 2a – Transformer ${fr(2,3)}</div>
+    <div class="ligne">3 × <span class="hl-b">4</span> = 12, donc on multiplie numérateur et dénominateur par <span class="hl-b">4</span> :</div>
+    <div class="ligne">${fr(2,3)} = ${fr('<span class="hl-b">2×4</span>','<span class="hl-b">3×4</span>')} = <span class="hl-b">${fr(8,12)}</span></div>
+    <div class="ligne">La barre bleue est maintenant divisée en 12 parts.</div>`,
+    expl: "On multiplie le haut (numérateur) et le bas (dénominateur) par le même nombre. La valeur de la fraction ne change pas : 2/3 = 8/12."
+  },
+  {
+    calc: `<div class="enonce">Étape 2b – Transformer ${fr(3,4)}</div>
+    <div class="ligne">4 × <span class="hl-o">3</span> = 12, donc on multiplie numérateur et dénominateur par <span class="hl-o">3</span> :</div>
+    <div class="ligne">${fr(3,4)} = ${fr('<span class="hl-o">3×3</span>','<span class="hl-o">4×3</span>')} = <span class="hl-o">${fr(9,12)}</span></div>
+    <div class="ligne">La barre orange est maintenant divisée en 12 parts.</div>`,
+    expl: "On multiplie le haut et le bas par 3. La valeur de la fraction ne change pas : 3/4 = 9/12. Les deux barres ont maintenant le même dénominateur : 12."
+  },
+  {
+    calc: `<div class="enonce">Étape 3 – Comparer les numérateurs</div>
+    <div class="ligne"><span class="hl-b">${fr(2,3)} = ${fr(8,12)}</span> &nbsp;et&nbsp; <span class="hl-o">${fr(3,4)} = ${fr(9,12)}</span></div>
+    <div class="ligne">Même dénominateur → on compare les numérateurs :</div>
+    <div class="ligne"><span class="hl-b">8</span> <span class="op">&lt;</span> <span class="hl-o">9</span> &nbsp;donc&nbsp; <span class="hl-b">${fr(8,12)}</span> <span class="op">&lt;</span> <span class="hl-o">${fr(9,12)}</span></div>`,
+    expl: "Maintenant que les deux fractions ont le même dénominateur (12), les parts sont de même taille. On compare simplement les numérateurs : 8 < 9."
+  },
+  {
+    calc: `<div class="enonce">Conclusion</div>
+    <div class="ligne"><span class="hl-b">${fr(2,3)} = ${fr(8,12)}</span> &nbsp;et&nbsp; <span class="hl-o">${fr(3,4)} = ${fr(9,12)}</span></div>
+    <div class="ligne">Comme <span class="hl-b">8</span> &lt; <span class="hl-o">9</span> :</div>
+    <div class="conclusion-ok">${fr(2,3)} &nbsp;<span style="font-size:1.25em">&lt;</span>&nbsp; ${fr(3,4)}</div>`,
+    expl: "La barre bleue (2/3 = 8/12) est légèrement plus courte que la barre orange (3/4 = 9/12). On peut conclure : 2/3 est plus petit que 3/4."
+  }
+];
+
+const S2 = [
+  {
+    calc: `<div class="enonce">Calculer ${fr(1,3)} + ${fr(1,4)}</div>
+    <div class="ligne">Dénominateurs différents : <span class="hl-g">3</span> et <span class="hl-b">4</span>.</div>
+    <div class="attention">⚠️ On ne peut pas additionner des fractions de dénominateurs différents directement !<br>Il faut d'abord les mettre au même dénominateur.</div>`,
+    expl: "C'est comme ajouter des tiers et des quarts : les parts n'ont pas la même taille. On doit d'abord les ramener à la même taille (même dénominateur)."
+  },
+  {
+    calc: `<div class="enonce">Étape 1 – Dénominateur commun</div>
+    <div class="ligne">On cherche un multiple commun à <span class="hl-g">3</span> et à <span class="hl-b">4</span>.</div>
+    <div class="ligne">Multiples de 3 : 3, 6, 9, <span class="hl-p">12</span>…</div>
+    <div class="ligne">Multiples de 4 : 4, 8, <span class="hl-p">12</span>…</div>
+    <div class="ligne">Dénominateur commun : <span class="hl-p">12</span> &nbsp;(car 3×4=12)</div>`,
+    expl: "12 est le plus petit commun multiple de 3 et 4. On va transformer les deux fractions pour qu'elles aient 12 comme dénominateur."
+  },
+  {
+    calc: `<div class="enonce">Étape 2 – Transformer les deux fractions</div>
+    <div class="ligne"><span class="hl-g">${fr(1,3)} = ${fr('1×4','3×4')} = ${fr(4,12)}</span> &nbsp;(×4)</div>
+    <div class="ligne"><span class="hl-b">${fr(1,4)} = ${fr('1×3','4×3')} = ${fr(3,12)}</span> &nbsp;(×3)</div>`,
+    expl: "1/3 = 4/12 : on multiplie par 4 en haut et en bas. 1/4 = 3/12 : on multiplie par 3 en haut et en bas. Les deux barres ont maintenant 12 parts."
+  },
+  {
+    calc: `<div class="enonce">Étape 3 – Additionner</div>
+    <div class="ligne">${fr(1,3)} + ${fr(1,4)} = <span class="hl-g">${fr(4,12)}</span> + <span class="hl-b">${fr(3,12)}</span></div>
+    <div class="ligne">= ${fr('<span class="hl-r">4 + 3</span>',12)} = <span class="hl-r">${fr(7,12)}</span></div>
+    <div class="ligne">Même dénominateur → on additionne les numérateurs : <span class="hl-g">4</span> + <span class="hl-b">3</span> = <span class="hl-r">7</span></div>`,
+    expl: "Quand les dénominateurs sont identiques, on additionne les numérateurs et on garde le dénominateur. Les 4 parts vertes + les 3 parts bleues font 7 parts sur 12."
+  },
+  {
+    calc: `<div class="enonce">Conclusion</div>
+    <div class="ligne">${fr(1,3)} + ${fr(1,4)} = <span class="hl-g">${fr(4,12)}</span> + <span class="hl-b">${fr(3,12)}</span> = <span class="hl-r">${fr(7,12)}</span></div>
+    <div class="conclusion-ok">${fr(1,3)} + ${fr(1,4)} = ${fr(7,12)}</div>`,
+    expl: "Résultat : 1/3 + 1/4 = 7/12. La barre rouge montre bien 7 parts sur 12, ce qui correspond aux 4 parts vertes + 3 parts bleues."
+  }
+];
+
+const S3 = [
+  {
+    calc: `<div class="enonce">Calculer ${fr(3,4)} − ${fr(1,3)}</div>
+    <div class="ligne">Dénominateurs différents : <span class="hl-o">4</span> et <span class="hl-p">3</span>.</div>
+    <div class="attention">⚠️ Même méthode que pour l'addition : on doit d'abord mettre les fractions au même dénominateur.</div>`,
+    expl: "On ne peut pas soustraire directement des quarts et des tiers. Il faut d'abord les convertir au même dénominateur."
+  },
+  {
+    calc: `<div class="enonce">Étape 1 – Dénominateur commun</div>
+    <div class="ligne">On cherche un multiple commun à <span class="hl-o">4</span> et à <span class="hl-p">3</span>.</div>
+    <div class="ligne">Multiples de 4 : 4, 8, <span class="hl-p">12</span>…</div>
+    <div class="ligne">Multiples de 3 : 3, 6, 9, <span class="hl-p">12</span>…</div>
+    <div class="ligne">Dénominateur commun : <span class="hl-p">12</span> &nbsp;(car 4×3=12)</div>`,
+    expl: "Même principe que pour la comparaison et l'addition : on cherche le plus petit multiple commun à 4 et à 3, qui est 12."
+  },
+  {
+    calc: `<div class="enonce">Étape 2 – Transformer les deux fractions</div>
+    <div class="ligne"><span class="hl-o">${fr(3,4)} = ${fr('3×3','4×3')} = ${fr(9,12)}</span> &nbsp;(×3)</div>
+    <div class="ligne"><span class="hl-p">${fr(1,3)} = ${fr('1×4','3×4')} = ${fr(4,12)}</span> &nbsp;(×4)</div>`,
+    expl: "3/4 = 9/12 : on multiplie par 3 en haut et en bas (3×3=9). 1/3 = 4/12 : on multiplie par 4 en haut et en bas (1×4=4)."
+  },
+  {
+    calc: `<div class="enonce">Étape 3 – Soustraire</div>
+    <div class="ligne">${fr(3,4)} − ${fr(1,3)} = <span class="hl-o">${fr(9,12)}</span> − <span class="hl-p">${fr(4,12)}</span></div>
+    <div class="ligne">= ${fr('<span class="hl-r">9 − 4</span>',12)} = <span class="hl-r">${fr(5,12)}</span></div>
+    <div class="ligne">Même dénominateur → on soustrait les numérateurs : <span class="hl-o">9</span> − <span class="hl-p">4</span> = <span class="hl-r">5</span></div>`,
+    expl: "On retire 4 parts violettes des 9 parts oranges. Il reste 5 parts sur 12. Le dénominateur reste 12."
+  },
+  {
+    calc: `<div class="enonce">Conclusion</div>
+    <div class="ligne">${fr(3,4)} − ${fr(1,3)} = <span class="hl-o">${fr(9,12)}</span> − <span class="hl-p">${fr(4,12)}</span> = <span class="hl-r">${fr(5,12)}</span></div>
+    <div class="conclusion-ok">${fr(3,4)} − ${fr(1,3)} = ${fr(5,12)}</div>`,
+    expl: "Résultat : 3/4 − 1/3 = 5/12. La barre verte montre les 5 parts restantes sur 12 après avoir retiré les 4 parts violettes."
+  }
+];
+
+// ───────────────────────────────────────────
+//  MOTEUR
+// ───────────────────────────────────────────
+
+const state = {1:0, 2:0, 3:0};
+const allSteps = {1:S1, 2:S2, 3:S3};
+const allSVG   = {1:svgTab1, 2:svgTab2, 3:svgTab3};
+
+function render(t) {
+  const i = state[t], steps = allSteps[t];
+  document.getElementById('svg'+t).innerHTML  = allSVG[t](i);
+  document.getElementById('calc'+t).innerHTML = steps[i].calc;
+  document.getElementById('expl'+t).innerHTML = steps[i].expl;
+  document.getElementById('ind'+t).textContent = `Étape ${i+1} / ${steps.length}`;
+  document.getElementById('prev'+t).disabled  = i === 0;
+  const nb = document.getElementById('next'+t);
+  nb.disabled = false;
+  nb.textContent = i === steps.length-1 ? '✓ Terminé' : 'Suivant ▶';
+  if (i === steps.length-1) nb.disabled = true;
+}
+
+function go(t, d) {
+  const steps = allSteps[t];
+  state[t] = Math.max(0, Math.min(steps.length-1, state[t]+d));
+  render(t);
+}
+
+function switchTab(t) {
+  [1,2,3].forEach(n => {
+    document.getElementById('page'+n).classList.toggle('active', n===t);
+    document.getElementById('tbtn'+n).classList.toggle('active', n===t);
+  });
+}
+
+// Init
+render(1); render(2); render(3);
+</script>
+</body>
+</html>
